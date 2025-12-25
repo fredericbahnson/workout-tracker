@@ -10,9 +10,9 @@ import {
   Mountain,
   Sparkles
 } from 'lucide-react';
-import { Button, Input, Select } from '../ui';
+import { Button } from '../ui';
 import { ExerciseRepo, MaxRecordRepo } from '../../data/repositories';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, type ExerciseType, type ExerciseMode } from '../../types';
+import { EXERCISE_TYPE_LABELS, type ExerciseType, type ExerciseMode } from '../../types';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -86,7 +86,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
     setIsCreating(true);
     try {
       // Create the exercise
-      const exerciseId = await ExerciseRepo.create({
+      const exercise = await ExerciseRepo.create({
         name: exerciseName.trim(),
         type: exerciseType,
         mode: exerciseMode,
@@ -99,11 +99,11 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
       if (initialMax && exerciseMode === 'standard') {
         const maxReps = parseInt(initialMax, 10);
         if (!isNaN(maxReps) && maxReps > 0) {
-          await MaxRecordRepo.create({
-            exerciseId,
+          await MaxRecordRepo.create(
+            exercise.id,
             maxReps,
-            notes: 'Initial max during onboarding',
-          });
+            'Initial max during onboarding'
+          );
         }
       }
 

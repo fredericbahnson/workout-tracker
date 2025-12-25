@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, Mountain, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts';
-import { Button, Input } from '../ui';
+import { Button } from '../ui';
 
 interface AuthGateProps {
   onAuthComplete: (isNewUser: boolean) => void;

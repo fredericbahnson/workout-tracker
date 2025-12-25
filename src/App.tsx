@@ -15,32 +15,32 @@ import { AuthGate, OnboardingFlow } from './components/onboarding';
 
 function AppContent() {
   const { user, isLoading: authLoading, isConfigured } = useAuth();
-  const { onboardingCompleted, setOnboardingCompleted } = useAppStore();
+  const { hasCompletedOnboarding, setHasCompletedOnboarding } = useAppStore();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Handler for when auth is complete
   const handleAuthComplete = (isNewUser: boolean) => {
-    if (isNewUser && !onboardingCompleted) {
+    if (isNewUser && !hasCompletedOnboarding) {
       setShowOnboarding(true);
     }
   };
 
   // Handler for when onboarding is complete
   const handleOnboardingComplete = () => {
-    setOnboardingCompleted(true);
+    setHasCompletedOnboarding(true);
     setShowOnboarding(false);
   };
 
   // Handler for skipping onboarding
   const handleOnboardingSkip = () => {
-    setOnboardingCompleted(true);
+    setHasCompletedOnboarding(true);
     setShowOnboarding(false);
   };
 
   // Show loading state while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex items-center justify-center">
         <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -63,18 +63,16 @@ function AppContent() {
 
   // Normal app
   return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<TodayPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/exercises" element={<ExercisesPage />} />
-          <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
-          <Route path="/progress" element={<ProgressPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<TodayPage />} />
+        <Route path="/schedule" element={<SchedulePage />} />
+        <Route path="/exercises" element={<ExercisesPage />} />
+        <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Routes>
+    </Layout>
   );
 }
 
@@ -111,7 +109,9 @@ function App() {
   return (
     <AuthProvider>
       <SyncProvider>
-        <AppContent />
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
       </SyncProvider>
     </AuthProvider>
   );
