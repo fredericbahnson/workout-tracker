@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout';
 import { 
@@ -10,7 +10,73 @@ import {
   SchedulePage 
 } from './pages';
 import { useAppStore } from './stores/appStore';
-import { AuthProvider, SyncProvider } from './contexts';
+import { AuthProvider, SyncProvider, useAuth } from './contexts';
+import { AuthGate, OnboardingFlow } from './components/onboarding';
+
+function AppContent() {
+  const { user, isLoading: authLoading, isConfigured } = useAuth();
+  const { onboardingCompleted, setOnboardingCompleted } = useAppStore();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Handler for when auth is complete
+  const handleAuthComplete = (isNewUser: boolean) => {
+    if (isNewUser && !onboardingCompleted) {
+      setShowOnboarding(true);
+    }
+  };
+
+  // Handler for when onboarding is complete
+  const handleOnboardingComplete = () => {
+    setOnboardingCompleted(true);
+    setShowOnboarding(false);
+  };
+
+  // Handler for skipping onboarding
+  const handleOnboardingSkip = () => {
+    setOnboardingCompleted(true);
+    setShowOnboarding(false);
+  };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#121212] flex items-center justify-center">
+        <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If Supabase is configured and no user, show auth gate
+  if (isConfigured && !user) {
+    return <AuthGate onAuthComplete={handleAuthComplete} />;
+  }
+
+  // If new user needs onboarding
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow 
+        onComplete={handleOnboardingComplete} 
+        onSkip={handleOnboardingSkip}
+      />
+    );
+  }
+
+  // Normal app
+  return (
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<TodayPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/exercises" element={<ExercisesPage />} />
+          <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
+          <Route path="/progress" element={<ProgressPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  );
+}
 
 function App() {
   const theme = useAppStore(state => state.theme);
@@ -45,18 +111,7 @@ function App() {
   return (
     <AuthProvider>
       <SyncProvider>
-        <BrowserRouter>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<TodayPage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/exercises" element={<ExercisesPage />} />
-              <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
-              <Route path="/progress" element={<ProgressPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Routes>
-          </Layout>
-        </BrowserRouter>
+        <AppContent />
       </SyncProvider>
     </AuthProvider>
   );

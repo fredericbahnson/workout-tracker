@@ -21,10 +21,22 @@ export default {
           800: '#075985',
           900: '#0c4a6e',
           950: '#082f49',
+        },
+        // Industry-standard dark mode colors
+        dark: {
+          bg: '#121212',        // Primary background
+          surface: '#1A1A2E',   // Elevated surfaces (cards, modals)
+          elevated: '#252538',  // Higher elevation surfaces
         }
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      // Gym-readable font sizes (24-32pt for active workout)
+      fontSize: {
+        'gym-xl': ['1.5rem', { lineHeight: '2rem', fontWeight: '600' }],      // 24px
+        'gym-2xl': ['1.75rem', { lineHeight: '2.25rem', fontWeight: '700' }], // 28px
+        'gym-3xl': ['2rem', { lineHeight: '2.5rem', fontWeight: '700' }],     // 32px
       }
     },
   },

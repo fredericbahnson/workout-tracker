@@ -42,6 +42,10 @@ interface AppState {
   restTimer: RestTimerSettings;
   setRestTimer: (settings: Partial<RestTimerSettings>) => void;
   
+  // Onboarding
+  hasCompletedOnboarding: boolean;
+  setHasCompletedOnboarding: (completed: boolean) => void;
+  
   // UI state
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -99,6 +103,10 @@ export const useAppStore = create<AppState>()(
         restTimer: { ...state.restTimer, ...settings }
       })),
       
+      // Onboarding
+      hasCompletedOnboarding: false,
+      setHasCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
+      
       // UI state
       sidebarOpen: false,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
@@ -109,7 +117,8 @@ export const useAppStore = create<AppState>()(
         theme: state.theme, 
         defaults: state.defaults, 
         repDisplayMode: state.repDisplayMode,
-        restTimer: state.restTimer
+        restTimer: state.restTimer,
+        hasCompletedOnboarding: state.hasCompletedOnboarding
       }),
     }
   )

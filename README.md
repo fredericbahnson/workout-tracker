@@ -4,14 +4,18 @@ A Progressive Web App for progressive calisthenics strength training.
 
 ## Features
 
+- **User Accounts**: Sign up with email to sync across devices
+- **Onboarding Flow**: Guided setup for new users
 - **Training Cycles**: Create multi-week training plans with exercise groups and rotations
 - **Dynamic Rep Calculation**: RFEM-based rep targets and conditioning progression
 - **Queue-Based Scheduling**: Automatic workout queue management
 - **Swipe Gestures**: Swipe right to complete sets, swipe left to skip
 - **Rest Timer**: Configurable rest timer between sets
+- **Weight Tracking**: Optional weight tracking for weighted exercises
 - **Offline Support**: Full PWA with offline-first architecture
 - **Progress Tracking**: Track sets, reps, and personal records over time
 - **Data Export/Import**: Backup and restore all your data
+- **Industry-Standard Dark Mode**: Uses #121212 background with elevated surfaces
 
 ## Local Development
 
@@ -49,6 +53,16 @@ vercel
 
 Follow the prompts. Your app will be deployed in about 30 seconds.
 
+## Cloud Sync Setup
+
+To enable user accounts and cloud sync:
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run the SQL from `supabase-schema.sql` in the SQL Editor
+3. Add environment variables in Vercel:
+   - `VITE_SUPABASE_URL` = your project URL
+   - `VITE_SUPABASE_ANON_KEY` = your anon key
+
 ## Install as App on Phone
 
 Once deployed to Vercel (or any HTTPS host):
@@ -68,12 +82,15 @@ src/
 │   ├── exercises/    # Exercise-related components
 │   ├── workouts/     # Workout/set logging components
 │   ├── cycles/       # Cycle wizard and management
+│   ├── onboarding/   # Auth gate and onboarding flow
 │   └── layout/       # Layout and navigation
+├── contexts/         # Auth and sync contexts
 ├── data/
 │   ├── db.ts         # Dexie database setup
+│   ├── supabase.ts   # Supabase client
 │   └── repositories/ # Data access layer
 ├── pages/            # Page components
-├── services/         # Scheduling engine
+├── services/         # Scheduling engine and sync
 ├── stores/           # Zustand state management
 └── types/            # TypeScript type definitions
 ```
@@ -85,13 +102,7 @@ src/
 - **Dexie.js** (IndexedDB wrapper)
 - **Tailwind CSS**
 - **Zustand** (state management)
-
-## Future: Cloud Sync
-
-Phase 2 will add Supabase integration for:
-- User authentication
-- Multi-device sync
-- Sharing with others
+- **Supabase** (authentication + cloud sync)
 
 ## About
 

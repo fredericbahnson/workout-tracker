@@ -9,8 +9,14 @@
   }
   
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+    @apply bg-gray-50 text-gray-900;
     @apply antialiased;
+  }
+  
+  /* Industry-standard dark mode: #121212 background */
+  .dark body {
+    background-color: #121212;
+    @apply text-gray-100;
   }
 
   /* Safe area for iOS devices */
@@ -38,11 +44,19 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+    @apply bg-gray-300 rounded-full;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: #3a3a4a;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-gray-600;
+    @apply bg-gray-400;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #4a4a5a;
   }
 }
 
@@ -56,6 +70,15 @@
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+  
+  /* Dark surface colors for cards/elevated elements */
+  .dark .dark-surface {
+    background-color: #1A1A2E;
+  }
+  
+  .dark .dark-elevated {
+    background-color: #252538;
   }
 }
 
@@ -71,9 +94,14 @@
     background-color: #f9fafb; /* gray-50 */
   }
   
+  .dark html,
+  html.dark {
+    background-color: #121212; /* Industry-standard dark */
+  }
+  
   @media (prefers-color-scheme: dark) {
-    html {
-      background-color: #111827; /* gray-900 */
+    html:not(.light) {
+      background-color: #121212;
     }
   }
 }

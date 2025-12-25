@@ -49,7 +49,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       <div 
         className={`
           relative w-full ${sizes[size]}
-          bg-white dark:bg-gray-800 
+          bg-white dark:bg-[#1A1A2E] 
           rounded-xl shadow-xl
           max-h-[90vh] overflow-hidden
           flex flex-col
@@ -57,7 +57,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-[#2D2D4A]">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {title}
             </h2>

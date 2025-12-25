@@ -475,7 +475,7 @@ export function TodayPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-2xl font-bold ${isShowingCompletedWorkout 
+                  <p className={`text-gym-xl ${isShowingCompletedWorkout 
                     ? 'text-green-600 dark:text-green-400' 
                     : 'text-primary-600 dark:text-primary-400'
                   }`}>

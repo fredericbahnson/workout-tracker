@@ -213,7 +213,7 @@ export function SwipeableSetCard({
 
       {/* Swipeable card content */}
       <div
-        className={`relative bg-gray-50 dark:bg-gray-800/50 ${isDragging ? '' : 'transition-transform duration-200'}`}
+        className={`relative bg-gray-50 dark:bg-[#1A1A2E]/50 ${isDragging ? '' : 'transition-transform duration-200'}`}
         style={{ transform: `translateX(${translateX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
