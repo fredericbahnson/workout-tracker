@@ -7,10 +7,12 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isConfigured: boolean;
+  isNewUser: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  clearNewUserFlag: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(false);
   const isConfigured = isSupabaseConfigured();
 
   useEffect(() => {
@@ -26,6 +29,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
+
+    // Handle email confirmation redirect (hash contains tokens)
+    // Supabase puts auth tokens in URL hash after email confirmation
+    const handleEmailConfirmation = async () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        // Clear the hash from URL without triggering navigation
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+    
+    handleEmailConfirmation();
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -37,12 +52,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth event:', event);
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
 
-        // Trigger sync on sign in
+        // Check if this is a new user (email confirmation or fresh signup)
         if (event === 'SIGNED_IN' && session) {
+          // Check if user was created recently (within last 5 minutes)
+          const createdAt = new Date(session.user.created_at);
+          const now = new Date();
+          const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+          
+          if (createdAt > fiveMinutesAgo) {
+            setIsNewUser(true);
+          }
+          
           // Sync will be triggered by the sync service
           window.dispatchEvent(new CustomEvent('auth-signed-in'));
         }
@@ -60,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: window.location.origin,
+      }
     });
     
     return { error: error as Error | null };
@@ -84,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setIsNewUser(false);
   };
 
   const resetPassword = async (email: string) => {
@@ -98,16 +127,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const clearNewUserFlag = () => {
+    setIsNewUser(false);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
       session,
       isLoading,
       isConfigured,
+      isNewUser,
       signUp,
       signIn,
       signOut,
       resetPassword,
+      clearNewUserFlag,
     }}>
       {children}
     </AuthContext.Provider>

@@ -12,35 +12,100 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
   const [secondsRemaining, setSecondsRemaining] = useState(initialSeconds);
   const [isRunning, setIsRunning] = useState(true);
   const [isComplete, setIsComplete] = useState(false);
+  const [audioInitialized, setAudioInitialized] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
+  // Initialize audio context on first user interaction
+  const initAudio = useCallback(() => {
+    if (audioInitialized) return;
+    try {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Resume context (required for iOS Safari)
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      setAudioInitialized(true);
+    } catch (e) {
+      console.log('Audio context not available');
+    }
+  }, [audioInitialized]);
+
   // Play a beep sound using Web Audio API
-  const playBeep = useCallback(() => {
+  const playBeep = useCallback((isCompletion: boolean = false) => {
     try {
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
       const ctx = audioContextRef.current;
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
+      // Resume if suspended (iOS requirement)
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
       
-      oscillator.frequency.value = 880; // A5 note
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.3);
+      if (isCompletion) {
+        // Play a more distinct completion sound - three ascending tones
+        const frequencies = [660, 880, 1100]; // E5, A5, C#6
+        frequencies.forEach((freq, i) => {
+          const oscillator = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          
+          oscillator.frequency.value = freq;
+          oscillator.type = 'sine';
+          
+          const startTime = ctx.currentTime + (i * 0.15);
+          gainNode.gain.setValueAtTime(0.4, startTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+          
+          oscillator.start(startTime);
+          oscillator.stop(startTime + 0.3);
+        });
+      } else {
+        // Single beep for countdown
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        oscillator.frequency.value = 880; // A5 note
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.15);
+      }
     } catch (e) {
-      // Audio might not be available, that's okay
-      console.log('Audio not available');
+      console.log('Audio playback failed:', e);
     }
   }, []);
+
+  // Initialize audio on mount via any interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      initAudio();
+      // Remove listeners after first interaction
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('click', handleInteraction);
+    };
+    
+    document.addEventListener('touchstart', handleInteraction, { once: true });
+    document.addEventListener('click', handleInteraction, { once: true });
+    
+    // Also try to init immediately
+    initAudio();
+    
+    return () => {
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('click', handleInteraction);
+    };
+  }, [initAudio]);
 
   useEffect(() => {
     if (isRunning && secondsRemaining > 0) {
@@ -49,13 +114,13 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
           if (prev <= 1) {
             setIsRunning(false);
             setIsComplete(true);
-            playBeep();
+            playBeep(true); // Completion sound
             onComplete?.();
             return 0;
           }
           // Play beep for last 3 seconds
           if (prev <= 4) {
-            playBeep();
+            playBeep(false);
           }
           return prev - 1;
         });
@@ -70,16 +135,19 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
   }, [isRunning, secondsRemaining, playBeep, onComplete]);
 
   const togglePause = () => {
+    initAudio(); // Ensure audio is ready
     setIsRunning(!isRunning);
   };
 
   const reset = () => {
+    initAudio(); // Ensure audio is ready
     setSecondsRemaining(initialSeconds);
     setIsRunning(true);
     setIsComplete(false);
   };
 
   const addTime = (seconds: number) => {
+    initAudio(); // Ensure audio is ready
     setSecondsRemaining(prev => Math.max(0, prev + seconds));
     if (isComplete) {
       setIsComplete(false);

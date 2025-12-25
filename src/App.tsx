@@ -14,13 +14,20 @@ import { AuthProvider, SyncProvider, useAuth } from './contexts';
 import { AuthGate, OnboardingFlow } from './components/onboarding';
 
 function AppContent() {
-  const { user, isLoading: authLoading, isConfigured } = useAuth();
+  const { user, isLoading: authLoading, isConfigured, isNewUser, clearNewUserFlag } = useAuth();
   const { hasCompletedOnboarding, setHasCompletedOnboarding } = useAppStore();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Handler for when auth is complete
-  const handleAuthComplete = (isNewUser: boolean) => {
-    if (isNewUser && !hasCompletedOnboarding) {
+  // Trigger onboarding for new users (detected via AuthContext)
+  useEffect(() => {
+    if (isNewUser && !hasCompletedOnboarding && user) {
+      setShowOnboarding(true);
+    }
+  }, [isNewUser, hasCompletedOnboarding, user]);
+
+  // Handler for when auth gate reports a new user (signup flow)
+  const handleAuthComplete = (isNewUserFromGate: boolean) => {
+    if (isNewUserFromGate && !hasCompletedOnboarding) {
       setShowOnboarding(true);
     }
   };
@@ -29,12 +36,14 @@ function AppContent() {
   const handleOnboardingComplete = () => {
     setHasCompletedOnboarding(true);
     setShowOnboarding(false);
+    clearNewUserFlag();
   };
 
   // Handler for skipping onboarding
   const handleOnboardingSkip = () => {
     setHasCompletedOnboarding(true);
     setShowOnboarding(false);
+    clearNewUserFlag();
   };
 
   // Show loading state while checking auth

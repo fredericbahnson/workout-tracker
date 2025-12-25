@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Dumbbell, Calendar, CheckCircle, Circle, PlayCircle, SkipForward, StopCircle, PartyPopper, ChevronRight, ChevronDown, ChevronUp, BarChart3, Edit2 } from 'lucide-react';
+import { Plus, Dumbbell, Calendar, CheckCircle, Circle, SkipForward, StopCircle, PartyPopper, ChevronRight, ChevronDown, ChevronUp, BarChart3, Edit2 } from 'lucide-react';
 import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRecordRepo } from '../data/repositories';
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
@@ -507,23 +507,24 @@ export function TodayPage() {
                       onSwipeLeft={() => handleInitiateSkipSet(set)}
                       onTap={() => handleSelectScheduledSet(set)}
                     >
-                      <div className="flex items-center gap-3 p-3 text-left">
-                        <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                      <div className="flex items-center gap-4 p-4 text-left">
+                        <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
                             {exercise.name}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Badge variant={exercise.type} className="text-[10px]">
-                              {EXERCISE_TYPE_LABELS[exercise.type]}
-                            </Badge>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {targetReps} reps
-                              {set.isConditioning && ' (cond)'}
-                            </span>
-                          </div>
+                          <Badge variant={exercise.type} className="text-xs mt-1">
+                            {EXERCISE_TYPE_LABELS[exercise.type]}
+                          </Badge>
                         </div>
-                        <PlayCircle className="w-5 h-5 text-primary-500" />
+                        <div className="flex flex-col items-end">
+                          <span className="text-gym-2xl text-primary-600 dark:text-primary-400">
+                            {targetReps}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {set.isConditioning ? 'cond' : 'reps'}
+                          </span>
+                        </div>
                       </div>
                     </SwipeableSetCard>
                   );
@@ -537,7 +538,7 @@ export function TodayPage() {
                 {!isShowingCompletedWorkout && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Completed (tap to edit)</p>
                 )}
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {scheduledSetsCompleted.map(set => {
                     const exercise = exerciseMap.get(set.exerciseId);
                     const completedSet = workoutCompletedSets?.find(s => s.scheduledSetId === set.id);
@@ -550,34 +551,32 @@ export function TodayPage() {
                       <button
                         key={set.id}
                         onClick={() => handleEditCompletedSet(completedSet)}
-                        className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left ${
+                        className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left ${
                           wasSkipped 
                             ? 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30'
                             : 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
                         }`}
                       >
-                        <CheckCircle className={`w-4 h-4 flex-shrink-0 ${
+                        <CheckCircle className={`w-5 h-5 flex-shrink-0 ${
                           wasSkipped ? 'text-orange-500' : 'text-green-500'
                         }`} />
-                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
+                        <span className="text-base text-gray-700 dark:text-gray-300 truncate flex-1">
                           {exercise.name}
                         </span>
-                        <span className={`text-sm font-medium ${
-                          wasSkipped 
-                            ? 'text-orange-600 dark:text-orange-400'
-                            : 'text-green-600 dark:text-green-400'
-                        }`}>
-                          {wasSkipped ? 'Skipped' : (
-                            <>
-                              {completedSet.actualReps}
-                              {hasWeight && (
-                                <span className="text-purple-600 dark:text-purple-400 ml-1">
-                                  +{completedSet.weight}
-                                </span>
-                              )}
-                            </>
+                        <div className="flex items-baseline gap-1">
+                          <span className={`text-gym-xl ${
+                            wasSkipped 
+                              ? 'text-orange-600 dark:text-orange-400'
+                              : 'text-green-600 dark:text-green-400'
+                          }`}>
+                            {wasSkipped ? '—' : completedSet.actualReps}
+                          </span>
+                          {hasWeight && !wasSkipped && (
+                            <span className="text-sm text-purple-600 dark:text-purple-400">
+                              +{completedSet.weight}
+                            </span>
                           )}
-                        </span>
+                        </div>
                         <Edit2 className="w-3 h-3 text-gray-400" />
                       </button>
                     );
