@@ -4,7 +4,7 @@ import { exportData, importData, db } from '../data/db';
 import { useAppStore, useTheme, type RepDisplayMode } from '../stores/appStore';
 import { useAuth, useSync } from '../contexts';
 import { PageHeader } from '../components/layout';
-import { Card, CardContent, Button, Modal, NumberInput, Badge, Select, Input } from '../components/ui';
+import { Card, CardContent, Button, Modal, NumberInput, Badge, Select, Input, TimeDurationInput } from '../components/ui';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '../types';
 
 export function SettingsPage() {
@@ -383,16 +383,13 @@ export function SettingsPage() {
 
             {restTimer.enabled && (
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <NumberInput
-                  label="Default rest duration (seconds)"
+                <TimeDurationInput
+                  label="Default rest duration"
                   value={restTimer.defaultDurationSeconds}
                   onChange={v => setRestTimer({ defaultDurationSeconds: v })}
-                  min={10}
-                  max={600}
+                  minSeconds={10}
+                  maxSeconds={600}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Common values: 60s (short), 90s (medium), 120s (long)
-                </p>
               </div>
             )}
           </CardContent>
@@ -452,7 +449,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v0.10.0
+              Ascend v0.10.1
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

@@ -68,7 +68,7 @@ const DEFAULT_SETTINGS: AppDefaults = {
 
 const DEFAULT_REST_TIMER: RestTimerSettings = {
   enabled: false,
-  defaultDurationSeconds: 90
+  defaultDurationSeconds: 180
 };
 
 export const useAppStore = create<AppState>()(
