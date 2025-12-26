@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail, UserX } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail, UserX, Key } from 'lucide-react';
 import { exportData, importData, db } from '../data/db';
 import { useAppStore, useTheme, type RepDisplayMode } from '../stores/appStore';
 import { useAuth, useSync } from '../contexts';
@@ -10,8 +10,8 @@ import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '../types';
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
   const { defaults, setDefaults, setWeeklySetGoal, repDisplayMode, setRepDisplayMode, restTimer, setRestTimer } = useAppStore();
-  const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount } = useAuth();
-  const { status: syncStatus, lastSyncTime, sync, isSyncing } = useSync();
+  const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount, updatePassword } = useAuth();
+  const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
   
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -26,6 +26,10 @@ export function SettingsPage() {
   const [isClearing, setIsClearing] = useState(false);
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,6 +79,34 @@ export function SettingsPage() {
     } finally {
       setIsDeleting(false);
       setShowDeleteAccountConfirm(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    try {
+      const result = await updatePassword(newPassword);
+      if (result.error) {
+        setMessage({ type: 'error', text: `Failed to change password: ${result.error.message}` });
+      } else {
+        setMessage({ type: 'success', text: 'Password changed successfully.' });
+        setShowChangePassword(false);
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Failed to change password.' });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -205,6 +237,9 @@ export function SettingsPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => setShowChangePassword(true)} className="text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">
+                      <Key className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => setShowDeleteAccountConfirm(true)} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                       <UserX className="w-4 h-4" />
                     </Button>
@@ -241,6 +276,12 @@ export function SettingsPage() {
                     <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
+
+                {syncError && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                    {syncError}
+                  </p>
+                )}
                 
                 <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                   <button
@@ -484,7 +525,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v0.10.2
+              Ascend v0.10.3
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training
@@ -666,6 +707,54 @@ export function SettingsPage() {
               className="flex-1"
             >
               {isDeleting ? 'Deleting...' : 'Delete Account'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal
+        isOpen={showChangePassword}
+        onClose={() => { setShowChangePassword(false); setNewPassword(''); setConfirmPassword(''); }}
+        title="Change Password"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              New Password
+            </label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password (6+ characters)"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Confirm Password
+            </label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              variant="secondary" 
+              onClick={() => { setShowChangePassword(false); setNewPassword(''); setConfirmPassword(''); }} 
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleChangePassword} 
+              disabled={isChangingPassword || !newPassword || !confirmPassword}
+              className="flex-1"
+            >
+              {isChangingPassword ? 'Changing...' : 'Change Password'}
             </Button>
           </div>
         </div>

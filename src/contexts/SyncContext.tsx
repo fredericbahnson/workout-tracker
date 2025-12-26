@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 interface SyncContextType {
   status: SyncStatus;
   lastSyncTime: Date | null;
+  lastError: string | null;
   sync: () => Promise<void>;
   isSyncing: boolean;
 }
@@ -15,6 +16,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const { user, isConfigured } = useAuth();
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Subscribe to sync status changes
@@ -28,9 +30,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // Initial sync on sign in
   useEffect(() => {
     if (user && isConfigured) {
-      SyncService.fullSync(user.id).then(() => {
-        setLastSyncTime(SyncService.getLastSyncTime());
-      });
+      SyncService.fullSync(user.id)
+        .then(() => {
+          setLastSyncTime(SyncService.getLastSyncTime());
+          setLastError(null);
+        })
+        .catch((err) => {
+          console.error('Initial sync failed:', err);
+          setLastError(err.message || 'Sync failed');
+        });
     }
   }, [user, isConfigured]);
 
@@ -38,9 +46,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleSignIn = () => {
       if (user) {
-        SyncService.fullSync(user.id).then(() => {
-          setLastSyncTime(SyncService.getLastSyncTime());
-        });
+        SyncService.fullSync(user.id)
+          .then(() => {
+            setLastSyncTime(SyncService.getLastSyncTime());
+            setLastError(null);
+          })
+          .catch((err) => {
+            console.error('Sync on sign-in failed:', err);
+            setLastError(err.message || 'Sync failed');
+          });
       }
     };
 
@@ -54,9 +68,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
     const interval = setInterval(() => {
       if (navigator.onLine && status !== 'syncing') {
-        SyncService.fullSync(user.id).then(() => {
-          setLastSyncTime(SyncService.getLastSyncTime());
-        });
+        SyncService.fullSync(user.id)
+          .then(() => {
+            setLastSyncTime(SyncService.getLastSyncTime());
+            setLastError(null);
+          })
+          .catch((err) => {
+            console.error('Periodic sync failed:', err);
+            setLastError(err.message || 'Sync failed');
+          });
       }
     }, 5 * 60 * 1000); // 5 minutes
 
@@ -68,16 +88,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     if (!user || !isConfigured || isSyncing) return;
     
     setIsSyncing(true);
+    setLastError(null);
     try {
       await SyncService.fullSync(user.id);
       setLastSyncTime(SyncService.getLastSyncTime());
+    } catch (err: unknown) {
+      console.error('Manual sync failed:', err);
+      setLastError(err instanceof Error ? err.message : 'Sync failed');
     } finally {
       setIsSyncing(false);
     }
   }, [user, isConfigured, isSyncing]);
 
   return (
-    <SyncContext.Provider value={{ status, lastSyncTime, sync, isSyncing }}>
+    <SyncContext.Provider value={{ status, lastSyncTime, lastError, sync, isSyncing }}>
       {children}
     </SyncContext.Provider>
   );

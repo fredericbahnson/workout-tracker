@@ -13,6 +13,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   clearNewUserFlag: () => void;
 }
 
@@ -165,6 +166,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const updatePassword = async (newPassword: string) => {
+    if (!isConfigured) {
+      return { error: new Error('Supabase not configured') };
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    return { error: error as Error | null };
+  };
+
   const clearNewUserFlag = () => {
     setIsNewUser(false);
   };
@@ -181,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       deleteAccount,
       resetPassword,
+      updatePassword,
       clearNewUserFlag,
     }}>
       {children}

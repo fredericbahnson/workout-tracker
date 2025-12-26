@@ -8,7 +8,10 @@ import {
   Dumbbell,
   CheckCircle,
   Mountain,
-  Sparkles
+  Sparkles,
+  Plus,
+  Home,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '../ui';
 import { ExerciseRepo, MaxRecordRepo } from '../../data/repositories';
@@ -55,6 +58,8 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   const [showExerciseCreation, setShowExerciseCreation] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [exerciseCreated, setExerciseCreated] = useState(false);
+  const [createdExerciseName, setCreatedExerciseName] = useState('');
+  const [error, setError] = useState<string | null>(null);
   
   // Exercise form state
   const [exerciseName, setExerciseName] = useState('');
@@ -75,16 +80,33 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   const handlePrev = () => {
     if (showExerciseCreation) {
       setShowExerciseCreation(false);
+      setError(null);
     } else {
       setCurrentSlide(prev => Math.max(0, prev - 1));
     }
   };
 
+  const resetForm = () => {
+    setExerciseName('');
+    setExerciseType('push');
+    setExerciseMode('standard');
+    setInitialMax('');
+    setError(null);
+    setExerciseCreated(false);
+  };
+
   const handleCreateExercise = async () => {
-    if (!exerciseName.trim()) return;
+    if (!exerciseName.trim()) {
+      setError('Please enter an exercise name');
+      return;
+    }
     
     setIsCreating(true);
+    setError(null);
+    
     try {
+      console.log('Creating exercise:', exerciseName.trim());
+      
       // Create the exercise
       const exercise = await ExerciseRepo.create({
         name: exerciseName.trim(),
@@ -95,6 +117,8 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         weightEnabled: false,
       });
 
+      console.log('Exercise created:', exercise);
+
       // If they provided an initial max, record it
       if (initialMax && exerciseMode === 'standard') {
         const maxReps = parseInt(initialMax, 10);
@@ -104,35 +128,57 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
             maxReps,
             'Initial max during onboarding'
           );
+          console.log('Max record created');
         }
       }
 
+      setCreatedExerciseName(exerciseName.trim());
       setExerciseCreated(true);
-      
-      // Show success briefly then complete
-      setTimeout(() => {
-        onComplete();
-      }, 1500);
-    } catch (error) {
-      console.error('Failed to create exercise:', error);
+      setIsCreating(false);
+    } catch (err) {
+      console.error('Failed to create exercise:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create exercise. Please try again.');
       setIsCreating(false);
     }
+  };
+
+  const handleAddAnother = () => {
+    resetForm();
   };
 
   // Success screen after exercise creation
   if (exerciseCreated) {
     return (
       <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] flex flex-col items-center justify-center p-6 z-50">
-        <div className="text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-bounce">
+        <div className="text-center max-w-sm">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
             <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            You're all set!
+            Exercise Created!
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            {exerciseName} has been added. Time to start training!
+          <p className="text-gray-600 dark:text-gray-400 mb-8">
+            {createdExerciseName} has been added to your exercises.
           </p>
+          
+          <div className="space-y-3">
+            <Button
+              onClick={handleAddAnother}
+              variant="secondary"
+              className="w-full py-3"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Add Another Exercise
+            </Button>
+            
+            <Button
+              onClick={onComplete}
+              className="w-full py-3"
+            >
+              <Home className="w-5 h-5 mr-2" />
+              Start Using Ascend
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -164,6 +210,14 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         {/* Form content */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-sm mx-auto space-y-6">
+            {/* Error message */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
             {/* Encouragement */}
             <div className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
               <Dumbbell className="w-6 h-6 text-primary-600 dark:text-primary-400 flex-shrink-0" />
@@ -271,7 +325,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         </div>
 
         {/* Footer with CTA */}
-        <div className="px-4 py-4 border-t border-gray-200 dark:border-[#2D2D4A]">
+        <div className="px-4 py-4 border-t border-gray-200 dark:border-[#2D2D4A] space-y-3">
           <Button
             onClick={handleCreateExercise}
             disabled={!exerciseName.trim() || isCreating}
@@ -285,10 +339,17 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
             ) : (
               <span className="flex items-center justify-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                Create & Start Training
+                Create Exercise
               </span>
             )}
           </Button>
+          
+          <button
+            onClick={onSkip}
+            className="w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-2"
+          >
+            Skip for now — I'll add exercises later
+          </button>
         </div>
       </div>
     );
