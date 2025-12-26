@@ -282,16 +282,6 @@ export function SettingsPage() {
                     {syncError}
                   </p>
                 )}
-                
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => setShowDeleteAccountConfirm(true)}
-                    className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                  >
-                    <UserX className="w-4 h-4" />
-                    Delete account and all data
-                  </button>
-                </div>
               </>
             ) : (
               <div className="space-y-2">
@@ -525,7 +515,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v0.10.3
+              Ascend v0.10.4
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training
@@ -563,44 +553,6 @@ export function SettingsPage() {
               className="flex-1"
             >
               {isClearing ? 'Clearing...' : 'Clear All Data'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Delete Account Confirmation */}
-      <Modal
-        isOpen={showDeleteAccountConfirm}
-        onClose={() => setShowDeleteAccountConfirm(false)}
-        title="Delete Account"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete your account? This will permanently remove:
-          </p>
-          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
-            <li>All your workout data from our servers</li>
-            <li>All local data on this device</li>
-            <li>Your account settings and preferences</li>
-          </ul>
-          <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-            This action cannot be undone.
-          </p>
-          <div className="flex gap-3">
-            <Button 
-              variant="secondary" 
-              onClick={() => setShowDeleteAccountConfirm(false)} 
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="danger" 
-              onClick={handleDeleteAccount} 
-              disabled={isDeleting}
-              className="flex-1"
-            >
-              {isDeleting ? 'Deleting...' : 'Delete Account'}
             </Button>
           </div>
         </div>
