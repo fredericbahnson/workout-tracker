@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail, UserX } from 'lucide-react';
 import { exportData, importData, db } from '../data/db';
 import { useAppStore, useTheme, type RepDisplayMode } from '../stores/appStore';
 import { useAuth, useSync } from '../contexts';
@@ -10,7 +10,7 @@ import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '../types';
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
   const { defaults, setDefaults, setWeeklySetGoal, repDisplayMode, setRepDisplayMode, restTimer, setRestTimer } = useAppStore();
-  const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut } = useAuth();
+  const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount } = useAuth();
   const { status: syncStatus, lastSyncTime, sync, isSyncing } = useSync();
   
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -24,6 +24,8 @@ export function SettingsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +58,24 @@ export function SettingsPage() {
   const handleSignOut = async () => {
     await signOut();
     setMessage({ type: 'success', text: 'Signed out successfully.' });
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteAccount();
+      if (result.error) {
+        setMessage({ type: 'error', text: `Failed to delete account: ${result.error.message}` });
+      } else {
+        // Account deleted - page will redirect to auth gate
+        setMessage({ type: 'success', text: 'Account and data deleted successfully.' });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Failed to delete account.' });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteAccountConfirm(false);
+    }
   };
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
@@ -184,9 +204,14 @@ export function SettingsPage() {
                       {user.email}
                     </span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                    <LogOut className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => setShowDeleteAccountConfirm(true)} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <UserX className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -215,6 +240,16 @@ export function SettingsPage() {
                   >
                     <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                   </Button>
+                </div>
+                
+                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowDeleteAccountConfirm(true)}
+                    className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  >
+                    <UserX className="w-4 h-4" />
+                    Delete account and all data
+                  </button>
                 </div>
               </>
             ) : (
@@ -449,7 +484,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v0.10.1
+              Ascend v0.10.2
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training
@@ -487,6 +522,44 @@ export function SettingsPage() {
               className="flex-1"
             >
               {isClearing ? 'Clearing...' : 'Clear All Data'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Account Confirmation */}
+      <Modal
+        isOpen={showDeleteAccountConfirm}
+        onClose={() => setShowDeleteAccountConfirm(false)}
+        title="Delete Account"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-400">
+            Are you sure you want to delete your account? This will permanently remove:
+          </p>
+          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+            <li>All your workout data from our servers</li>
+            <li>All local data on this device</li>
+            <li>Your account settings and preferences</li>
+          </ul>
+          <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+            This action cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowDeleteAccountConfirm(false)} 
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="danger" 
+              onClick={handleDeleteAccount} 
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Account'}
             </Button>
           </div>
         </div>
@@ -557,6 +630,44 @@ export function SettingsPage() {
               </>
             )}
           </p>
+        </div>
+      </Modal>
+
+      {/* Delete Account Confirmation */}
+      <Modal
+        isOpen={showDeleteAccountConfirm}
+        onClose={() => setShowDeleteAccountConfirm(false)}
+        title="Delete Account"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-400">
+            Are you sure you want to delete your account? This will permanently remove:
+          </p>
+          <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <li>Your account and login credentials</li>
+            <li>All cloud-synced data</li>
+            <li>All local data on this device</li>
+          </ul>
+          <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+            This action cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowDeleteAccountConfirm(false)} 
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="danger" 
+              onClick={handleDeleteAccount} 
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Account'}
+            </Button>
+          </div>
         </div>
       </Modal>
     </>

@@ -62,6 +62,12 @@ To enable user accounts and cloud sync:
 3. Add environment variables in Vercel:
    - `VITE_SUPABASE_URL` = your project URL
    - `VITE_SUPABASE_ANON_KEY` = your anon key
+4. Configure authentication URLs in Supabase:
+   - Go to Authentication → URL Configuration
+   - Set **Site URL** to your production URL (e.g., `https://your-app.vercel.app`)
+   - Add your production URL to **Redirect URLs**
+   
+   This ensures email confirmation links redirect back to your app correctly.
 
 ## Install as App on Phone
 

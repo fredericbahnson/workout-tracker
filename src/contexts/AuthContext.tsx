@@ -11,6 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   clearNewUserFlag: () => void;
 }
@@ -115,6 +116,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsNewUser(false);
   };
 
+  const deleteAccount = async () => {
+    if (!isConfigured || !user) {
+      return { error: new Error('Not authenticated') };
+    }
+
+    try {
+      // Delete user data from Supabase tables
+      const userId = user.id;
+      
+      // Delete in order to respect foreign key constraints
+      await supabase.from('completed_sets').delete().eq('user_id', userId);
+      await supabase.from('scheduled_sets').delete().eq('user_id', userId);
+      await supabase.from('scheduled_workouts').delete().eq('user_id', userId);
+      await supabase.from('max_records').delete().eq('user_id', userId);
+      await supabase.from('exercises').delete().eq('user_id', userId);
+      await supabase.from('cycle_groups').delete().eq('user_id', userId);
+      await supabase.from('cycles').delete().eq('user_id', userId);
+      
+      // Clear local IndexedDB
+      const { db } = await import('../data/db');
+      await db.delete();
+      
+      // Clear localStorage
+      localStorage.clear();
+      
+      // Sign out
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setIsNewUser(false);
+      
+      return { error: null };
+    } catch (e) {
+      return { error: e as Error };
+    }
+  };
+
   const resetPassword = async (email: string) => {
     if (!isConfigured) {
       return { error: new Error('Supabase not configured') };
@@ -141,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signIn,
       signOut,
+      deleteAccount,
       resetPassword,
       clearNewUserFlag,
     }}>
