@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Calendar, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History } from 'lucide-react';
+import { Calendar, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2 } from 'lucide-react';
 import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo, CompletedSetRepo } from '../data/repositories';
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
 import { PageHeader } from '../components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '../components/ui';
-import { CycleWizard } from '../components/cycles';
+import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '../components/cycles';
 import { EXERCISE_TYPE_LABELS, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
 
 export function SchedulePage() {
   const navigate = useNavigate();
   const { defaults } = useAppStore();
   const [showCycleWizard, setShowCycleWizard] = useState(false);
+  const [showCycleTypeSelector, setShowCycleTypeSelector] = useState(false);
+  const [showMaxTestingWizard, setShowMaxTestingWizard] = useState(false);
   const [previewWorkout, setPreviewWorkout] = useState<ScheduledWorkout | null>(null);
   const [historyWorkout, setHistoryWorkout] = useState<ScheduledWorkout | null>(null);
   const [historyCompletedSets, setHistoryCompletedSets] = useState<CompletedSet[]>([]);
@@ -93,7 +95,7 @@ export function SchedulePage() {
         <PageHeader 
           title="Schedule" 
           action={
-            <Button onClick={() => setShowCycleWizard(true)} size="sm">
+            <Button onClick={() => setShowCycleTypeSelector(true)} size="sm">
               <Plus className="w-4 h-4 mr-1" />
               Create Cycle
             </Button>
@@ -105,12 +107,31 @@ export function SchedulePage() {
             title="No active cycle"
             description="Create a training cycle to see your workout queue."
             action={
-              <Button onClick={() => setShowCycleWizard(true)}>
+              <Button onClick={() => setShowCycleTypeSelector(true)}>
                 Create Cycle
               </Button>
             }
           />
         </div>
+
+        {/* Cycle Type Selector Modal */}
+        <Modal
+          isOpen={showCycleTypeSelector}
+          onClose={() => setShowCycleTypeSelector(false)}
+          title="Create New Cycle"
+        >
+          <CycleTypeSelector
+            onSelectTraining={() => {
+              setShowCycleTypeSelector(false);
+              setShowCycleWizard(true);
+            }}
+            onSelectMaxTesting={() => {
+              setShowCycleTypeSelector(false);
+              setShowMaxTestingWizard(true);
+            }}
+            onCancel={() => setShowCycleTypeSelector(false)}
+          />
+        </Modal>
 
         {/* Cycle Wizard Modal */}
         <Modal
@@ -126,6 +147,14 @@ export function SchedulePage() {
             />
           </div>
         </Modal>
+
+        {/* Max Testing Wizard */}
+        {showMaxTestingWizard && (
+          <MaxTestingWizard
+            onComplete={() => setShowMaxTestingWizard(false)}
+            onCancel={() => setShowMaxTestingWizard(false)}
+          />
+        )}
       </>
     );
   }
@@ -135,18 +164,31 @@ export function SchedulePage() {
       <PageHeader 
         title="Schedule" 
         subtitle={`${activeCycle.name} • ${passedWorkouts.length}/${allWorkouts?.length || 0} done`}
-        action={
+      />
+
+      <div className="px-4 py-4 space-y-6">
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button 
+            variant="primary"
+            size="sm"
+            onClick={() => setShowCycleTypeSelector(true)}
+            className="flex-1"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Create New Cycle
+          </Button>
           <Button 
             variant="secondary" 
             size="sm"
             onClick={() => setShowCycleWizard(true)}
+            className="flex-1"
           >
+            <Edit2 className="w-4 h-4 mr-1" />
             Edit Cycle
           </Button>
-        }
-      />
+        </div>
 
-      <div className="px-4 py-4 space-y-6">
         {/* Cycle Progress */}
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
@@ -308,7 +350,7 @@ export function SchedulePage() {
               You've finished all {passedWorkouts.length} workouts
               {skippedWorkouts.length > 0 && ` (${doneWorkouts.length} completed, ${skippedWorkouts.length} skipped)`}.
             </p>
-            <Button onClick={() => setShowCycleWizard(true)}>
+            <Button onClick={() => setShowCycleTypeSelector(true)}>
               Start New Cycle
             </Button>
           </Card>
@@ -486,6 +528,33 @@ export function SchedulePage() {
           />
         </div>
       </Modal>
+
+      {/* Cycle Type Selector Modal */}
+      <Modal
+        isOpen={showCycleTypeSelector}
+        onClose={() => setShowCycleTypeSelector(false)}
+        title="Create New Cycle"
+      >
+        <CycleTypeSelector
+          onSelectTraining={() => {
+            setShowCycleTypeSelector(false);
+            setShowCycleWizard(true);
+          }}
+          onSelectMaxTesting={() => {
+            setShowCycleTypeSelector(false);
+            setShowMaxTestingWizard(true);
+          }}
+          onCancel={() => setShowCycleTypeSelector(false)}
+        />
+      </Modal>
+
+      {/* Max Testing Wizard */}
+      {showMaxTestingWizard && (
+        <MaxTestingWizard
+          onComplete={() => setShowMaxTestingWizard(false)}
+          onCancel={() => setShowMaxTestingWizard(false)}
+        />
+      )}
     </>
   );
 }
