@@ -169,8 +169,14 @@ export function SettingsPage() {
   const handleClearData = async () => {
     setIsClearing(true);
     try {
-      await db.delete();
-      await db.open();
+      // Clear all tables instead of deleting database (which can cause issues)
+      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+        await db.exercises.clear();
+        await db.maxRecords.clear();
+        await db.completedSets.clear();
+        await db.cycles.clear();
+        await db.scheduledWorkouts.clear();
+      });
       setShowClearConfirm(false);
       setMessage({ type: 'success', text: 'All data cleared.' });
     } catch (error) {
@@ -240,9 +246,6 @@ export function SettingsPage() {
                     <Button variant="ghost" size="sm" onClick={() => setShowChangePassword(true)} className="text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">
                       <Key className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setShowDeleteAccountConfirm(true)} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                      <UserX className="w-4 h-4" />
-                    </Button>
                     <Button variant="ghost" size="sm" onClick={handleSignOut}>
                       <LogOut className="w-4 h-4" />
                     </Button>
@@ -282,6 +285,16 @@ export function SettingsPage() {
                     {syncError}
                   </p>
                 )}
+                
+                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowDeleteAccountConfirm(true)}
+                    className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  >
+                    <UserX className="w-4 h-4" />
+                    Delete account and all data
+                  </button>
+                </div>
               </>
             ) : (
               <div className="space-y-2">
@@ -515,7 +528,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v0.10.4
+              Ascend v0.10.6
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

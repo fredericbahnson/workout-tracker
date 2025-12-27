@@ -135,9 +135,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.from('cycle_groups').delete().eq('user_id', userId);
       await supabase.from('cycles').delete().eq('user_id', userId);
       
-      // Clear local IndexedDB
+      // Clear local IndexedDB tables (don't delete database - that closes it permanently)
       const { db } = await import('../data/db');
-      await db.delete();
+      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+        await db.exercises.clear();
+        await db.maxRecords.clear();
+        await db.completedSets.clear();
+        await db.cycles.clear();
+        await db.scheduledWorkouts.clear();
+      });
       
       // Clear localStorage
       localStorage.clear();
