@@ -244,32 +244,59 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
       }
       const numberOfDays = Math.max(1, maxExercisesInType);
 
-      // Distribute exercises across days (one per type per day)
-      // Day 1 gets first exercise of each type, Day 2 gets second, etc.
-      const dayExercises: ExerciseToTest[][] = [];
-      for (let day = 0; day < numberOfDays; day++) {
-        dayExercises.push([]);
+      // Create day buckets with tracking of which types are already assigned
+      interface DayBucket {
+        exercises: ExerciseToTest[];
+        typesUsed: Set<string>;
+      }
+      const dayBuckets: DayBucket[] = [];
+      for (let i = 0; i < numberOfDays; i++) {
+        dayBuckets.push({ exercises: [], typesUsed: new Set() });
       }
 
-      for (const [_type, exercises] of exercisesByType) {
-        exercises.forEach((ex, index) => {
-          dayExercises[index].push(ex);
-        });
+      // Sort types by count descending (distribute largest groups first for better balance)
+      const sortedTypes = [...exercisesByType.entries()]
+        .sort((a, b) => b[1].length - a[1].length);
+
+      // Distribute exercises: for each exercise, find the day with fewest exercises
+      // that doesn't already have this type
+      for (const [type, exercises] of sortedTypes) {
+        for (const ex of exercises) {
+          // Find the day with fewest exercises that doesn't have this type yet
+          let bestDay = -1;
+          let minCount = Infinity;
+          
+          for (let d = 0; d < dayBuckets.length; d++) {
+            if (!dayBuckets[d].typesUsed.has(type) && dayBuckets[d].exercises.length < minCount) {
+              bestDay = d;
+              minCount = dayBuckets[d].exercises.length;
+            }
+          }
+          
+          if (bestDay >= 0) {
+            dayBuckets[bestDay].exercises.push(ex);
+            dayBuckets[bestDay].typesUsed.add(type);
+          }
+        }
       }
+
+      // Convert to final format, filtering out empty days
+      const dayExercises = dayBuckets
+        .map(d => d.exercises)
+        .filter(exercises => exercises.length > 0);
 
       // Create groups (one per day)
       const groups: Group[] = [];
       const groupIds: string[] = [];
 
-      for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+      for (let dayIndex = 0; dayIndex < dayExercises.length; dayIndex++) {
         const dayEx = dayExercises[dayIndex];
-        if (dayEx.length === 0) continue;
 
         const groupId = generateId();
         groupIds.push(groupId);
         
         // Create descriptive name based on day number
-        const dayName = numberOfDays === 1 
+        const dayName = dayExercises.length === 1 
           ? 'Max Test' 
           : `Max Test Day ${dayIndex + 1}`;
         
