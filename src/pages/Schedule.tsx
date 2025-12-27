@@ -14,6 +14,7 @@ export function SchedulePage() {
   const navigate = useNavigate();
   const { defaults } = useAppStore();
   const [showCycleWizard, setShowCycleWizard] = useState(false);
+  const [isEditingCycle, setIsEditingCycle] = useState(false);  // true = edit existing, false = create new
   const [showCycleTypeSelector, setShowCycleTypeSelector] = useState(false);
   const [showMaxTestingWizard, setShowMaxTestingWizard] = useState(false);
   const [previewWorkout, setPreviewWorkout] = useState<ScheduledWorkout | null>(null);
@@ -123,6 +124,7 @@ export function SchedulePage() {
           <CycleTypeSelector
             onSelectTraining={() => {
               setShowCycleTypeSelector(false);
+              setIsEditingCycle(false);
               setShowCycleWizard(true);
             }}
             onSelectMaxTesting={() => {
@@ -181,7 +183,10 @@ export function SchedulePage() {
           <Button 
             variant="secondary" 
             size="sm"
-            onClick={() => setShowCycleWizard(true)}
+            onClick={() => {
+              setIsEditingCycle(true);
+              setShowCycleWizard(true);
+            }}
             className="flex-1"
           >
             <Edit2 className="w-4 h-4 mr-1" />
@@ -517,12 +522,12 @@ export function SchedulePage() {
       <Modal
         isOpen={showCycleWizard}
         onClose={() => setShowCycleWizard(false)}
-        title={activeCycle ? "Edit Training Cycle" : "Create Training Cycle"}
+        title={isEditingCycle ? "Edit Training Cycle" : "Create Training Cycle"}
         size="full"
       >
         <div className="h-[80vh]">
           <CycleWizard
-            editCycle={activeCycle}
+            editCycle={isEditingCycle ? activeCycle : undefined}
             onComplete={() => setShowCycleWizard(false)}
             onCancel={() => setShowCycleWizard(false)}
           />
@@ -538,6 +543,7 @@ export function SchedulePage() {
         <CycleTypeSelector
           onSelectTraining={() => {
             setShowCycleTypeSelector(false);
+            setIsEditingCycle(false);
             setShowCycleWizard(true);
           }}
           onSelectMaxTesting={() => {
