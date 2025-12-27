@@ -100,6 +100,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: new Error('Supabase not configured') };
     }
 
+    // Clear local database before signing in to prevent data leakage between accounts
+    try {
+      const { db } = await import('../data/db');
+      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+        await db.exercises.clear();
+        await db.maxRecords.clear();
+        await db.completedSets.clear();
+        await db.cycles.clear();
+        await db.scheduledWorkouts.clear();
+      });
+    } catch (e) {
+      console.error('Failed to clear local database on signin:', e);
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -110,6 +124,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     if (!isConfigured) return;
+    
+    // Clear local IndexedDB tables before signing out
+    try {
+      const { db } = await import('../data/db');
+      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+        await db.exercises.clear();
+        await db.maxRecords.clear();
+        await db.completedSets.clear();
+        await db.cycles.clear();
+        await db.scheduledWorkouts.clear();
+      });
+    } catch (e) {
+      console.error('Failed to clear local database on signout:', e);
+    }
     
     await supabase.auth.signOut();
     setUser(null);

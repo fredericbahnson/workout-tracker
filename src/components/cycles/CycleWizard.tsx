@@ -61,7 +61,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
     return today.toISOString().split('T')[0];
   });
   const [numberOfWeeks, setNumberOfWeeks] = useState(editCycle?.numberOfWeeks || 4);
-  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(editCycle?.workoutDaysPerWeek || 3);
+  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(editCycle?.workoutDaysPerWeek || 5);
   const [groups, setGroups] = useState<Group[]>(editCycle?.groups || []);
   const [weeklySetGoals, setWeeklySetGoals] = useState<Record<ExerciseType, number>>(() => 
     editCycle?.weeklySetGoals || { ...defaults.weeklySetGoals }
@@ -133,6 +133,12 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
     }
     // Use default naming convention
     setName(getDefaultCycleName());
+    // Set default training cycle parameters
+    setNumberOfWeeks(4);
+    setWorkoutDaysPerWeek(5);
+    setRfemRotation([4, 3, 2]);
+    setWeeklySetGoals({ ...defaults.weeklySetGoals });
+    setConditioningWeeklyRepIncrement(defaults.conditioningWeeklyIncrement);
     setCurrentStep('basics');
   };
 
@@ -149,6 +155,54 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
       setGroupRotation(defaultGroups.map(g => g.id));
     }
   }, [exercises, currentStep]);
+
+  // Auto-clone the most recent training cycle if available (and not editing)
+  useEffect(() => {
+    if (editCycle || currentStep !== 'start' || !allCycles) return;
+    
+    // Get most recent training cycle
+    const trainingCycles = allCycles
+      .filter(c => c.cycleType !== 'max_testing')
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    
+    if (trainingCycles.length > 0) {
+      const sourceCycle = trainingCycles[0];
+      
+      // Clone groups with new IDs
+      const groupIdMap = new Map<string, string>();
+      const clonedGroups: Group[] = sourceCycle.groups.map(g => {
+        const newId = generateId();
+        groupIdMap.set(g.id, newId);
+        return {
+          id: newId,
+          name: g.name,
+          exerciseAssignments: g.exerciseAssignments.map(a => ({ ...a }))
+        };
+      });
+      
+      // Update group rotation to use new IDs
+      const clonedGroupRotation = sourceCycle.groupRotation.map(
+        oldId => groupIdMap.get(oldId) || oldId
+      );
+      
+      // Count completed training cycles for naming
+      const completedCount = allCycles.filter(
+        c => c.cycleType !== 'max_testing' && c.status === 'completed'
+      ).length;
+      
+      setGroups(clonedGroups);
+      setGroupRotation(clonedGroupRotation);
+      setWeeklySetGoals({ ...sourceCycle.weeklySetGoals });
+      setRfemRotation([...sourceCycle.rfemRotation]);
+      setNumberOfWeeks(sourceCycle.numberOfWeeks);
+      setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
+      setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
+      setName(`Workout Cycle ${completedCount + 1}`);
+      
+      // Skip start step
+      setCurrentStep('basics');
+    }
+  }, [allCycles, editCycle, currentStep]);
 
   const exerciseMap = new Map(exercises?.map(e => [e.id, e]) || []);
 
