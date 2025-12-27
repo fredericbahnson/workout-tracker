@@ -227,62 +227,97 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
         return;
       }
 
-      // Group exercises by their original group for multi-day testing
-      // or put all in one group for single day
-      const groupMap = new Map<string, ExerciseToTest[]>();
+      // Group exercises by TYPE (push, pull, legs, etc.)
+      const exercisesByType = new Map<string, ExerciseToTest[]>();
       for (const ex of standardExercises) {
-        const key = ex.groupName;
-        if (!groupMap.has(key)) {
-          groupMap.set(key, []);
+        const type = ex.exerciseType;
+        if (!exercisesByType.has(type)) {
+          exercisesByType.set(type, []);
         }
-        groupMap.get(key)!.push(ex);
+        exercisesByType.get(type)!.push(ex);
       }
 
+      // Determine number of days needed = max exercises in any single type
+      let maxExercisesInType = 0;
+      for (const exercises of exercisesByType.values()) {
+        maxExercisesInType = Math.max(maxExercisesInType, exercises.length);
+      }
+      const numberOfDays = Math.max(1, maxExercisesInType);
+
+      // Distribute exercises across days (one per type per day)
+      // Day 1 gets first exercise of each type, Day 2 gets second, etc.
+      const dayExercises: ExerciseToTest[][] = [];
+      for (let day = 0; day < numberOfDays; day++) {
+        dayExercises.push([]);
+      }
+
+      for (const [_type, exercises] of exercisesByType) {
+        exercises.forEach((ex, index) => {
+          dayExercises[index].push(ex);
+        });
+      }
+
+      // Create groups (one per day)
       const groups: Group[] = [];
       const groupIds: string[] = [];
 
-      // Create groups
-      for (const [groupName, groupExercises] of groupMap) {
+      for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+        const dayEx = dayExercises[dayIndex];
+        if (dayEx.length === 0) continue;
+
         const groupId = generateId();
         groupIds.push(groupId);
         
+        // Create descriptive name based on day number
+        const dayName = numberOfDays === 1 
+          ? 'Max Test' 
+          : `Max Test Day ${dayIndex + 1}`;
+        
         groups.push({
           id: groupId,
-          name: `Max Test: ${groupName}`,
-          exerciseAssignments: groupExercises.map(ex => ({
+          name: dayName,
+          exerciseAssignments: dayEx.map(ex => ({
             exerciseId: ex.exerciseId
           }))
         });
       }
 
-      const numberOfDays = groups.length;
+      const actualNumberOfDays = groups.length;
+      if (actualNumberOfDays === 0) {
+        setError('No exercises to schedule.');
+        setIsCreating(false);
+        return;
+      }
+
       const startDate = new Date();
       startDate.setHours(0, 0, 0, 0);
 
-      // Create the max testing cycle
-      const cycle: Cycle = {
-        id: generateId(),
+      // Deactivate any existing active cycle first
+      const existingActive = await CycleRepo.getActive();
+      if (existingActive) {
+        await CycleRepo.update(existingActive.id, { status: 'completed' });
+      }
+
+      // Create the max testing cycle - use returned cycle which has the actual DB ID
+      const savedCycle = await CycleRepo.create({
         name: 'Max Testing',
         cycleType: 'max_testing',
         previousCycleId: completedCycle?.id,
         startDate,
         numberOfWeeks: 1,
-        workoutDaysPerWeek: numberOfDays,
+        workoutDaysPerWeek: actualNumberOfDays,
         weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
         groups,
         groupRotation: groupIds,
         rfemRotation: [0], // RFEM 0 = max testing
         conditioningWeeklyRepIncrement: 0,
         status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      });
 
-      await CycleRepo.create(cycle);
-      await syncItem('cycles', cycle);
+      await syncItem('cycles', savedCycle);
 
-      // Create scheduled workouts - one per group
-      for (let dayIndex = 0; dayIndex < numberOfDays; dayIndex++) {
+      // Create scheduled workouts - one per day/group
+      for (let dayIndex = 0; dayIndex < actualNumberOfDays; dayIndex++) {
         const group = groups[dayIndex];
         const scheduledSets: ScheduledSet[] = [];
         let setNumber = 1;
@@ -320,7 +355,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
         const workout: ScheduledWorkout = {
           id: generateId(),
-          cycleId: cycle.id,
+          cycleId: savedCycle.id,  // Use the saved cycle's actual ID
           sequenceNumber: dayIndex + 1,
           weekNumber: 1,
           dayInWeek: dayIndex + 1,
@@ -360,6 +395,22 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
   const includedStandard = exercisesToTest.filter(e => e.included && !e.isConditioning);
   const includedConditioning = exercisesToTest.filter(e => e.included && e.isConditioning);
+
+  // Calculate number of days needed (max exercises in any single type)
+  const calculateNumberOfDays = () => {
+    const exercisesByType = new Map<string, number>();
+    for (const ex of includedStandard) {
+      const count = (exercisesByType.get(ex.exerciseType) || 0) + 1;
+      exercisesByType.set(ex.exerciseType, count);
+    }
+    let maxInType = 0;
+    for (const count of exercisesByType.values()) {
+      maxInType = Math.max(maxInType, count);
+    }
+    return Math.max(1, maxInType);
+  };
+
+  const numberOfDays = calculateNumberOfDays();
 
   return (
     <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] z-50 flex flex-col safe-area-top safe-area-bottom">
@@ -538,7 +589,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
               <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
               <p className="text-sm text-green-700 dark:text-green-300">
-                Ready to create your max testing cycle. You'll test {includedStandard.length} exercise{includedStandard.length !== 1 ? 's' : ''} over {new Set(includedStandard.map(e => e.groupName)).size} day{new Set(includedStandard.map(e => e.groupName)).size !== 1 ? 's' : ''}.
+                Ready to create your max testing cycle. You'll test {includedStandard.length} exercise{includedStandard.length !== 1 ? 's' : ''} over {numberOfDays} day{numberOfDays !== 1 ? 's' : ''}.
               </p>
             </div>
 
