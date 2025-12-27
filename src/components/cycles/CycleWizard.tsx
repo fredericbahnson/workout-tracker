@@ -113,8 +113,8 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
     setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
     setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
     
-    // Don't copy name - suggest a new one
-    setName(`${sourceCycle.name} (Copy)`);
+    // Use default naming convention
+    setName(getDefaultCycleName());
     
     // Move to basics step
     setCurrentStep('basics');
@@ -131,6 +131,8 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
       setGroups(defaultGroups);
       setGroupRotation(defaultGroups.map(g => g.id));
     }
+    // Use default naming convention
+    setName(getDefaultCycleName());
     setCurrentStep('basics');
   };
 
@@ -357,8 +359,18 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
   // Get steps to display (hide 'start' step from progress indicator)
   const displaySteps = editCycle ? STEPS.filter(s => s.key !== 'start') : STEPS.filter(s => s.key !== 'start');
   
-  // Get cycles available for cloning (all except the current one being edited)
-  const cloneableCycles = allCycles?.filter(c => c.id !== editCycle?.id) || [];
+  // Get cycles available for cloning (training cycles only, excluding current one being edited)
+  const cloneableCycles = allCycles
+    ?.filter(c => c.id !== editCycle?.id && c.cycleType !== 'max_testing')
+    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()) || [];
+  
+  // Count completed training cycles for naming
+  const completedTrainingCycleCount = allCycles
+    ?.filter(c => c.cycleType !== 'max_testing' && c.status === 'completed')
+    .length || 0;
+  
+  // Generate default name for new cycle
+  const getDefaultCycleName = () => `Workout Cycle ${completedTrainingCycleCount + 1}`;
 
   return (
     <div className="flex flex-col h-full">
