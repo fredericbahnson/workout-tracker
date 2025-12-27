@@ -506,8 +506,8 @@ export function TodayPage() {
         {/* Cycle Progress or Cycle Complete */}
         {activeCycle && cycleProgress && (
           <>
-            {/* Cycle Complete - show when all workouts are done */}
-            {cycleProgress.passed === cycleProgress.total && cycleProgress.total > 0 && !isShowingCompletedWorkout ? (
+            {/* Cycle Complete - show when all workouts are done (including when viewing the last completed workout) */}
+            {cycleProgress.passed === cycleProgress.total && cycleProgress.total > 0 ? (
               <Card className="p-4 text-center">
                 <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                   🎉 Cycle Complete!
