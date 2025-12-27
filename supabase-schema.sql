@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS cycles (
   id UUID PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
+  cycle_type TEXT DEFAULT 'training',
+  previous_cycle_id UUID,
   start_date TIMESTAMPTZ NOT NULL,
   number_of_weeks INTEGER NOT NULL,
   workout_days_per_week INTEGER NOT NULL,

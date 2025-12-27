@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+    @apply antialiased;
+  }
+  
+  /* Industry-standard dark mode: #121212 background */
+  .dark body {
+    background-color: #121212;
+    @apply text-gray-100;
+  }
+
+  /* Safe area for iOS devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Prevent overscroll on iOS */
+  html, body {
+    overscroll-behavior: none;
+  }
+
+  /* Custom scrollbar for dark mode */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: #3a3a4a;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #4a4a5a;
+  }
+}
+
+/* Component utilities */
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Dark surface colors for cards/elevated elements */
+  .dark .dark-surface {
+    background-color: #1A1A2E;
+  }
+  
+  .dark .dark-elevated {
+    background-color: #252538;
+  }
+}
+
+/* PWA standalone mode adjustments */
+@media (display-mode: standalone) {
+  body {
+    /* Prevent pull-to-refresh on iOS */
+    overscroll-behavior-y: contain;
+  }
+  
+  /* Ensure safe area has matching background */
+  html {
+    background-color: #f9fafb; /* gray-50 */
+  }
+  
+  .dark html,
+  html.dark {
+    background-color: #121212; /* Industry-standard dark */
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    html:not(.light) {
+      background-color: #121212;
+    }
+  }
+}

@@ -1,0 +1,329 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Edit, Trash2, TrendingUp, History, AlertTriangle } from 'lucide-react';
+import { ExerciseRepo, MaxRecordRepo, CompletedSetRepo, CycleRepo } from '../data/repositories';
+import { useAppStore } from '../stores/appStore';
+import { PageHeader } from '../components/layout';
+import { Button, Card, CardContent, Badge, Modal, EmptyState } from '../components/ui';
+import { ExerciseForm, MaxRecordForm } from '../components/exercises';
+import { EXERCISE_TYPE_LABELS, type ExerciseFormData } from '../types';
+
+export function ExerciseDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { repDisplayMode } = useAppStore();
+  
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showMaxForm, setShowMaxForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isRecordingMax, setIsRecordingMax] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Live queries
+  const exercise = useLiveQuery(() => 
+    id ? ExerciseRepo.getById(id) : undefined, 
+    [id]
+  );
+  
+  const maxRecords = useLiveQuery(() => 
+    id ? MaxRecordRepo.getAllForExercise(id) : [], 
+    [id]
+  );
+
+  const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
+
+  // Get stats based on display mode
+  const stats = useLiveQuery(async () => {
+    if (!id) return { totalSets: 0, totalReps: 0 };
+    
+    if (repDisplayMode === 'week') {
+      // This week
+      const today = new Date();
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 7);
+      return CompletedSetRepo.getStatsForDateRange(id, startOfWeek, endOfWeek);
+    } else if (repDisplayMode === 'cycle' && activeCycle) {
+      // This cycle
+      return CompletedSetRepo.getStatsForCycle(id, new Date(activeCycle.startDate));
+    } else {
+      // All time
+      const allStats = await CompletedSetRepo.getStats(id);
+      return { totalSets: allStats.totalSets, totalReps: allStats.totalReps };
+    }
+  }, [id, repDisplayMode, activeCycle?.id]);
+
+  const latestMax = maxRecords?.[0];
+
+  if (!exercise) {
+    return (
+      <>
+        <PageHeader title="Exercise" backTo="/exercises" />
+        <div className="px-4 py-8">
+          <EmptyState
+            icon={AlertTriangle}
+            title="Exercise not found"
+            description="This exercise may have been deleted."
+            action={
+              <Button onClick={() => navigate('/exercises')}>
+                Back to Exercises
+              </Button>
+            }
+          />
+        </div>
+      </>
+    );
+  }
+
+  const handleUpdate = async (data: ExerciseFormData) => {
+    if (!id) return;
+    setIsUpdating(true);
+    try {
+      await ExerciseRepo.update(id, data);
+      setShowEditForm(false);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleRecordMax = async (maxReps: number, notes: string, weight?: number) => {
+    if (!id) return;
+    setIsRecordingMax(true);
+    try {
+      await MaxRecordRepo.create(id, maxReps, notes, weight);
+      setShowMaxForm(false);
+    } finally {
+      setIsRecordingMax(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      await ExerciseRepo.delete(id);
+      await MaxRecordRepo.deleteAllForExercise(id);
+      navigate('/exercises');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <PageHeader 
+        title={exercise.name}
+        backTo="/exercises"
+        action={
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowEditForm(true)}>
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="px-4 py-4 space-y-4">
+        {/* Exercise Info Card */}
+        <Card>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant={exercise.type}>
+                {EXERCISE_TYPE_LABELS[exercise.type]}
+              </Badge>
+              {exercise.mode === 'conditioning' && (
+                <Badge variant="outline">Conditioning</Badge>
+              )}
+              {exercise.weightEnabled && (
+                <Badge variant="outline" className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
+                  +Weight
+                </Badge>
+              )}
+            </div>
+            
+            {exercise.notes && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {exercise.notes}
+              </p>
+            )}
+
+            {exercise.customParameters.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">
+                  Custom Parameters
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {exercise.customParameters.map(param => (
+                    <span 
+                      key={param.name}
+                      className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded"
+                    >
+                      {param.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stats Card */}
+        <Card>
+          <CardContent>
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">
+              {repDisplayMode === 'week' ? 'This Week' : 
+               repDisplayMode === 'cycle' ? 'This Cycle' : 'All Time'}
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {latestMax?.maxReps || '—'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Current Max
+                  {latestMax?.weight !== undefined && latestMax.weight > 0 && (
+                    <span className="block text-purple-600 dark:text-purple-400">
+                      +{latestMax.weight} lbs
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {stats?.totalSets || 0}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Sets</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {stats?.totalReps || 0}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Reps</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Record Max Button */}
+        {exercise.mode === 'standard' && (
+          <Button onClick={() => setShowMaxForm(true)} className="w-full">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Record New Max
+          </Button>
+        )}
+
+        {/* Max History */}
+        {maxRecords && maxRecords.length > 0 && (
+          <div>
+            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Max History
+            </h2>
+            <div className="space-y-2">
+              {maxRecords.map((record, index) => (
+                <Card key={record.id} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {record.maxReps} reps
+                      </span>
+                      {record.weight !== undefined && record.weight > 0 && (
+                        <span className="ml-2 text-sm text-purple-600 dark:text-purple-400">
+                          +{record.weight} lbs
+                        </span>
+                      )}
+                      {index === 0 && (
+                        <Badge className="ml-2 text-[10px]" variant="outline">Current</Badge>
+                      )}
+                      {record.notes && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                          {record.notes}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(record.recordedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={showEditForm}
+        onClose={() => setShowEditForm(false)}
+        title="Edit Exercise"
+        size="lg"
+      >
+        <ExerciseForm
+          initialData={exercise}
+          onSubmit={handleUpdate}
+          onCancel={() => setShowEditForm(false)}
+          isLoading={isUpdating}
+        />
+      </Modal>
+
+      {/* Record Max Modal */}
+      <Modal
+        isOpen={showMaxForm}
+        onClose={() => setShowMaxForm(false)}
+        title="Record New Max"
+      >
+        <MaxRecordForm
+          currentMax={latestMax?.maxReps}
+          currentMaxWeight={latestMax?.weight}
+          weightEnabled={exercise.weightEnabled}
+          defaultWeight={exercise.defaultWeight}
+          onSubmit={handleRecordMax}
+          onCancel={() => setShowMaxForm(false)}
+          isLoading={isRecordingMax}
+        />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Exercise"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-400">
+            Are you sure you want to delete <strong>{exercise.name}</strong>? 
+            This will also delete all max records for this exercise.
+          </p>
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            Note: Historical completed sets will be preserved but may affect reporting.
+          </p>
+          <div className="flex gap-3">
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowDeleteConfirm(false)} 
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="danger" 
+              onClick={handleDelete} 
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
