@@ -194,33 +194,50 @@ export function SchedulePage() {
           </Button>
         </div>
 
-        {/* Cycle Progress */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Cycle Progress
-            </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Week {Math.min(
-                Math.ceil((passedWorkouts.length + 1) / activeCycle.workoutDaysPerWeek),
-                activeCycle.numberOfWeeks
-              )} of {activeCycle.numberOfWeeks}
-            </span>
-          </div>
-          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary-500 rounded-full transition-all"
-              style={{ width: `${((passedWorkouts.length) / (allWorkouts?.length || 1)) * 100}%` }}
-            />
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-            <span>
-              {passedWorkouts.length} / {allWorkouts?.length || 0} passed
-              {skippedWorkouts.length > 0 && ` (${skippedWorkouts.length} skipped)`}
-            </span>
-            <span>{pendingWorkouts.length} remaining</span>
-          </div>
-        </Card>
+        {/* Cycle Progress or Cycle Complete */}
+        {pendingWorkouts.length === 0 && passedWorkouts.length > 0 ? (
+          /* Cycle Complete */
+          <Card className="p-6 text-center">
+            <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
+              🎉 Cycle Complete!
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              You've finished all {passedWorkouts.length} workouts
+              {skippedWorkouts.length > 0 && ` (${doneWorkouts.length} completed, ${skippedWorkouts.length} skipped)`}.
+            </p>
+            <Button onClick={() => setShowCycleTypeSelector(true)}>
+              Start New Cycle
+            </Button>
+          </Card>
+        ) : (
+          /* Cycle Progress */
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Cycle Progress
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Week {Math.min(
+                  Math.ceil((passedWorkouts.length + 1) / activeCycle.workoutDaysPerWeek),
+                  activeCycle.numberOfWeeks
+                )} of {activeCycle.numberOfWeeks}
+              </span>
+            </div>
+            <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary-500 rounded-full transition-all"
+                style={{ width: `${((passedWorkouts.length) / (allWorkouts?.length || 1)) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                {passedWorkouts.length} / {allWorkouts?.length || 0} passed
+                {skippedWorkouts.length > 0 && ` (${skippedWorkouts.length} skipped)`}
+              </span>
+              <span>{pendingWorkouts.length} remaining</span>
+            </div>
+          </Card>
+        )}
 
         {/* Upcoming Workouts */}
         {pendingWorkouts.length > 0 && (
@@ -343,22 +360,6 @@ export function SchedulePage() {
               })}
             </div>
           </div>
-        )}
-
-        {/* All done */}
-        {pendingWorkouts.length === 0 && passedWorkouts.length > 0 && (
-          <Card className="p-6 text-center">
-            <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
-              🎉 Cycle Complete!
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              You've finished all {passedWorkouts.length} workouts
-              {skippedWorkouts.length > 0 && ` (${doneWorkouts.length} completed, ${skippedWorkouts.length} skipped)`}.
-            </p>
-            <Button onClick={() => setShowCycleTypeSelector(true)}>
-              Start New Cycle
-            </Button>
-          </Card>
         )}
       </div>
 

@@ -503,16 +503,38 @@ export function TodayPage() {
           </Card>
         )}
 
-        {/* Compact Cycle Progress - only show when there's an active workout */}
-        {activeCycle && cycleProgress && displayWorkout && !isShowingCompletedWorkout && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">
-              {activeCycle.name}
-            </span>
-            <span className="text-gray-500 dark:text-gray-400">
-              Workout {cycleProgress.passed + 1} of {cycleProgress.total}
-            </span>
-          </div>
+        {/* Cycle Progress or Cycle Complete */}
+        {activeCycle && cycleProgress && (
+          <>
+            {/* Cycle Complete - show when all workouts are done */}
+            {cycleProgress.passed === cycleProgress.total && cycleProgress.total > 0 && !isShowingCompletedWorkout ? (
+              <Card className="p-4 text-center">
+                <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  🎉 Cycle Complete!
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  You've completed {activeCycle.name}
+                  {cycleProgress.skipped > 0 
+                    ? ` (${cycleProgress.completed} completed, ${cycleProgress.skipped} skipped)`
+                    : ` — all ${cycleProgress.total} workouts done!`
+                  }
+                </p>
+                <Button onClick={() => setShowCycleTypeSelector(true)}>
+                  Start New Cycle
+                </Button>
+              </Card>
+            ) : displayWorkout && !isShowingCompletedWorkout ? (
+              /* Compact Cycle Progress - show when there's an active workout */
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  {activeCycle.name}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  Workout {cycleProgress.passed + 1} of {cycleProgress.total}
+                </span>
+              </div>
+            ) : null}
+          </>
         )}
 
         {/* Current/Completed Workout */}
@@ -713,25 +735,6 @@ export function TodayPage() {
                 )}
               </div>
             )}
-          </Card>
-        )}
-
-        {/* Cycle complete (only show when no pending workouts AND not showing a completed workout) */}
-        {activeCycle && !nextPendingWorkout && !isShowingCompletedWorkout && cycleProgress && cycleProgress.passed === cycleProgress.total && (
-          <Card className="p-4 text-center">
-            <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              🎉 Cycle Complete!
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              You've completed {activeCycle.name}
-              {cycleProgress.skipped > 0 
-                ? ` (${cycleProgress.completed} completed, ${cycleProgress.skipped} skipped)`
-                : ` — all ${cycleProgress.total} workouts done!`
-              }
-            </p>
-            <Button onClick={() => setShowCycleTypeSelector(true)}>
-              Start New Cycle
-            </Button>
           </Card>
         )}
 
