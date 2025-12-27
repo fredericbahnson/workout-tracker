@@ -123,19 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Delete user data from Supabase tables
-      const userId = user.id;
+      // Call the database function to delete the user account and all data
+      const { error: rpcError } = await supabase.rpc('delete_user_account');
       
-      // Delete in order to respect foreign key constraints
-      await supabase.from('completed_sets').delete().eq('user_id', userId);
-      await supabase.from('scheduled_sets').delete().eq('user_id', userId);
-      await supabase.from('scheduled_workouts').delete().eq('user_id', userId);
-      await supabase.from('max_records').delete().eq('user_id', userId);
-      await supabase.from('exercises').delete().eq('user_id', userId);
-      await supabase.from('cycle_groups').delete().eq('user_id', userId);
-      await supabase.from('cycles').delete().eq('user_id', userId);
+      if (rpcError) {
+        console.error('RPC error:', rpcError);
+        return { error: new Error(rpcError.message) };
+      }
       
-      // Clear local IndexedDB tables (don't delete database - that closes it permanently)
+      // Clear local IndexedDB tables
       const { db } = await import('../data/db');
       await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
         await db.exercises.clear();
@@ -148,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear localStorage
       localStorage.clear();
       
-      // Sign out
+      // Sign out (session is already invalid since user was deleted)
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);

@@ -69,6 +69,11 @@ To enable user accounts and cloud sync:
    
    This ensures email confirmation links redirect back to your app correctly.
 
+### Migrations
+
+If you already have the database set up and need to add new features:
+- `supabase-migration-delete-account.sql` - Adds the function for proper account deletion
+
 ## Install as App on Phone
 
 Once deployed to Vercel (or any HTTPS host):
