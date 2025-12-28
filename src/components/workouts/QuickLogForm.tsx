@@ -108,7 +108,7 @@ export function QuickLogForm({
         value={value}
         onChange={e => setValue(e.target.value)}
         placeholder={isTimeBased 
-          ? (isMaxTest ? "e.g., 45s, 1m30s" : "e.g., 30s, 1m") 
+          ? (isMaxTest ? "e.g., 0:45, 1:30" : "e.g., 0:30, 1:00") 
           : (isMaxTest ? "Enter your max" : "Enter reps")
         }
         required
@@ -116,7 +116,7 @@ export function QuickLogForm({
       />
       {isTimeBased && (
         <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-          Enter as seconds (45), or with units (45s, 1m, 1m30s, 1:30)
+          Enter as M:SS (1:30), seconds (90), or with units (90s, 1m30s)
         </p>
       )}
 

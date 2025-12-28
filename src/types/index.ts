@@ -158,15 +158,9 @@ export const EXERCISE_TYPE_COLORS: Record<ExerciseType, string> = {
 
 // Helper function to format time in seconds to display string
 export function formatTime(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}s`;
-  }
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  if (secs === 0) {
-    return `${mins}m`;
-  }
-  return `${mins}m ${secs}s`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 // Helper to parse time input (supports "30", "30s", "1m", "1m30s", "1:30")

@@ -210,7 +210,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
           label="Initial Max Time (optional)"
           value={initialMaxTime}
           onChange={e => setInitialMaxTime(e.target.value)}
-          placeholder="e.g., 45, 1m30s, 1:30"
+          placeholder="e.g., 0:45, 1:30"
         />
       )}
 
@@ -230,7 +230,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
           label="Starting Time"
           value={startingTime}
           onChange={e => setStartingTime(e.target.value)}
-          placeholder="e.g., 30, 45s, 1m"
+          placeholder="e.g., 0:30, 1:00"
         />
       )}
 

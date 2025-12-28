@@ -8,7 +8,7 @@ import { useAppStore } from '../stores/appStore';
 import { useSyncItem } from '../contexts/SyncContext';
 import { PageHeader } from '../components/layout';
 import { Button, Modal, EmptyState, Card, Badge, NumberInput } from '../components/ui';
-import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard } from '../components/workouts';
+import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard, ExerciseTimer } from '../components/workouts';
 import { ExerciseCard } from '../components/exercises';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
 import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
@@ -37,6 +37,7 @@ export function TodayPage() {
     workout: ScheduledWorkout;
     targetReps: number;
   } | null>(null);
+  const [showTimerMode, setShowTimerMode] = useState(false);
   const [isLogging, setIsLogging] = useState(false);
   
   // Cycle completion state
@@ -242,6 +243,13 @@ export function TodayPage() {
         ? (set.previousMaxReps || 0)
         : getTargetReps(set, displayWorkout);
       setSelectedScheduledSet({ set, workout: displayWorkout, targetReps });
+      
+      // Show timer for time-based exercises (except max tests, which need manual entry)
+      if (exercise.measurementType === 'time' && !set.isMaxTest) {
+        setShowTimerMode(true);
+      } else {
+        setShowTimerMode(false);
+      }
     }
   };
 
@@ -433,6 +441,7 @@ export function TodayPage() {
         }
         
         setSelectedScheduledSet(null);
+        setShowTimerMode(false);
       } else if (selectedExercise) {
         await CompletedSetRepo.create({
           exerciseId: selectedExercise.id,
@@ -869,19 +878,46 @@ export function TodayPage() {
       {/* Scheduled Set Log Modal */}
       <Modal
         isOpen={!!selectedScheduledSet}
-        onClose={() => setSelectedScheduledSet(null)}
-        title={selectedScheduledSet?.set.isMaxTest ? "Record Max" : "Complete Set"}
+        onClose={() => { setSelectedScheduledSet(null); setShowTimerMode(false); }}
+        title={
+          selectedScheduledSet?.set.isMaxTest 
+            ? "Record Max" 
+            : showTimerMode 
+              ? "Timed Hold" 
+              : "Complete Set"
+        }
       >
-        {selectedScheduledSet && (
-          <QuickLogForm
-            exercise={exerciseMap.get(selectedScheduledSet.set.exerciseId)!}
-            suggestedReps={selectedScheduledSet.targetReps}
-            isMaxTest={selectedScheduledSet.set.isMaxTest}
-            onSubmit={handleLogSet}
-            onCancel={() => setSelectedScheduledSet(null)}
-            isLoading={isLogging}
-          />
-        )}
+        {selectedScheduledSet && (() => {
+          const exercise = exerciseMap.get(selectedScheduledSet.set.exerciseId);
+          if (!exercise) return null;
+          
+          // Show timer for time-based exercises (non-max test)
+          if (showTimerMode && exercise.measurementType === 'time') {
+            return (
+              <ExerciseTimer
+                targetSeconds={selectedScheduledSet.targetReps}
+                exerciseName={exercise.name}
+                onComplete={(actualSeconds) => {
+                  handleLogSet(actualSeconds, '', {}, undefined);
+                }}
+                onCancel={() => { setSelectedScheduledSet(null); setShowTimerMode(false); }}
+                onSkipToLog={() => setShowTimerMode(false)}
+              />
+            );
+          }
+          
+          // Show form for manual entry
+          return (
+            <QuickLogForm
+              exercise={exercise}
+              suggestedReps={selectedScheduledSet.targetReps}
+              isMaxTest={selectedScheduledSet.set.isMaxTest}
+              onSubmit={handleLogSet}
+              onCancel={() => { setSelectedScheduledSet(null); setShowTimerMode(false); }}
+              isLoading={isLogging}
+            />
+          );
+        })()}
       </Modal>
 
       {/* Cycle Wizard Modal */}
