@@ -45,16 +45,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     handleEmailConfirmation();
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          // If offline or network error, try to use cached session
+          // Supabase stores session in localStorage
+          console.log('getSession error (may be offline):', error.message);
+          
+          // Still try to get the user from the cached session
+          // onAuthStateChange will handle restoring from localStorage
+        }
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        // Network error - still set loading to false
+        console.log('getSession failed (may be offline):', err);
+        setIsLoading(false);
+      });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth event:', event);
+        
+        // Handle token refresh errors gracefully when offline
+        if (event === 'TOKEN_REFRESHED' && !session && !navigator.onLine) {
+          console.log('Token refresh failed while offline - keeping existing session');
+          return; // Don't clear user when offline
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
@@ -103,12 +124,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear local database before signing in to prevent data leakage between accounts
     try {
       const { db } = await import('../data/db');
-      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
         await db.exercises.clear();
         await db.maxRecords.clear();
         await db.completedSets.clear();
         await db.cycles.clear();
         await db.scheduledWorkouts.clear();
+        await db.syncQueue.clear();
       });
     } catch (e) {
       console.error('Failed to clear local database on signin:', e);
@@ -128,12 +150,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear local IndexedDB tables before signing out
     try {
       const { db } = await import('../data/db');
-      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
         await db.exercises.clear();
         await db.maxRecords.clear();
         await db.completedSets.clear();
         await db.cycles.clear();
         await db.scheduledWorkouts.clear();
+        await db.syncQueue.clear();
       });
     } catch (e) {
       console.error('Failed to clear local database on signout:', e);
@@ -161,12 +184,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Clear local IndexedDB tables
       const { db } = await import('../data/db');
-      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
         await db.exercises.clear();
         await db.maxRecords.clear();
         await db.completedSets.clear();
         await db.cycles.clear();
         await db.scheduledWorkouts.clear();
+        await db.syncQueue.clear();
       });
       
       // Clear localStorage

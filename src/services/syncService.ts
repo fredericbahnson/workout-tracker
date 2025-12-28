@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../data/supabase';
-import { db } from '../data/db';
+import { db, generateId } from '../data/db';
 import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '../types';
 
 // Remote data types (from Supabase)
@@ -313,12 +313,19 @@ export const SyncService = {
   },
 
   // Sync a single item immediately (called after local writes)
+  // If offline, queues the operation for later
   async syncItem(
     table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
     item: unknown,
     userId: string
   ) {
-    if (!isSupabaseConfigured() || !this.isOnline()) return;
+    if (!isSupabaseConfigured()) return;
+    
+    // If offline, queue for later
+    if (!this.isOnline()) {
+      await this.queueOperation(table, 'upsert', item);
+      return;
+    }
 
     try {
       let remoteItem;
@@ -343,6 +350,10 @@ export const SyncService = {
       await supabase.from(table).upsert(remoteItem, { onConflict: 'id' });
     } catch (error) {
       console.error(`Error syncing ${table}:`, error);
+      // Queue for retry on network errors
+      if (this.isNetworkError(error)) {
+        await this.queueOperation(table, 'upsert', item);
+      }
     }
   },
 
@@ -352,7 +363,13 @@ export const SyncService = {
     id: string,
     userId: string
   ) {
-    if (!isSupabaseConfigured() || !this.isOnline()) return;
+    if (!isSupabaseConfigured()) return;
+    
+    // If offline, queue for later
+    if (!this.isOnline()) {
+      await this.queueOperation(table, 'delete', { id });
+      return;
+    }
 
     try {
       await supabase
@@ -362,7 +379,127 @@ export const SyncService = {
         .eq('user_id', userId);
     } catch (error) {
       console.error(`Error deleting ${table}:`, error);
+      // Queue for retry on network errors
+      if (this.isNetworkError(error)) {
+        await this.queueOperation(table, 'delete', { id });
+      }
     }
+  },
+
+  // Check if error is a network error
+  isNetworkError(error: unknown): boolean {
+    if (error instanceof Error) {
+      return error.message.includes('fetch') || 
+             error.message.includes('network') ||
+             error.message.includes('Failed to fetch') ||
+             error.name === 'TypeError';
+    }
+    return false;
+  },
+
+  // Queue an operation for later sync
+  async queueOperation(
+    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
+    operation: 'upsert' | 'delete',
+    item: unknown
+  ) {
+    const itemId = (item as { id: string }).id;
+    
+    // Check if already queued - update existing instead of duplicating
+    const existing = await db.syncQueue
+      .where(['table', 'itemId'])
+      .equals([table, itemId])
+      .first();
+    
+    if (existing) {
+      // Update existing queue item with latest data
+      await db.syncQueue.update(existing.id, {
+        data: item,
+        operation,
+        createdAt: new Date()
+      });
+    } else {
+      // Add new queue item
+      await db.syncQueue.add({
+        id: generateId(),
+        table,
+        operation,
+        itemId,
+        data: item,
+        createdAt: new Date(),
+        retryCount: 0
+      });
+    }
+    
+    console.log(`Queued ${operation} for ${table}:${itemId}`);
+  },
+
+  // Process queued operations (call when back online)
+  async processQueue(userId: string): Promise<{ processed: number; failed: number }> {
+    if (!isSupabaseConfigured() || !this.isOnline()) {
+      return { processed: 0, failed: 0 };
+    }
+
+    const queuedItems = await db.syncQueue.orderBy('createdAt').toArray();
+    let processed = 0;
+    let failed = 0;
+
+    for (const queueItem of queuedItems) {
+      try {
+        if (queueItem.operation === 'upsert' && queueItem.data) {
+          let remoteItem;
+          switch (queueItem.table) {
+            case 'exercises':
+              remoteItem = this.localToRemoteExercise(queueItem.data as Exercise, userId);
+              break;
+            case 'max_records':
+              remoteItem = this.localToRemoteMaxRecord(queueItem.data as MaxRecord, userId);
+              break;
+            case 'completed_sets':
+              remoteItem = this.localToRemoteCompletedSet(queueItem.data as CompletedSet, userId);
+              break;
+            case 'cycles':
+              remoteItem = this.localToRemoteCycle(queueItem.data as Cycle, userId);
+              break;
+            case 'scheduled_workouts':
+              remoteItem = this.localToRemoteScheduledWorkout(queueItem.data as ScheduledWorkout, userId);
+              break;
+          }
+          await supabase.from(queueItem.table).upsert(remoteItem, { onConflict: 'id' });
+        } else if (queueItem.operation === 'delete') {
+          await supabase
+            .from(queueItem.table)
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', queueItem.itemId)
+            .eq('user_id', userId);
+        }
+
+        // Successfully processed - remove from queue
+        await db.syncQueue.delete(queueItem.id);
+        processed++;
+      } catch (error) {
+        console.error(`Failed to process queue item ${queueItem.id}:`, error);
+        
+        // Increment retry count
+        const newRetryCount = queueItem.retryCount + 1;
+        if (newRetryCount >= 5) {
+          // Give up after 5 retries
+          await db.syncQueue.delete(queueItem.id);
+          console.error(`Giving up on queue item ${queueItem.id} after ${newRetryCount} retries`);
+        } else {
+          await db.syncQueue.update(queueItem.id, { retryCount: newRetryCount });
+        }
+        failed++;
+      }
+    }
+
+    console.log(`Queue processed: ${processed} successful, ${failed} failed`);
+    return { processed, failed };
+  },
+
+  // Get queue count (for UI display)
+  async getQueueCount(): Promise<number> {
+    return db.syncQueue.count();
   },
 
   // Conversion helpers: Remote (Supabase) -> Local (Dexie)

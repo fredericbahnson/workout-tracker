@@ -1,6 +1,17 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '../types';
 
+// Sync queue item for offline operations
+export interface SyncQueueItem {
+  id: string;
+  table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts';
+  operation: 'upsert' | 'delete';
+  itemId: string;
+  data?: unknown;
+  createdAt: Date;
+  retryCount: number;
+}
+
 // Database class
 class AscendDatabase extends Dexie {
   exercises!: EntityTable<Exercise, 'id'>;
@@ -8,6 +19,7 @@ class AscendDatabase extends Dexie {
   completedSets!: EntityTable<CompletedSet, 'id'>;
   cycles!: EntityTable<Cycle, 'id'>;
   scheduledWorkouts!: EntityTable<ScheduledWorkout, 'id'>;
+  syncQueue!: EntityTable<SyncQueueItem, 'id'>;
 
   constructor() {
     super('Ascend');
@@ -19,6 +31,16 @@ class AscendDatabase extends Dexie {
       completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
       cycles: 'id, status, startDate',
       scheduledWorkouts: 'id, cycleId, sequenceNumber, status'
+    });
+
+    // Version 2: Add sync queue for offline support
+    this.version(2).stores({
+      exercises: 'id, type, mode, name, createdAt',
+      maxRecords: 'id, exerciseId, recordedAt',
+      completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
+      cycles: 'id, status, startDate',
+      scheduledWorkouts: 'id, cycleId, sequenceNumber, status',
+      syncQueue: 'id, table, itemId, createdAt'
     });
   }
 }

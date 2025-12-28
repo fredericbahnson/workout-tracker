@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Dumbbell, ListChecks, Calendar, BarChart3, Settings } from 'lucide-react';
+import { OfflineIndicator } from '../ui';
 
 interface LayoutProps {
   children: ReactNode;
@@ -19,6 +20,9 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex flex-col safe-area-top">
+      {/* Offline indicator */}
+      <OfflineIndicator />
+      
       {/* Main content */}
       <main className="flex-1 pb-20 overflow-y-auto">
         {children}
