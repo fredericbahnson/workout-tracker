@@ -380,8 +380,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
           });
         }
 
-        const workout: ScheduledWorkout = {
-          id: generateId(),
+        const workoutData: Omit<ScheduledWorkout, 'id'> = {
           cycleId: savedCycle.id,  // Use the saved cycle's actual ID
           sequenceNumber: dayIndex + 1,
           weekNumber: 1,
@@ -392,8 +391,8 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
           status: 'pending'
         };
 
-        await ScheduledWorkoutRepo.create(workout);
-        await syncItem('scheduled_workouts', workout);
+        const savedWorkout = await ScheduledWorkoutRepo.create(workoutData);
+        await syncItem('scheduled_workouts', savedWorkout);
       }
 
       // Update conditioning exercise baselines
