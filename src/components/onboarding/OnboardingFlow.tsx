@@ -7,14 +7,14 @@ import {
   Calendar, 
   Dumbbell,
   CheckCircle,
-  Sparkles,
   Plus,
   Home,
   AlertCircle
 } from 'lucide-react';
 import { Button } from '../ui';
+import { ExerciseForm } from '../exercises';
 import { ExerciseRepo, MaxRecordRepo } from '../../data/repositories';
-import { EXERCISE_TYPE_LABELS, type ExerciseType, type ExerciseMode } from '../../types';
+import type { ExerciseFormData } from '../../types';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -60,12 +60,6 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   const [exerciseCreated, setExerciseCreated] = useState(false);
   const [createdExerciseName, setCreatedExerciseName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  
-  // Exercise form state
-  const [exerciseName, setExerciseName] = useState('');
-  const [exerciseType, setExerciseType] = useState<ExerciseType>('push');
-  const [exerciseMode, setExerciseMode] = useState<ExerciseMode>('standard');
-  const [initialMax, setInitialMax] = useState('');
 
   const isLastSlide = currentSlide === SLIDES.length - 1;
 
@@ -86,55 +80,35 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
     }
   };
 
-  const resetForm = () => {
-    setExerciseName('');
-    setExerciseType('push');
-    setExerciseMode('standard');
-    setInitialMax('');
-    setError(null);
-    setExerciseCreated(false);
-  };
-
-  const handleCreateExercise = async () => {
-    if (!exerciseName.trim()) {
-      setError('Please enter an exercise name');
-      return;
-    }
-    
+  const handleCreateExercise = async (data: ExerciseFormData) => {
     setIsCreating(true);
     setError(null);
     
     try {
-      console.log('Creating exercise:', exerciseName.trim());
+      console.log('Creating exercise:', data.name);
       
-      // Create the exercise
-      const exercise = await ExerciseRepo.create({
-        name: exerciseName.trim(),
-        type: exerciseType,
-        mode: exerciseMode,
-        measurementType: 'reps',  // Onboarding defaults to rep-based
-        notes: '',
-        customParameters: [],
-        weightEnabled: false,
-      });
-
+      const { initialMax, initialMaxTime, startingReps, startingTime, ...exerciseData } = data;
+      
+      // Add default conditioning values based on measurement type
+      const exerciseToCreate = {
+        ...exerciseData,
+        defaultConditioningReps: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps' ? startingReps : undefined,
+        defaultConditioningTime: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time' ? startingTime : undefined
+      };
+      
+      const exercise = await ExerciseRepo.create(exerciseToCreate);
       console.log('Exercise created:', exercise);
 
-      // If they provided an initial max, record it
-      if (initialMax && exerciseMode === 'standard') {
-        const maxReps = parseInt(initialMax, 10);
-        if (!isNaN(maxReps) && maxReps > 0) {
-          await MaxRecordRepo.create(
-            exercise.id,
-            maxReps,
-            undefined,  // maxTime
-            'Initial max during onboarding'
-          );
-          console.log('Max record created');
-        }
+      // Create initial max record if provided (standard exercises)
+      if (exerciseData.measurementType === 'reps' && initialMax && initialMax > 0) {
+        await MaxRecordRepo.create(exercise.id, initialMax, undefined, 'Initial max during onboarding');
+        console.log('Initial max reps recorded:', initialMax);
+      } else if (exerciseData.measurementType === 'time' && initialMaxTime && initialMaxTime > 0) {
+        await MaxRecordRepo.create(exercise.id, undefined, initialMaxTime, 'Initial max during onboarding');
+        console.log('Initial max time recorded:', initialMaxTime);
       }
 
-      setCreatedExerciseName(exerciseName.trim());
+      setCreatedExerciseName(data.name);
       setExerciseCreated(true);
       setIsCreating(false);
     } catch (err) {
@@ -145,7 +119,8 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   };
 
   const handleAddAnother = () => {
-    resetForm();
+    setError(null);
+    setExerciseCreated(false);
   };
 
   // Success screen after exercise creation
@@ -228,130 +203,13 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
               </p>
             </div>
 
-            {/* Exercise Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Exercise Name
-              </label>
-              <input
-                type="text"
-                value={exerciseName}
-                onChange={(e) => setExerciseName(e.target.value)}
-                placeholder="e.g., Pull-ups, Push-ups, Squats"
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-[#2D2D4A] bg-white dark:bg-[#1A1A2E] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none"
-                autoFocus
-              />
-            </div>
-
-            {/* Exercise Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Movement Type
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {(['push', 'pull', 'legs', 'core'] as ExerciseType[]).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setExerciseType(type)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      exerciseType === type
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 dark:bg-[#1A1A2E] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#252542]'
-                    }`}
-                  >
-                    {EXERCISE_TYPE_LABELS[type]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Exercise Mode */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Training Mode
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setExerciseMode('standard')}
-                  className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                    exerciseMode === 'standard'
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-[#2D2D4A] hover:border-gray-300 dark:hover:border-[#3D3D5A]'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900 dark:text-gray-100">Standard</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    RFEM-based progression
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExerciseMode('conditioning')}
-                  className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                    exerciseMode === 'conditioning'
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-[#2D2D4A] hover:border-gray-300 dark:hover:border-[#3D3D5A]'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900 dark:text-gray-100">Conditioning</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Weekly rep increases
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Initial Max (only for standard mode) */}
-            {exerciseMode === 'standard' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Current Max Reps <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={initialMax}
-                  onChange={(e) => setInitialMax(e.target.value)}
-                  placeholder="Your best set without stopping"
-                  min="1"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-[#2D2D4A] bg-white dark:bg-[#1A1A2E] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  If you're not sure, you can set this later after testing.
-                </p>
-              </div>
-            )}
+            {/* Use the full ExerciseForm component */}
+            <ExerciseForm
+              onSubmit={handleCreateExercise}
+              onCancel={onSkip}
+              isLoading={isCreating}
+            />
           </div>
-        </div>
-
-        {/* Footer with CTA */}
-        <div className="px-4 py-4 border-t border-gray-200 dark:border-[#2D2D4A] space-y-3">
-          <Button
-            onClick={handleCreateExercise}
-            disabled={!exerciseName.trim() || isCreating}
-            className="w-full py-3 text-base font-medium"
-          >
-            {isCreating ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Creating...
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                Create Exercise
-              </span>
-            )}
-          </Button>
-          
-          <button
-            onClick={onSkip}
-            className="w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 py-2"
-          >
-            Skip for now — I'll add exercises later
-          </button>
         </div>
       </div>
     );
