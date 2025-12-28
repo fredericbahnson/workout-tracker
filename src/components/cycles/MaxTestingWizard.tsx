@@ -78,7 +78,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
           if (exercise.mode === 'standard') {
             const maxRecords = await MaxRecordRepo.getAllForExercise(exerciseId);
             if (maxRecords.length > 0) {
-              previousMaxReps = maxRecords[0].maxReps;
+              previousMaxReps = maxRecords[0].maxReps ?? maxRecords[0].maxTime ?? null;
             }
           }
 
@@ -111,7 +111,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             let previousMaxReps: number | null = null;
             const maxRecords = await MaxRecordRepo.getAllForExercise(exercise.id);
             if (maxRecords.length > 0) {
-              previousMaxReps = maxRecords[0].maxReps;
+              previousMaxReps = maxRecords[0].maxReps ?? maxRecords[0].maxTime ?? null;
             }
 
             toTest.push({
@@ -164,7 +164,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
     if (exercise.mode === 'standard') {
       const maxRecords = await MaxRecordRepo.getAllForExercise(exercise.id);
       if (maxRecords.length > 0) {
-        previousMaxReps = maxRecords[0].maxReps;
+        previousMaxReps = maxRecords[0].maxReps ?? maxRecords[0].maxTime ?? null;
       }
     }
 

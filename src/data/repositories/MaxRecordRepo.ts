@@ -35,11 +35,12 @@ export const MaxRecordRepo = {
     return latestByExercise;
   },
 
-  async create(exerciseId: string, maxReps: number, notes: string = '', weight?: number): Promise<MaxRecord> {
+  async create(exerciseId: string, maxReps?: number, maxTime?: number, notes: string = '', weight?: number): Promise<MaxRecord> {
     const record: MaxRecord = {
       id: generateId(),
       exerciseId,
       maxReps,
+      maxTime,
       weight,
       notes,
       recordedAt: new Date()

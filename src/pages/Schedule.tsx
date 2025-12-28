@@ -63,7 +63,7 @@ export function SchedulePage() {
     return summary;
   };
 
-  // Get target reps for a set
+  // Get target reps/time for a set
   const getTargetReps = (set: ScheduledSet, workout: ScheduledWorkout): number => {
     if (!activeCycle) return 0;
     const maxRecord = maxRecords?.get(set.exerciseId);
@@ -72,6 +72,7 @@ export function SchedulePage() {
       workout, 
       maxRecord, 
       activeCycle.conditioningWeeklyRepIncrement,
+      activeCycle.conditioningWeeklyTimeIncrement || 5,
       defaults.defaultMaxReps
     );
   };

@@ -152,7 +152,11 @@ function createScheduledWorkout(
   const scheduledSets: ScheduledSet[] = [];
   
   // Group exercises by type for this day's group
-  const exercisesByType = new Map<ExerciseType, { exerciseId: string; conditioningBaseReps?: number }[]>();
+  const exercisesByType = new Map<ExerciseType, { 
+    exerciseId: string; 
+    conditioningBaseReps?: number;
+    conditioningBaseTime?: number;
+  }[]>();
   
   for (const assignment of day.group.exerciseAssignments) {
     const exercise = exercises.get(assignment.exerciseId);
@@ -163,7 +167,8 @@ function createScheduledWorkout(
     }
     exercisesByType.get(exercise.type)!.push({
       exerciseId: assignment.exerciseId,
-      conditioningBaseReps: assignment.conditioningBaseReps
+      conditioningBaseReps: assignment.conditioningBaseReps,
+      conditioningBaseTime: assignment.conditioningBaseTime
     });
   }
 
@@ -177,16 +182,19 @@ function createScheduledWorkout(
     // Round-robin through available exercises
     for (let setNum = 0; setNum < setsNeeded; setNum++) {
       const exIndex = setNum % availableExercises.length;
-      const { exerciseId, conditioningBaseReps } = availableExercises[exIndex];
+      const { exerciseId, conditioningBaseReps, conditioningBaseTime } = availableExercises[exIndex];
       const exercise = exercises.get(exerciseId)!;
       const isConditioning = exercise.mode === 'conditioning';
+      const isTimeBased = exercise.measurementType === 'time';
 
       scheduledSets.push({
         id: generateId(),
         exerciseId,
         exerciseType,
         isConditioning,
-        conditioningBaseReps: isConditioning ? (conditioningBaseReps || 10) : undefined,
+        measurementType: exercise.measurementType || 'reps',
+        conditioningBaseReps: isConditioning && !isTimeBased ? (conditioningBaseReps || 10) : undefined,
+        conditioningBaseTime: isConditioning && isTimeBased ? (conditioningBaseTime || 30) : undefined,
         setNumber: Math.floor(setNum / availableExercises.length) + 1
       });
     }
@@ -205,19 +213,29 @@ function createScheduledWorkout(
 }
 
 /**
- * Calculate target reps for a scheduled set dynamically
+ * Calculate target reps/time for a scheduled set dynamically
+ * Returns reps for rep-based exercises, seconds for time-based exercises
  */
 export function calculateTargetReps(
   set: ScheduledSet,
   workout: ScheduledWorkout,
   maxRecord: MaxRecord | undefined,
   conditioningWeeklyIncrement: number,
+  conditioningWeeklyTimeIncrement: number = 5,
   defaultMax: number = 10
 ): number {
+  const isTimeBased = set.measurementType === 'time';
+  const defaultTimeMax = 30; // 30 seconds default for time-based
+  
   // Max testing warmup: 20% of previous max (or default)
   if (set.isWarmup) {
-    const prevMax = set.previousMaxReps || maxRecord?.maxReps || defaultMax;
-    return Math.max(1, Math.round(prevMax * 0.2));
+    if (isTimeBased) {
+      const prevMax = set.previousMaxTime || maxRecord?.maxTime || defaultTimeMax;
+      return Math.max(5, Math.round(prevMax * 0.2)); // Minimum 5 seconds warmup
+    } else {
+      const prevMax = set.previousMaxReps || maxRecord?.maxReps || defaultMax;
+      return Math.max(1, Math.round(prevMax * 0.2));
+    }
   }
   
   // Max testing: no target, user goes to max
@@ -227,13 +245,23 @@ export function calculateTargetReps(
   }
   
   if (set.isConditioning) {
-    // Conditioning: base reps + weekly increment
-    const baseReps = set.conditioningBaseReps || 10;
-    return baseReps + (workout.weekNumber - 1) * conditioningWeeklyIncrement;
+    // Conditioning: base + weekly increment
+    if (isTimeBased) {
+      const baseTime = set.conditioningBaseTime || defaultTimeMax;
+      return baseTime + (workout.weekNumber - 1) * conditioningWeeklyTimeIncrement;
+    } else {
+      const baseReps = set.conditioningBaseReps || defaultMax;
+      return baseReps + (workout.weekNumber - 1) * conditioningWeeklyIncrement;
+    }
   } else {
-    // Standard: max - RFEM
-    const max = maxRecord?.maxReps || defaultMax;
-    return Math.max(1, max - workout.rfem);
+    // Standard/Progressive: max - RFEM (same percentage logic applies to time)
+    if (isTimeBased) {
+      const max = maxRecord?.maxTime || defaultTimeMax;
+      return Math.max(5, max - workout.rfem * 3); // Scale RFEM for time (each RFEM = ~3 seconds)
+    } else {
+      const max = maxRecord?.maxReps || defaultMax;
+      return Math.max(1, max - workout.rfem);
+    }
   }
 }
 

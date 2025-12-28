@@ -7,7 +7,9 @@ import {
   EXERCISE_TYPE_LABELS, 
   type ExerciseFormData, 
   type CustomParameter,
-  type Exercise 
+  type Exercise,
+  type MeasurementType,
+  parseTimeInput
 } from '../../types';
 
 interface ExerciseFormProps {
@@ -22,12 +24,15 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   const [name, setName] = useState(initialData?.name || '');
   const [type, setType] = useState(initialData?.type || 'push');
   const [mode, setMode] = useState(initialData?.mode || 'standard');
+  const [measurementType, setMeasurementType] = useState<MeasurementType>(initialData?.measurementType || 'reps');
   const [notes, setNotes] = useState(initialData?.notes || '');
   const [customParameters, setCustomParameters] = useState<CustomParameter[]>(
     initialData?.customParameters || []
   );
   const [initialMax, setInitialMax] = useState<string>('');
+  const [initialMaxTime, setInitialMaxTime] = useState<string>('');
   const [startingReps, setStartingReps] = useState<number>(defaults.defaultConditioningReps);
+  const [startingTime, setStartingTime] = useState<string>('30');
   const [weightEnabled, setWeightEnabled] = useState(initialData?.weightEnabled || false);
   const [defaultWeight, setDefaultWeight] = useState<string>(
     initialData?.defaultWeight?.toString() || ''
@@ -44,14 +49,23 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
       return;
     }
 
+    // Parse time inputs
+    const parsedInitialMaxTime = initialMaxTime ? parseTimeInput(initialMaxTime) : undefined;
+    const parsedStartingTime = startingTime ? parseTimeInput(startingTime) : undefined;
+
     const data: ExerciseFormData = {
       name: name.trim(),
       type,
       mode,
+      measurementType,
       notes: notes.trim(),
       customParameters: customParameters.filter(p => p.name.trim()),
-      initialMax: mode === 'standard' && initialMax ? parseInt(initialMax) : undefined,
-      startingReps: mode === 'conditioning' ? startingReps : undefined,
+      // Rep-based initial values
+      initialMax: mode === 'standard' && measurementType === 'reps' && initialMax ? parseInt(initialMax) : undefined,
+      startingReps: mode === 'conditioning' && measurementType === 'reps' ? startingReps : undefined,
+      // Time-based initial values
+      initialMaxTime: mode === 'standard' && measurementType === 'time' && parsedInitialMaxTime ? parsedInitialMaxTime : undefined,
+      startingTime: mode === 'conditioning' && measurementType === 'time' && parsedStartingTime ? parsedStartingTime : undefined,
       weightEnabled,
       defaultWeight: weightEnabled && defaultWeight ? parseFloat(defaultWeight) : undefined
     };
@@ -83,8 +97,13 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   }));
 
   const modeOptions = [
-    { value: 'standard', label: 'Standard (uses RFEM)' },
-    { value: 'conditioning', label: 'Conditioning (fixed reps)' }
+    { value: 'standard', label: measurementType === 'time' ? 'Progressive (% of max time)' : 'Standard (uses RFEM)' },
+    { value: 'conditioning', label: measurementType === 'time' ? 'Fixed (set time + weekly increment)' : 'Conditioning (fixed reps)' }
+  ];
+
+  const measurementOptions = [
+    { value: 'reps', label: 'Reps' },
+    { value: 'time', label: 'Time (seconds)' }
   ];
 
   const paramTypeOptions = [
@@ -113,12 +132,19 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         />
 
         <Select
-          label="Mode"
-          value={mode}
-          onChange={e => setMode(e.target.value as typeof mode)}
-          options={modeOptions}
+          label="Measurement"
+          value={measurementType}
+          onChange={e => setMeasurementType(e.target.value as MeasurementType)}
+          options={measurementOptions}
         />
       </div>
+
+      <Select
+        label="Mode"
+        value={mode}
+        onChange={e => setMode(e.target.value as typeof mode)}
+        options={modeOptions}
+      />
 
       {/* Weight Tracking Toggle */}
       <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -167,7 +193,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
       </div>
 
       {/* Initial Max - only show when creating and in standard mode */}
-      {!initialData && mode === 'standard' && (
+      {!initialData && mode === 'standard' && measurementType === 'reps' && (
         <Input
           label="Initial Max Reps (optional)"
           type="number"
@@ -178,13 +204,33 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         />
       )}
 
-      {/* Starting Reps - only show when creating and in conditioning mode */}
-      {!initialData && mode === 'conditioning' && (
+      {/* Initial Max Time - only show when creating and in standard/time mode */}
+      {!initialData && mode === 'standard' && measurementType === 'time' && (
+        <Input
+          label="Initial Max Time (optional)"
+          value={initialMaxTime}
+          onChange={e => setInitialMaxTime(e.target.value)}
+          placeholder="e.g., 45, 1m30s, 1:30"
+        />
+      )}
+
+      {/* Starting Reps - only show when creating and in conditioning/reps mode */}
+      {!initialData && mode === 'conditioning' && measurementType === 'reps' && (
         <NumberInput
           label="Starting Reps"
           value={startingReps}
           onChange={setStartingReps}
           min={1}
+        />
+      )}
+
+      {/* Starting Time - only show when creating and in conditioning/time mode */}
+      {!initialData && mode === 'conditioning' && measurementType === 'time' && (
+        <Input
+          label="Starting Time"
+          value={startingTime}
+          onChange={e => setStartingTime(e.target.value)}
+          placeholder="e.g., 30, 45s, 1m"
         />
       )}
 

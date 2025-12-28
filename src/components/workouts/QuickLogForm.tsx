@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Button, Input, Select } from '../ui';
-import type { Exercise, CustomParameter } from '../../types';
+import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from '../../types';
 
 interface QuickLogFormProps {
   exercise: Exercise;
-  suggestedReps?: number;
+  suggestedReps?: number;  // For time-based, this is seconds
+  isMaxTest?: boolean;
   onSubmit: (reps: number, notes: string, parameters: Record<string, string | number>, weight?: number) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -13,11 +14,20 @@ interface QuickLogFormProps {
 export function QuickLogForm({ 
   exercise, 
   suggestedReps, 
+  isMaxTest,
   onSubmit, 
   onCancel, 
   isLoading 
 }: QuickLogFormProps) {
-  const [reps, setReps] = useState(suggestedReps?.toString() || '');
+  const isTimeBased = exercise.measurementType === 'time';
+  
+  // For time-based exercises, store as formatted string for easier editing
+  const [value, setValue] = useState(() => {
+    if (suggestedReps !== undefined) {
+      return isTimeBased ? formatTime(suggestedReps) : suggestedReps.toString();
+    }
+    return '';
+  });
   const [notes, setNotes] = useState('');
   const [weight, setWeight] = useState(exercise.defaultWeight?.toString() || '');
   const [parameters, setParameters] = useState<Record<string, string | number>>(() => {
@@ -32,17 +42,43 @@ export function QuickLogForm({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const repCount = parseInt(reps, 10);
-    if (isNaN(repCount) || repCount < 0) return;
+    
+    let numericValue: number;
+    if (isTimeBased) {
+      const parsed = parseTimeInput(value);
+      if (parsed === null || parsed < 0) return;
+      numericValue = parsed;
+    } else {
+      numericValue = parseInt(value, 10);
+      if (isNaN(numericValue) || numericValue < 0) return;
+    }
+    
     const weightValue = weight ? parseFloat(weight) : undefined;
-    onSubmit(repCount, notes.trim(), parameters, weightValue);
+    onSubmit(numericValue, notes.trim(), parameters, weightValue);
   };
 
-  const updateParameter = (param: CustomParameter, value: string) => {
+  const updateParameter = (param: CustomParameter, paramValue: string) => {
     setParameters(prev => ({
       ...prev,
-      [param.name]: param.type === 'number' ? (parseFloat(value) || 0) : value
+      [param.name]: param.type === 'number' ? (parseFloat(paramValue) || 0) : paramValue
     }));
+  };
+
+  // Validate the current value
+  const isValid = () => {
+    if (!value) return false;
+    if (isTimeBased) {
+      const parsed = parseTimeInput(value);
+      return parsed !== null && parsed >= 0;
+    }
+    const num = parseInt(value, 10);
+    return !isNaN(num) && num >= 0;
+  };
+
+  // Format suggested value for display
+  const formatSuggested = () => {
+    if (suggestedReps === undefined) return null;
+    return isTimeBased ? formatTime(suggestedReps) : `${suggestedReps} reps`;
   };
 
   return (
@@ -51,23 +87,38 @@ export function QuickLogForm({
         <h3 className="font-medium text-gray-900 dark:text-gray-100">
           {exercise.name}
         </h3>
-        {suggestedReps && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Target: {suggestedReps} reps
+        {isMaxTest ? (
+          <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+            Max Test{suggestedReps ? ` • Previous: ${formatSuggested()}` : ''}
           </p>
-        )}
+        ) : suggestedReps ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Target: {formatSuggested()}
+          </p>
+        ) : null}
       </div>
 
       <Input
-        label="Reps Completed"
-        type="number"
-        min={0}
-        value={reps}
-        onChange={e => setReps(e.target.value)}
-        placeholder="Enter reps"
+        label={isTimeBased 
+          ? (isMaxTest ? "Time Achieved" : "Time Completed")
+          : (isMaxTest ? "Reps Achieved" : "Reps Completed")
+        }
+        type={isTimeBased ? "text" : "number"}
+        min={isTimeBased ? undefined : 0}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder={isTimeBased 
+          ? (isMaxTest ? "e.g., 45s, 1m30s" : "e.g., 30s, 1m") 
+          : (isMaxTest ? "Enter your max" : "Enter reps")
+        }
         required
         autoFocus
       />
+      {isTimeBased && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+          Enter as seconds (45), or with units (45s, 1m, 1m30s, 1:30)
+        </p>
+      )}
 
       {/* Weight Input - only show if exercise has weight tracking enabled */}
       {exercise.weightEnabled && (
@@ -137,7 +188,7 @@ export function QuickLogForm({
         </Button>
         <Button 
           type="submit" 
-          disabled={!reps || parseInt(reps, 10) < 0 || isLoading} 
+          disabled={!isValid() || isLoading} 
           className="flex-1"
         >
           {isLoading ? 'Logging...' : 'Log Set'}

@@ -11,7 +11,7 @@ import { Button, Modal, EmptyState, Card, Badge, NumberInput } from '../componen
 import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard } from '../components/workouts';
 import { ExerciseCard } from '../components/exercises';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
-import { EXERCISE_TYPE_LABELS, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
+import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
 
 // Helper to check if a date is today
 const isToday = (date: Date): boolean => {
@@ -152,7 +152,7 @@ export function TodayPage() {
     s => completedScheduledSetIds.has(s.id)
   ) || [];
 
-  // Helper to get target reps for a set
+  // Helper to get target reps/time for a set
   const getTargetReps = (set: ScheduledSet, workout: ScheduledWorkout): number => {
     if (!activeCycle) return 0;
     const maxRecord = maxRecords?.get(set.exerciseId);
@@ -161,6 +161,7 @@ export function TodayPage() {
       workout, 
       maxRecord, 
       activeCycle.conditioningWeeklyRepIncrement,
+      activeCycle.conditioningWeeklyTimeIncrement || 5,
       defaults.defaultMaxReps
     );
   };
@@ -236,7 +237,10 @@ export function TodayPage() {
     if (!displayWorkout || isShowingCompletedWorkout) return;
     const exercise = exerciseMap.get(set.exerciseId);
     if (exercise) {
-      const targetReps = getTargetReps(set, displayWorkout);
+      // For max test sets, default to previous max instead of calculated target (which is 0)
+      const targetReps = set.isMaxTest 
+        ? (set.previousMaxReps || 0)
+        : getTargetReps(set, displayWorkout);
       setSelectedScheduledSet({ set, workout: displayWorkout, targetReps });
     }
   };
@@ -399,9 +403,12 @@ export function TodayPage() {
         
         // If this is a max test set, record a new max
         if (set.isMaxTest && reps > 0) {
+          const exercise = exerciseMap.get(set.exerciseId);
+          const isTimeBased = exercise?.measurementType === 'time';
           const newMaxRecord = await MaxRecordRepo.create(
             set.exerciseId,
-            reps,
+            isTimeBased ? undefined : reps,  // maxReps
+            isTimeBased ? reps : undefined,  // maxTime (reps field is used for time in seconds)
             'Max test result',
             weight
           );
@@ -631,10 +638,10 @@ export function TodayPage() {
                         </div>
                         <div className="flex flex-col items-end">
                           <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`}>
-                            {isMaxTestSet ? 'MAX' : targetReps}
+                            {isMaxTestSet ? 'MAX' : exercise.measurementType === 'time' ? formatTime(targetReps) : targetReps}
                           </span>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : 'reps'}
+                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : exercise.measurementType === 'time' ? 'hold' : 'reps'}
                           </span>
                         </div>
                       </div>
@@ -863,12 +870,13 @@ export function TodayPage() {
       <Modal
         isOpen={!!selectedScheduledSet}
         onClose={() => setSelectedScheduledSet(null)}
-        title="Complete Set"
+        title={selectedScheduledSet?.set.isMaxTest ? "Record Max" : "Complete Set"}
       >
         {selectedScheduledSet && (
           <QuickLogForm
             exercise={exerciseMap.get(selectedScheduledSet.set.exerciseId)!}
             suggestedReps={selectedScheduledSet.targetReps}
+            isMaxTest={selectedScheduledSet.set.isMaxTest}
             onSubmit={handleLogSet}
             onCancel={() => setSelectedScheduledSet(null)}
             isLoading={isLogging}

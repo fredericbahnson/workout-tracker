@@ -28,21 +28,25 @@ export function ExercisesPage() {
     setError(null);
     try {
       console.log('Creating exercise:', data);
-      const { initialMax, startingReps, ...exerciseData } = data;
+      const { initialMax, initialMaxTime, startingReps, startingTime, ...exerciseData } = data;
       
-      // Add default conditioning reps if it's a conditioning exercise
+      // Add default conditioning values based on measurement type
       const exerciseToCreate = {
         ...exerciseData,
-        defaultConditioningReps: exerciseData.mode === 'conditioning' ? startingReps : undefined
+        defaultConditioningReps: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps' ? startingReps : undefined,
+        defaultConditioningTime: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time' ? startingTime : undefined
       };
       
       const created = await ExerciseRepo.create(exerciseToCreate);
       console.log('Exercise created:', created);
       
       // Create initial max record if provided (standard exercises)
-      if (initialMax && initialMax > 0) {
-        await MaxRecordRepo.create(created.id, initialMax, 'Initial max');
-        console.log('Initial max recorded:', initialMax);
+      if (exerciseData.measurementType === 'reps' && initialMax && initialMax > 0) {
+        await MaxRecordRepo.create(created.id, initialMax, undefined, 'Initial max');
+        console.log('Initial max reps recorded:', initialMax);
+      } else if (exerciseData.measurementType === 'time' && initialMaxTime && initialMaxTime > 0) {
+        await MaxRecordRepo.create(created.id, undefined, initialMaxTime, 'Initial max');
+        console.log('Initial max time recorded:', initialMaxTime);
       }
       
       setShowForm(false);

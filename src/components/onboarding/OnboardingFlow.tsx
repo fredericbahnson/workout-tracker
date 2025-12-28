@@ -112,6 +112,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         name: exerciseName.trim(),
         type: exerciseType,
         mode: exerciseMode,
+        measurementType: 'reps',  // Onboarding defaults to rep-based
         notes: '',
         customParameters: [],
         weightEnabled: false,
@@ -126,6 +127,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
           await MaxRecordRepo.create(
             exercise.id,
             maxReps,
+            undefined,  // maxTime
             'Initial max during onboarding'
           );
           console.log('Max record created');

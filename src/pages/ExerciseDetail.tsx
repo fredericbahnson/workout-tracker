@@ -90,11 +90,18 @@ export function ExerciseDetailPage() {
     }
   };
 
-  const handleRecordMax = async (maxReps: number, notes: string, weight?: number) => {
-    if (!id) return;
+  const handleRecordMax = async (maxValue: number, notes: string, weight?: number) => {
+    if (!id || !exercise) return;
     setIsRecordingMax(true);
     try {
-      await MaxRecordRepo.create(id, maxReps, notes, weight);
+      const isTimeBased = exercise.measurementType === 'time';
+      await MaxRecordRepo.create(
+        id, 
+        isTimeBased ? undefined : maxValue,  // maxReps
+        isTimeBased ? maxValue : undefined,  // maxTime
+        notes, 
+        weight
+      );
       setShowMaxForm(false);
     } finally {
       setIsRecordingMax(false);

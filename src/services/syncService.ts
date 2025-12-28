@@ -9,9 +9,11 @@ interface RemoteExercise {
   name: string;
   type: string;
   mode: string;
+  measurement_type: string | null;
   notes: string;
   custom_parameters: unknown;
   default_conditioning_reps: number | null;
+  default_conditioning_time: number | null;
   weight_enabled: boolean;
   default_weight: number | null;
   created_at: string;
@@ -23,7 +25,8 @@ interface RemoteMaxRecord {
   id: string;
   user_id: string;
   exercise_id: string;
-  max_reps: number;
+  max_reps: number | null;
+  max_time: number | null;
   weight: number | null;
   notes: string;
   recorded_at: string;
@@ -369,9 +372,11 @@ export const SyncService = {
       name: remote.name,
       type: remote.type as Exercise['type'],
       mode: remote.mode as Exercise['mode'],
+      measurementType: (remote.measurement_type as Exercise['measurementType']) || 'reps',
       notes: remote.notes || '',
       customParameters: (remote.custom_parameters as Exercise['customParameters']) || [],
       defaultConditioningReps: remote.default_conditioning_reps ?? undefined,
+      defaultConditioningTime: remote.default_conditioning_time ?? undefined,
       weightEnabled: remote.weight_enabled ?? undefined,
       defaultWeight: remote.default_weight ?? undefined,
       createdAt: new Date(remote.created_at),
@@ -383,7 +388,8 @@ export const SyncService = {
     return {
       id: remote.id,
       exerciseId: remote.exercise_id,
-      maxReps: remote.max_reps,
+      maxReps: remote.max_reps ?? undefined,
+      maxTime: remote.max_time ?? undefined,
       weight: remote.weight ?? undefined,
       notes: remote.notes || '',
       recordedAt: new Date(remote.recorded_at),
@@ -448,9 +454,11 @@ export const SyncService = {
       name: local.name,
       type: local.type,
       mode: local.mode,
+      measurement_type: local.measurementType || 'reps',
       notes: local.notes,
       custom_parameters: local.customParameters,
       default_conditioning_reps: local.defaultConditioningReps || null,
+      default_conditioning_time: local.defaultConditioningTime || null,
       weight_enabled: local.weightEnabled || false,
       default_weight: local.defaultWeight || null,
       created_at: local.createdAt.toISOString(),
@@ -463,7 +471,8 @@ export const SyncService = {
       id: local.id,
       user_id: userId,
       exercise_id: local.exerciseId,
-      max_reps: local.maxReps,
+      max_reps: local.maxReps || null,
+      max_time: local.maxTime || null,
       weight: local.weight || null,
       notes: local.notes,
       recorded_at: local.recordedAt.toISOString(),
