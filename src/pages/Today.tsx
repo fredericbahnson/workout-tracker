@@ -8,7 +8,7 @@ import { useAppStore } from '../stores/appStore';
 import { useSyncItem } from '../contexts/SyncContext';
 import { PageHeader } from '../components/layout';
 import { Button, Modal, EmptyState, Card, Badge, NumberInput } from '../components/ui';
-import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard, ExerciseTimer } from '../components/workouts';
+import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard, ExerciseTimer, ExerciseStopwatch } from '../components/workouts';
 import { ExerciseCard } from '../components/exercises';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
 import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
@@ -38,6 +38,7 @@ export function TodayPage() {
     targetReps: number;
   } | null>(null);
   const [showTimerMode, setShowTimerMode] = useState(false);
+  const [showStopwatchMode, setShowStopwatchMode] = useState(false);
   const [isLogging, setIsLogging] = useState(false);
   
   // Cycle completion state
@@ -244,11 +245,21 @@ export function TodayPage() {
         : getTargetReps(set, displayWorkout);
       setSelectedScheduledSet({ set, workout: displayWorkout, targetReps });
       
-      // Show timer for time-based exercises (except max tests, which need manual entry)
-      if (exercise.measurementType === 'time' && !set.isMaxTest) {
-        setShowTimerMode(true);
+      // Determine which mode to show based on exercise type and set type
+      if (exercise.measurementType === 'time') {
+        if (set.isMaxTest) {
+          // Time-based max test: show stopwatch
+          setShowStopwatchMode(true);
+          setShowTimerMode(false);
+        } else {
+          // Regular time-based set: show countdown timer
+          setShowTimerMode(true);
+          setShowStopwatchMode(false);
+        }
       } else {
+        // Rep-based: show form
         setShowTimerMode(false);
+        setShowStopwatchMode(false);
       }
     }
   };
@@ -442,6 +453,7 @@ export function TodayPage() {
         
         setSelectedScheduledSet(null);
         setShowTimerMode(false);
+        setShowStopwatchMode(false);
       } else if (selectedExercise) {
         await CompletedSetRepo.create({
           exerciseId: selectedExercise.id,
@@ -878,10 +890,10 @@ export function TodayPage() {
       {/* Scheduled Set Log Modal */}
       <Modal
         isOpen={!!selectedScheduledSet}
-        onClose={() => { setSelectedScheduledSet(null); setShowTimerMode(false); }}
+        onClose={() => { setSelectedScheduledSet(null); setShowTimerMode(false); setShowStopwatchMode(false); }}
         title={
           selectedScheduledSet?.set.isMaxTest 
-            ? "Record Max" 
+            ? (showStopwatchMode ? "Max Test" : "Record Max")
             : showTimerMode 
               ? "Timed Hold" 
               : "Complete Set"
@@ -890,6 +902,21 @@ export function TodayPage() {
         {selectedScheduledSet && (() => {
           const exercise = exerciseMap.get(selectedScheduledSet.set.exerciseId);
           if (!exercise) return null;
+          
+          // Show stopwatch for time-based max tests
+          if (showStopwatchMode && exercise.measurementType === 'time' && selectedScheduledSet.set.isMaxTest) {
+            return (
+              <ExerciseStopwatch
+                exerciseName={exercise.name}
+                previousMax={selectedScheduledSet.set.previousMaxReps}
+                onRecordMax={(seconds) => {
+                  handleLogSet(seconds, '', {}, undefined);
+                }}
+                onCancel={() => { setSelectedScheduledSet(null); setShowStopwatchMode(false); }}
+                onSkipToLog={() => setShowStopwatchMode(false)}
+              />
+            );
+          }
           
           // Show timer for time-based exercises (non-max test)
           if (showTimerMode && exercise.measurementType === 'time') {
@@ -900,7 +927,7 @@ export function TodayPage() {
                 onComplete={(actualSeconds) => {
                   handleLogSet(actualSeconds, '', {}, undefined);
                 }}
-                onCancel={() => { setSelectedScheduledSet(null); setShowTimerMode(false); }}
+                onCancel={() => { setSelectedScheduledSet(null); setShowTimerMode(false); setShowStopwatchMode(false); }}
                 onSkipToLog={() => setShowTimerMode(false)}
               />
             );
@@ -913,7 +940,7 @@ export function TodayPage() {
               suggestedReps={selectedScheduledSet.targetReps}
               isMaxTest={selectedScheduledSet.set.isMaxTest}
               onSubmit={handleLogSet}
-              onCancel={() => { setSelectedScheduledSet(null); setShowTimerMode(false); }}
+              onCancel={() => { setSelectedScheduledSet(null); setShowTimerMode(false); setShowStopwatchMode(false); }}
               isLoading={isLogging}
             />
           );
