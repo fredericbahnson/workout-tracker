@@ -162,6 +162,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to clear local database on signout:', e);
     }
     
+    // Reset onboarding flag so next user sees onboarding
+    const { useAppStore } = await import('../stores/appStore');
+    useAppStore.getState().setHasCompletedOnboarding(false);
+    
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
