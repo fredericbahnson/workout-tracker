@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { Card, Badge } from '../ui';
-import { EXERCISE_TYPE_LABELS, type Exercise, type MaxRecord } from '../../types';
+import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type MaxRecord } from '../../types';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -19,6 +19,36 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
       navigate(`/exercises/${exercise.id}`);
     }
   };
+
+  // Determine the value to display
+  const getDisplayValue = () => {
+    if (exercise.mode === 'conditioning') {
+      // Conditioning: show base reps/time
+      if (exercise.measurementType === 'time') {
+        return exercise.defaultConditioningTime 
+          ? `Base: ${formatTime(exercise.defaultConditioningTime)}`
+          : null;
+      } else {
+        return exercise.defaultConditioningReps 
+          ? `Base: ${exercise.defaultConditioningReps}`
+          : null;
+      }
+    } else {
+      // Standard: show max reps/time
+      if (!latestMax) return null;
+      if (exercise.measurementType === 'time') {
+        return latestMax.maxTime 
+          ? `Max: ${formatTime(latestMax.maxTime)}`
+          : null;
+      } else {
+        return latestMax.maxReps 
+          ? `Max: ${latestMax.maxReps}`
+          : null;
+      }
+    }
+  };
+
+  const displayValue = getDisplayValue();
 
   return (
     <Card 
@@ -40,9 +70,9 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
             <Badge variant={exercise.type}>
               {EXERCISE_TYPE_LABELS[exercise.type]}
             </Badge>
-            {latestMax && (
+            {displayValue && (
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Max: {latestMax.maxReps}
+                {displayValue}
               </span>
             )}
           </div>

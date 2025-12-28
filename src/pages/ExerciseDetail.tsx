@@ -7,7 +7,7 @@ import { useAppStore } from '../stores/appStore';
 import { PageHeader } from '../components/layout';
 import { Button, Card, CardContent, Badge, Modal, EmptyState } from '../components/ui';
 import { ExerciseForm, MaxRecordForm } from '../components/exercises';
-import { EXERCISE_TYPE_LABELS, type ExerciseFormData } from '../types';
+import { EXERCISE_TYPE_LABELS, formatTime, type ExerciseFormData } from '../types';
 
 export function ExerciseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -190,17 +190,38 @@ export function ExerciseDetailPage() {
             </div>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {latestMax?.maxReps || '—'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Current Max
-                  {latestMax?.weight !== undefined && latestMax.weight > 0 && (
-                    <span className="block text-purple-600 dark:text-purple-400">
-                      +{latestMax.weight} lbs
-                    </span>
-                  )}
-                </p>
+                {exercise.mode === 'conditioning' ? (
+                  // Conditioning exercise: show Base Reps or Base Time
+                  <>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {exercise.measurementType === 'time' 
+                        ? (exercise.defaultConditioningTime ? formatTime(exercise.defaultConditioningTime) : '—')
+                        : (exercise.defaultConditioningReps || '—')
+                      }
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {exercise.measurementType === 'time' ? 'Base Time' : 'Base Reps'}
+                    </p>
+                  </>
+                ) : (
+                  // Standard exercise: show Current Max
+                  <>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {exercise.measurementType === 'time'
+                        ? (latestMax?.maxTime ? formatTime(latestMax.maxTime) : '—')
+                        : (latestMax?.maxReps || '—')
+                      }
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Current Max
+                      {latestMax?.weight !== undefined && latestMax.weight > 0 && (
+                        <span className="block text-purple-600 dark:text-purple-400">
+                          +{latestMax.weight} lbs
+                        </span>
+                      )}
+                    </p>
+                  </>
+                )}
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -210,9 +231,14 @@ export function ExerciseDetailPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {stats?.totalReps || 0}
+                  {exercise.measurementType === 'time' 
+                    ? (stats?.totalReps ? formatTime(stats.totalReps) : '0:00')
+                    : (stats?.totalReps || 0)
+                  }
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Total Reps</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {exercise.measurementType === 'time' ? 'Total Time' : 'Total Reps'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -226,8 +252,8 @@ export function ExerciseDetailPage() {
           </Button>
         )}
 
-        {/* Max History */}
-        {maxRecords && maxRecords.length > 0 && (
+        {/* Max History - only for standard exercises */}
+        {exercise.mode === 'standard' && maxRecords && maxRecords.length > 0 && (
           <div>
             <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
               <History className="w-4 h-4" />
@@ -239,7 +265,10 @@ export function ExerciseDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {record.maxReps} reps
+                        {exercise.measurementType === 'time' 
+                          ? (record.maxTime ? formatTime(record.maxTime) : '—')
+                          : `${record.maxReps} reps`
+                        }
                       </span>
                       {record.weight !== undefined && record.weight > 0 && (
                         <span className="ml-2 text-sm text-purple-600 dark:text-purple-400">

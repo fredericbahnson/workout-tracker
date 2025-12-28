@@ -9,7 +9,8 @@ import {
   type CustomParameter,
   type Exercise,
   type MeasurementType,
-  parseTimeInput
+  parseTimeInput,
+  formatTime
 } from '../../types';
 
 interface ExerciseFormProps {
@@ -31,8 +32,13 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   );
   const [initialMax, setInitialMax] = useState<string>('');
   const [initialMaxTime, setInitialMaxTime] = useState<string>('');
-  const [startingReps, setStartingReps] = useState<number>(defaults.defaultConditioningReps);
-  const [startingTime, setStartingTime] = useState<string>('30');
+  // For conditioning exercises, initialize from existing data or defaults
+  const [baselineReps, setBaselineReps] = useState<number>(
+    initialData?.defaultConditioningReps || defaults.defaultConditioningReps
+  );
+  const [baselineTime, setBaselineTime] = useState<string>(
+    initialData?.defaultConditioningTime ? formatTime(initialData.defaultConditioningTime) : '0:30'
+  );
   const [weightEnabled, setWeightEnabled] = useState(initialData?.weightEnabled || false);
   const [defaultWeight, setDefaultWeight] = useState<string>(
     initialData?.defaultWeight?.toString() || ''
@@ -51,7 +57,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
 
     // Parse time inputs
     const parsedInitialMaxTime = initialMaxTime ? parseTimeInput(initialMaxTime) : undefined;
-    const parsedStartingTime = startingTime ? parseTimeInput(startingTime) : undefined;
+    const parsedBaselineTime = baselineTime ? parseTimeInput(baselineTime) : undefined;
 
     const data: ExerciseFormData = {
       name: name.trim(),
@@ -60,12 +66,15 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
       measurementType,
       notes: notes.trim(),
       customParameters: customParameters.filter(p => p.name.trim()),
-      // Rep-based initial values
+      // Rep-based initial values (for creating max record on new exercises)
       initialMax: mode === 'standard' && measurementType === 'reps' && initialMax ? parseInt(initialMax) : undefined,
-      startingReps: mode === 'conditioning' && measurementType === 'reps' ? startingReps : undefined,
+      startingReps: mode === 'conditioning' && measurementType === 'reps' ? baselineReps : undefined,
       // Time-based initial values
       initialMaxTime: mode === 'standard' && measurementType === 'time' && parsedInitialMaxTime ? parsedInitialMaxTime : undefined,
-      startingTime: mode === 'conditioning' && measurementType === 'time' && parsedStartingTime ? parsedStartingTime : undefined,
+      startingTime: mode === 'conditioning' && measurementType === 'time' && parsedBaselineTime ? parsedBaselineTime : undefined,
+      // Conditioning baseline values (stored on the exercise)
+      defaultConditioningReps: mode === 'conditioning' && measurementType === 'reps' ? baselineReps : undefined,
+      defaultConditioningTime: mode === 'conditioning' && measurementType === 'time' && parsedBaselineTime ? parsedBaselineTime : undefined,
       weightEnabled,
       defaultWeight: weightEnabled && defaultWeight ? parseFloat(defaultWeight) : undefined
     };
@@ -214,22 +223,22 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         />
       )}
 
-      {/* Starting Reps - only show when creating and in conditioning/reps mode */}
-      {!initialData && mode === 'conditioning' && measurementType === 'reps' && (
+      {/* Base Reps - show for conditioning/reps mode (create or edit) */}
+      {mode === 'conditioning' && measurementType === 'reps' && (
         <NumberInput
-          label="Starting Reps"
-          value={startingReps}
-          onChange={setStartingReps}
+          label="Base Reps"
+          value={baselineReps}
+          onChange={setBaselineReps}
           min={1}
         />
       )}
 
-      {/* Starting Time - only show when creating and in conditioning/time mode */}
-      {!initialData && mode === 'conditioning' && measurementType === 'time' && (
+      {/* Base Time - show for conditioning/time mode (create or edit) */}
+      {mode === 'conditioning' && measurementType === 'time' && (
         <Input
-          label="Starting Time"
-          value={startingTime}
-          onChange={e => setStartingTime(e.target.value)}
+          label="Base Time"
+          value={baselineTime}
+          onChange={e => setBaselineTime(e.target.value)}
           placeholder="e.g., 0:30, 1:00"
         />
       )}
