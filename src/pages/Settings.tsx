@@ -429,17 +429,19 @@ export function SettingsPage() {
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2">
                 Default Weekly Sets per Type
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 {EXERCISE_TYPES.filter(t => t !== 'other').map(type => (
-                  <div key={type} className="flex items-center gap-2">
-                    <Badge variant={type} className="w-16 justify-center text-[10px]">
+                  <div key={type} className="flex items-center gap-3">
+                    <Badge variant={type} className="w-20 justify-center text-[10px] flex-shrink-0">
                       {EXERCISE_TYPE_LABELS[type]}
                     </Badge>
                     <NumberInput
                       value={defaults.weeklySetGoals[type]}
                       onChange={v => setWeeklySetGoal(type, v)}
                       min={0}
+                      className="w-20 flex-shrink-0"
                     />
+                    <span className="text-xs text-gray-400 dark:text-gray-500">sets/week</span>
                   </div>
                 ))}
               </div>
@@ -615,7 +617,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v1.0.4
+              Ascend v1.0.5
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

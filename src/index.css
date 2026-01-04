@@ -4,19 +4,19 @@
 
 /* Font size scaling */
 html.font-small {
-  font-size: 14px;
-}
-
-html.font-default {
   font-size: 16px;
 }
 
-html.font-large {
+html.font-default {
   font-size: 18px;
 }
 
-html.font-xl {
+html.font-large {
   font-size: 20px;
+}
+
+html.font-xl {
+  font-size: 24px;
 }
 
 /* Base styles */
