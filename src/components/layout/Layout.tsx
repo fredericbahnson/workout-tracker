@@ -48,8 +48,8 @@ export function Layout({ children }: LayoutProps) {
                   }
                 `}
               >
-                <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
-                <span className="text-xs mt-1 font-medium">{label}</span>
+                <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                <span className="mt-1 font-medium" style={{ fontSize: '10px' }}>{label}</span>
               </NavLink>
             );
           })}

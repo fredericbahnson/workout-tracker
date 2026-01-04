@@ -366,13 +366,13 @@ export function SettingsPage() {
                 Font Size
               </h3>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {fontSizeOptions.map(({ value, label }) => (
                 <button
                   key={value}
                   onClick={() => setFontSize(value)}
                   className={`
-                    flex-1 flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors
+                    flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors
                     ${fontSize === value
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
@@ -431,17 +431,19 @@ export function SettingsPage() {
               </label>
               <div className="space-y-2">
                 {EXERCISE_TYPES.filter(t => t !== 'other').map(type => (
-                  <div key={type} className="flex items-center gap-3">
+                  <div key={type} className="flex flex-wrap items-center gap-2">
                     <Badge variant={type} className="w-20 justify-center text-[10px] flex-shrink-0">
                       {EXERCISE_TYPE_LABELS[type]}
                     </Badge>
-                    <NumberInput
-                      value={defaults.weeklySetGoals[type]}
-                      onChange={v => setWeeklySetGoal(type, v)}
-                      min={0}
-                      className="w-20 flex-shrink-0"
-                    />
-                    <span className="text-xs text-gray-400 dark:text-gray-500">sets/week</span>
+                    <div className="flex items-center gap-2">
+                      <NumberInput
+                        value={defaults.weeklySetGoals[type]}
+                        onChange={v => setWeeklySetGoal(type, v)}
+                        min={0}
+                        className="w-16 flex-shrink-0"
+                      />
+                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">/wk</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -617,7 +619,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v1.0.5
+              Ascend v1.0.6
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

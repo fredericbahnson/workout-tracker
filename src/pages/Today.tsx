@@ -686,7 +686,7 @@ export function TodayPage() {
                             <div className="flex items-center gap-4 p-4 text-left">
                               <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
+                                <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                                   {exercise.name}
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
@@ -755,7 +755,7 @@ export function TodayPage() {
                               <CheckCircle className={`w-5 h-5 flex-shrink-0 ${
                                 wasSkipped ? 'text-orange-500' : 'text-green-500'
                               }`} />
-                              <span className="text-base text-gray-700 dark:text-gray-300 truncate flex-1">
+                              <span className="text-base text-gray-700 dark:text-gray-300 flex-1">
                                 {exercise.name}
                               </span>
                               <div className="flex items-baseline gap-1">
@@ -808,7 +808,7 @@ export function TodayPage() {
                               className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
                             >
                               <Plus className="w-5 h-5 flex-shrink-0 text-blue-500" />
-                              <span className="text-base text-gray-700 dark:text-gray-300 truncate flex-1">
+                              <span className="text-base text-gray-700 dark:text-gray-300 flex-1">
                                 {exercise.name}
                               </span>
                               <div className="flex items-baseline gap-1">

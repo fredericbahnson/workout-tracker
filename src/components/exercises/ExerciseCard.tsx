@@ -58,8 +58,8 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
     >
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">
               {exercise.name}
             </h3>
             {exercise.mode === 'conditioning' && (
