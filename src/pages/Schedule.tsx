@@ -10,7 +10,7 @@ import { PageHeader } from '../components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '../components/ui';
 import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '../components/cycles';
 import { SwipeableWorkoutCard } from '../components/workouts';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
 
 export function SchedulePage() {
   const navigate = useNavigate();
@@ -597,6 +597,7 @@ export function SchedulePage() {
                                 {group.sets.map(completedSet => {
                                   const exercise = exerciseMap.get(completedSet.exerciseId);
                                   const wasSkipped = completedSet.actualReps === 0 && completedSet.notes === 'Skipped';
+                                  const isTimeBased = exercise?.measurementType === 'time';
                                   return (
                                     <div 
                                       key={completedSet.id}
@@ -615,10 +616,10 @@ export function SchedulePage() {
                                         ) : (
                                           <>
                                             <span className="font-medium text-gray-900 dark:text-gray-100">
-                                              {completedSet.actualReps}
+                                              {isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
                                             </span>
                                             <span className="text-gray-500 dark:text-gray-400">
-                                              {' '}/ {completedSet.targetReps}
+                                              {' '}/ {isTimeBased ? formatTime(completedSet.targetReps) : completedSet.targetReps}
                                             </span>
                                           </>
                                         )}
@@ -646,6 +647,7 @@ export function SchedulePage() {
                               <div className="space-y-2">
                                 {group.sets.map(completedSet => {
                                   const exercise = exerciseMap.get(completedSet.exerciseId);
+                                  const isTimeBased = exercise?.measurementType === 'time';
                                   return (
                                     <div 
                                       key={completedSet.id}
@@ -655,7 +657,7 @@ export function SchedulePage() {
                                         {exercise?.name || 'Unknown Exercise'}
                                       </span>
                                       <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                        {completedSet.actualReps}
+                                        {isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
                                       </span>
                                     </div>
                                   );

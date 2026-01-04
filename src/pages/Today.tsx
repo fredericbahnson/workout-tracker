@@ -740,6 +740,7 @@ export function TodayPage() {
                           
                           const wasSkipped = completedSet.actualReps === 0 && completedSet.notes === 'Skipped';
                           const hasWeight = completedSet.weight !== undefined && completedSet.weight > 0;
+                          const isTimeBased = exercise.measurementType === 'time';
 
                           return (
                             <button
@@ -763,7 +764,7 @@ export function TodayPage() {
                                     ? 'text-orange-600 dark:text-orange-400'
                                     : 'text-green-600 dark:text-green-400'
                                 }`}>
-                                  {wasSkipped ? '—' : completedSet.actualReps}
+                                  {wasSkipped ? '—' : isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
                                 </span>
                                 {hasWeight && !wasSkipped && (
                                   <span className="text-sm text-purple-600 dark:text-purple-400">
@@ -798,6 +799,7 @@ export function TodayPage() {
                           if (!exercise) return null;
                           
                           const hasWeight = completedSet.weight !== undefined && completedSet.weight > 0;
+                          const isTimeBased = exercise.measurementType === 'time';
 
                           return (
                             <button
@@ -811,7 +813,7 @@ export function TodayPage() {
                               </span>
                               <div className="flex items-baseline gap-1">
                                 <span className="text-gym-xl text-blue-600 dark:text-blue-400">
-                                  {completedSet.actualReps}
+                                  {isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
                                 </span>
                                 {hasWeight && (
                                   <span className="text-sm text-purple-600 dark:text-purple-400">
