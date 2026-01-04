@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type RepDisplayMode = 'week' | 'cycle' | 'allTime';
+export type FontSize = 'small' | 'default' | 'large' | 'xl';
 
 export interface AppDefaults {
   defaultMaxReps: number;
@@ -28,6 +29,10 @@ interface AppState {
   // Theme
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  
+  // Font size
+  fontSize: FontSize;
+  setFontSize: (size: FontSize) => void;
   
   // App defaults
   defaults: AppDefaults;
@@ -87,6 +92,10 @@ export const useAppStore = create<AppState>()(
       theme: 'system',
       setTheme: (theme) => set({ theme }),
       
+      // Font size - default to 'default'
+      fontSize: 'default',
+      setFontSize: (size) => set({ fontSize: size }),
+      
       // App defaults
       defaults: DEFAULT_SETTINGS,
       setDefaults: (newDefaults) => set((state) => ({ 
@@ -129,7 +138,8 @@ export const useAppStore = create<AppState>()(
     {
       name: 'ascend-settings',
       partialize: (state) => ({ 
-        theme: state.theme, 
+        theme: state.theme,
+        fontSize: state.fontSize,
         defaults: state.defaults, 
         repDisplayMode: state.repDisplayMode,
         restTimer: state.restTimer,

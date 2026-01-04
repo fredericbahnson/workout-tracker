@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail, UserX, Key } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail, UserX, Key, Type } from 'lucide-react';
 import { exportData, importData, db } from '../data/db';
-import { useAppStore, useTheme, type RepDisplayMode } from '../stores/appStore';
+import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '../stores/appStore';
 import { useAuth, useSync } from '../contexts';
 import { PageHeader } from '../components/layout';
 import { Card, CardContent, Button, Modal, NumberInput, Badge, Select, Input, TimeDurationInput } from '../components/ui';
@@ -9,7 +9,7 @@ import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '../types';
 
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
-  const { defaults, setDefaults, setWeeklySetGoal, repDisplayMode, setRepDisplayMode, restTimer, setRestTimer, maxTestRestTimer, setMaxTestRestTimer } = useAppStore();
+  const { defaults, setDefaults, setWeeklySetGoal, repDisplayMode, setRepDisplayMode, restTimer, setRestTimer, maxTestRestTimer, setMaxTestRestTimer, fontSize, setFontSize } = useAppStore();
   const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount, updatePassword } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
   
@@ -192,6 +192,13 @@ export function SettingsPage() {
     { value: 'system', label: 'System', icon: Monitor },
   ] as const;
 
+  const fontSizeOptions: { value: FontSize; label: string }[] = [
+    { value: 'small', label: 'Small' },
+    { value: 'default', label: 'Default' },
+    { value: 'large', label: 'Large' },
+    { value: 'xl', label: 'XL' },
+  ];
+
   return (
     <>
       <PageHeader title="Settings" />
@@ -342,6 +349,45 @@ export function SettingsPage() {
                 >
                   <Icon className={`w-5 h-5 ${theme === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500'}`} />
                   <span className={`text-sm font-medium ${theme === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Font Size */}
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-2 mb-3">
+              <Type className="w-4 h-4 text-gray-500" />
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Font Size
+              </h3>
+            </div>
+            <div className="flex gap-2">
+              {fontSizeOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setFontSize(value)}
+                  className={`
+                    flex-1 flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors
+                    ${fontSize === value
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }
+                  `}
+                >
+                  <span className={`font-medium ${
+                    value === 'small' ? 'text-xs' : 
+                    value === 'default' ? 'text-sm' : 
+                    value === 'large' ? 'text-base' : 
+                    'text-lg'
+                  } ${fontSize === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                    Aa
+                  </span>
+                  <span className={`text-xs ${fontSize === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500'}`}>
                     {label}
                   </span>
                 </button>
@@ -569,7 +615,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v1.0.3
+              Ascend v1.0.4
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

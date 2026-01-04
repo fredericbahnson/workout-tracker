@@ -90,6 +90,7 @@ function AppContent() {
 
 function App() {
   const theme = useAppStore(state => state.theme);
+  const fontSize = useAppStore(state => state.fontSize);
 
   // Apply theme on mount and when it changes
   useEffect(() => {
@@ -117,6 +118,17 @@ function App() {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
+
+  // Apply font size on mount and when it changes
+  useEffect(() => {
+    const root = document.documentElement;
+    
+    // Remove all font size classes
+    root.classList.remove('font-small', 'font-default', 'font-large', 'font-xl');
+    
+    // Add current font size class
+    root.classList.add(`font-${fontSize}`);
+  }, [fontSize]);
 
   return (
     <AuthProvider>
