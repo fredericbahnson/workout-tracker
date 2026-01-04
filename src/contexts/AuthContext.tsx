@@ -26,6 +26,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isNewUser, setIsNewUser] = useState(false);
   const isConfigured = isSupabaseConfigured();
 
+  // Helper to clear all local database tables
+  const clearLocalDatabase = async () => {
+    const { db } = await import('../data/db');
+    await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
+      await db.exercises.clear();
+      await db.maxRecords.clear();
+      await db.completedSets.clear();
+      await db.cycles.clear();
+      await db.scheduledWorkouts.clear();
+      await db.syncQueue.clear();
+    });
+  };
+
   useEffect(() => {
     if (!isConfigured) {
       setIsLoading(false);
@@ -123,15 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Clear local database before signing in to prevent data leakage between accounts
     try {
-      const { db } = await import('../data/db');
-      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
-        await db.exercises.clear();
-        await db.maxRecords.clear();
-        await db.completedSets.clear();
-        await db.cycles.clear();
-        await db.scheduledWorkouts.clear();
-        await db.syncQueue.clear();
-      });
+      await clearLocalDatabase();
     } catch (e) {
       console.error('Failed to clear local database on signin:', e);
     }
@@ -149,15 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Clear local IndexedDB tables before signing out
     try {
-      const { db } = await import('../data/db');
-      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
-        await db.exercises.clear();
-        await db.maxRecords.clear();
-        await db.completedSets.clear();
-        await db.cycles.clear();
-        await db.scheduledWorkouts.clear();
-        await db.syncQueue.clear();
-      });
+      await clearLocalDatabase();
     } catch (e) {
       console.error('Failed to clear local database on signout:', e);
     }
@@ -187,15 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // Clear local IndexedDB tables
-      const { db } = await import('../data/db');
-      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
-        await db.exercises.clear();
-        await db.maxRecords.clear();
-        await db.completedSets.clear();
-        await db.cycles.clear();
-        await db.scheduledWorkouts.clear();
-        await db.syncQueue.clear();
-      });
+      await clearLocalDatabase();
       
       // Clear localStorage
       localStorage.clear();

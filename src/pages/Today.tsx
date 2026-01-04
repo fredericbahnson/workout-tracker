@@ -6,20 +6,13 @@ import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRec
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
 import { useSyncItem } from '../contexts/SyncContext';
+import { isToday } from '../utils';
 import { PageHeader } from '../components/layout';
 import { Button, Modal, EmptyState, Card, NumberInput } from '../components/ui';
 import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard, ExerciseTimer, ExerciseStopwatch } from '../components/workouts';
 import { ExerciseCard } from '../components/exercises';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
-
-// Helper to check if a date is today
-const isToday = (date: Date): boolean => {
-  const today = new Date();
-  return date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-};
 
 export function TodayPage() {
   const navigate = useNavigate();

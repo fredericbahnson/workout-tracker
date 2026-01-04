@@ -19,12 +19,7 @@ export interface AppDefaults {
   };
 }
 
-export interface RestTimerSettings {
-  enabled: boolean;
-  defaultDurationSeconds: number;
-}
-
-export interface MaxTestRestTimerSettings {
+export interface TimerSettings {
   enabled: boolean;
   defaultDurationSeconds: number;
 }
@@ -44,12 +39,12 @@ interface AppState {
   setRepDisplayMode: (mode: RepDisplayMode) => void;
   
   // Rest timer settings
-  restTimer: RestTimerSettings;
-  setRestTimer: (settings: Partial<RestTimerSettings>) => void;
+  restTimer: TimerSettings;
+  setRestTimer: (settings: Partial<TimerSettings>) => void;
   
   // Max testing rest timer settings
-  maxTestRestTimer: MaxTestRestTimerSettings;
-  setMaxTestRestTimer: (settings: Partial<MaxTestRestTimerSettings>) => void;
+  maxTestRestTimer: TimerSettings;
+  setMaxTestRestTimer: (settings: Partial<TimerSettings>) => void;
   
   // Onboarding
   hasCompletedOnboarding: boolean;
@@ -75,12 +70,12 @@ const DEFAULT_SETTINGS: AppDefaults = {
   }
 };
 
-const DEFAULT_REST_TIMER: RestTimerSettings = {
+const DEFAULT_REST_TIMER: TimerSettings = {
   enabled: false,
   defaultDurationSeconds: 180
 };
 
-const DEFAULT_MAX_TEST_REST_TIMER: MaxTestRestTimerSettings = {
+const DEFAULT_MAX_TEST_REST_TIMER: TimerSettings = {
   enabled: false,
   defaultDurationSeconds: 300 // 5 minutes
 };

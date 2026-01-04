@@ -38,7 +38,7 @@ export interface MaxRecord {
   notes: string;
 }
 
-// Cycle-related types (Phase 2, but defined now for completeness)
+// Cycle-related types
 
 export interface ExerciseAssignment {
   exerciseId: string;
