@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Calendar, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2 } from 'lucide-react';
+import { Calendar, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Trash2 } from 'lucide-react';
 import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo, CompletedSetRepo } from '../data/repositories';
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
+import { useSyncItem } from '../contexts/SyncContext';
 import { PageHeader } from '../components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '../components/ui';
 import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '../components/cycles';
+import { SwipeableWorkoutCard } from '../components/workouts';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
 
 export function SchedulePage() {
   const navigate = useNavigate();
   const { defaults } = useAppStore();
+  const { deleteItem } = useSyncItem();
   const [showCycleWizard, setShowCycleWizard] = useState(false);
   const [isEditingCycle, setIsEditingCycle] = useState(false);  // true = edit existing, false = create new
   const [showCycleTypeSelector, setShowCycleTypeSelector] = useState(false);
@@ -20,6 +23,8 @@ export function SchedulePage() {
   const [previewWorkout, setPreviewWorkout] = useState<ScheduledWorkout | null>(null);
   const [historyWorkout, setHistoryWorkout] = useState<ScheduledWorkout | null>(null);
   const [historyCompletedSets, setHistoryCompletedSets] = useState<CompletedSet[]>([]);
+  const [workoutToDelete, setWorkoutToDelete] = useState<ScheduledWorkout | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
@@ -85,6 +90,27 @@ export function SchedulePage() {
     setHistoryWorkout(workout);
     const completedSets = await CompletedSetRepo.getForScheduledWorkout(workout.id);
     setHistoryCompletedSets(completedSets);
+  };
+
+  const handleDeleteWorkout = async () => {
+    if (!workoutToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await ScheduledWorkoutRepo.delete(workoutToDelete.id);
+      await deleteItem('scheduled_workouts', workoutToDelete.id);
+      
+      // If we were previewing this workout, close the preview
+      if (previewWorkout?.id === workoutToDelete.id) {
+        setPreviewWorkout(null);
+      }
+      
+      setWorkoutToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete workout:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (!activeCycle) {
@@ -249,53 +275,57 @@ export function SchedulePage() {
                 const isNext = index === 0;
                 
                 return (
-                  <Card
+                  <SwipeableWorkoutCard
                     key={workout.id}
-                    className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isNext ? 'ring-2 ring-primary-500' : ''}`}
-                    onClick={() => handleWorkoutClick(workout)}
+                    onSwipeLeft={() => setWorkoutToDelete(workout)}
+                    onTap={() => handleWorkoutClick(workout)}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`
-                        w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0
-                        ${isNext 
-                          ? 'bg-primary-600 text-white' 
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                        }
-                      `}>
-                        <span className="text-xs font-medium">#{workout.sequenceNumber}</span>
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 dark:text-gray-100">
-                            {group?.name || 'Workout'}
-                          </span>
-                          {isNext && (
-                            <Badge className="text-[10px] bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
-                              NEXT
-                            </Badge>
-                          )}
+                    <Card
+                      className={`p-3 ${isNext ? 'ring-2 ring-primary-500' : ''}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`
+                          w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0
+                          ${isNext 
+                            ? 'bg-primary-600 text-white' 
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          }
+                        `}>
+                          <span className="text-xs font-medium">#{workout.sequenceNumber}</span>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Week {workout.weekNumber} • RFEM -{workout.rfem} • {workout.scheduledSets.length} sets
-                        </p>
-                        
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {Object.entries(setsSummary).map(([type, count]) => (
-                            <Badge 
-                              key={type} 
-                              variant={type as any} 
-                              className="text-[10px]"
-                            >
-                              {count} {EXERCISE_TYPE_LABELS[type as keyof typeof EXERCISE_TYPE_LABELS]}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
 
-                      <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                    </div>
-                  </Card>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              {group?.name || 'Workout'}
+                            </span>
+                            {isNext && (
+                              <Badge className="text-[10px] bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
+                                NEXT
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Week {workout.weekNumber} • RFEM -{workout.rfem} • {workout.scheduledSets.length} sets
+                          </p>
+                          
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {Object.entries(setsSummary).map(([type, count]) => (
+                              <Badge 
+                                key={type} 
+                                variant={type as any} 
+                                className="text-[10px]"
+                              >
+                                {count} {EXERCISE_TYPE_LABELS[type as keyof typeof EXERCISE_TYPE_LABELS]}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                      </div>
+                    </Card>
+                  </SwipeableWorkoutCard>
                 );
               })}
             </div>
@@ -430,24 +460,37 @@ export function SchedulePage() {
                 ))}
               </div>
 
-              <div className="flex gap-2">
-                {isNextWorkout && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  {isNextWorkout && (
+                    <Button 
+                      className="flex-1"
+                      onClick={() => {
+                        setPreviewWorkout(null);
+                        navigate('/');
+                      }}
+                    >
+                      Start Workout
+                    </Button>
+                  )}
                   <Button 
-                    className="flex-1"
-                    onClick={() => {
-                      setPreviewWorkout(null);
-                      navigate('/');
-                    }}
+                    variant="secondary" 
+                    className={isNextWorkout ? "flex-1" : "w-full"}
+                    onClick={() => setPreviewWorkout(null)}
                   >
-                    Start Workout
+                    Close
                   </Button>
-                )}
+                </div>
+                
                 <Button 
-                  variant="secondary" 
-                  className={isNextWorkout ? "flex-1" : "w-full"}
-                  onClick={() => setPreviewWorkout(null)}
+                  variant="secondary"
+                  className="w-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => {
+                    setWorkoutToDelete(previewWorkout);
+                  }}
                 >
-                  Close
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Workout
                 </Button>
               </div>
             </div>
@@ -616,6 +659,54 @@ export function SchedulePage() {
           onCancel={() => setShowMaxTestingWizard(false)}
         />
       )}
+
+      {/* Delete Workout Confirmation Modal */}
+      <Modal
+        isOpen={!!workoutToDelete}
+        onClose={() => setWorkoutToDelete(null)}
+        title="Delete Workout"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <p className="text-sm text-red-800 dark:text-red-200">
+              <strong>Warning:</strong> This action cannot be undone.
+            </p>
+          </div>
+          
+          <p className="text-gray-700 dark:text-gray-300">
+            Are you sure you want to delete Workout #{workoutToDelete?.sequenceNumber}?
+          </p>
+          
+          {workoutToDelete && (
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <p className="font-medium text-gray-900 dark:text-gray-100">
+                {activeCycle?.groups.find(g => g.id === workoutToDelete.groupId)?.name}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Week {workoutToDelete.weekNumber} • {workoutToDelete.scheduledSets.length} sets
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              className="flex-1"
+              onClick={() => setWorkoutToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDeleteWorkout}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Workout'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
