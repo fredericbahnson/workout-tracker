@@ -180,6 +180,24 @@ export function TodayPage() {
   const groupedSetsRemaining = groupSetsByType(scheduledSetsRemaining);
   const groupedSetsCompleted = groupSetsByType(scheduledSetsCompleted);
 
+  // Ad-hoc completed sets (logged via "+ Log" button, not from scheduled sets)
+  const adHocCompletedSets = workoutCompletedSets?.filter(s => s.scheduledSetId === null) || [];
+  
+  // Group ad-hoc sets by exercise type
+  const groupedAdHocSets = EXERCISE_TYPES.map(type => ({
+    type,
+    sets: adHocCompletedSets
+      .filter(set => {
+        const exercise = exerciseMap.get(set.exerciseId);
+        return exercise?.type === type;
+      })
+      .sort((a, b) => {
+        const exA = exerciseMap.get(a.exerciseId);
+        const exB = exerciseMap.get(b.exerciseId);
+        return (exA?.name || '').localeCompare(exB?.name || '');
+      })
+  })).filter(group => group.sets.length > 0);
+
   // Handler to proceed to next workout after viewing completion
   const handleProceedToNextWorkout = () => {
     setShowCompletionView(false);
@@ -475,13 +493,14 @@ export function TodayPage() {
         setShowTimerMode(false);
         setShowStopwatchMode(false);
       } else if (selectedExercise) {
+        // Pass the current workout ID if one is active, so the set shows in workout history
         await CompletedSetRepo.create({
           exerciseId: selectedExercise.id,
           reps,
           weight,
           notes,
           parameters
-        });
+        }, displayWorkout?.id);
         setSelectedExercise(null);
         // Show rest timer for ad-hoc sets too if enabled
         if (restTimer.enabled) {
@@ -747,6 +766,54 @@ export function TodayPage() {
                                   {wasSkipped ? '—' : completedSet.actualReps}
                                 </span>
                                 {hasWeight && !wasSkipped && (
+                                  <span className="text-sm text-purple-600 dark:text-purple-400">
+                                    +{completedSet.weight}
+                                  </span>
+                                )}
+                              </div>
+                              <Edit2 className="w-3 h-3 text-gray-400" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ad-hoc completed sets (logged via "+ Log") */}
+            {adHocCompletedSets.length > 0 && (
+              <div className={`p-3 ${(scheduledSetsCompleted.length > 0 || !isShowingCompletedWorkout) && 'border-t border-gray-100 dark:border-gray-800'}`}>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Additional Sets (tap to edit)</p>
+                <div className="space-y-4">
+                  {groupedAdHocSets.map(group => (
+                    <div key={group.type}>
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        {EXERCISE_TYPE_LABELS[group.type]}
+                      </h4>
+                      <div className="space-y-2">
+                        {group.sets.map(completedSet => {
+                          const exercise = exerciseMap.get(completedSet.exerciseId);
+                          if (!exercise) return null;
+                          
+                          const hasWeight = completedSet.weight !== undefined && completedSet.weight > 0;
+
+                          return (
+                            <button
+                              key={completedSet.id}
+                              onClick={() => handleEditCompletedSet(completedSet)}
+                              className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                            >
+                              <Plus className="w-5 h-5 flex-shrink-0 text-blue-500" />
+                              <span className="text-base text-gray-700 dark:text-gray-300 truncate flex-1">
+                                {exercise.name}
+                              </span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-gym-xl text-blue-600 dark:text-blue-400">
+                                  {completedSet.actualReps}
+                                </span>
+                                {hasWeight && (
                                   <span className="text-sm text-purple-600 dark:text-purple-400">
                                     +{completedSet.weight}
                                   </span>

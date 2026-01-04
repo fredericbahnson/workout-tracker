@@ -38,11 +38,11 @@ export const CompletedSetRepo = {
       .toArray();
   },
 
-  async create(data: QuickLogData): Promise<CompletedSet> {
+  async create(data: QuickLogData, scheduledWorkoutId?: string): Promise<CompletedSet> {
     const completedSet: CompletedSet = {
       id: generateId(),
       scheduledSetId: null,
-      scheduledWorkoutId: null,
+      scheduledWorkoutId: scheduledWorkoutId || null,
       exerciseId: data.exerciseId,
       targetReps: data.reps,
       actualReps: data.reps,

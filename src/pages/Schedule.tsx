@@ -541,18 +541,34 @@ export function SchedulePage() {
               </div>
             ) : (
               <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Sets Completed ({historyCompletedSets.length})
-                </h4>
                 {historyCompletedSets.length === 0 ? (
                   <p className="text-sm text-gray-400 dark:text-gray-500 py-2">
                     No set data recorded
                   </p>
                 ) : (() => {
-                  // Group completed sets by exercise type
-                  const groupedHistorySets = EXERCISE_TYPES.map(type => ({
+                  // Separate scheduled sets from ad-hoc sets
+                  const scheduledSets = historyCompletedSets.filter(cs => cs.scheduledSetId !== null);
+                  const adHocSets = historyCompletedSets.filter(cs => cs.scheduledSetId === null);
+                  
+                  // Group scheduled sets by exercise type
+                  const groupedScheduledSets = EXERCISE_TYPES.map(type => ({
                     type,
-                    sets: historyCompletedSets
+                    sets: scheduledSets
+                      .filter(cs => {
+                        const ex = exerciseMap.get(cs.exerciseId);
+                        return ex?.type === type;
+                      })
+                      .sort((a, b) => {
+                        const exA = exerciseMap.get(a.exerciseId);
+                        const exB = exerciseMap.get(b.exerciseId);
+                        return (exA?.name || '').localeCompare(exB?.name || '');
+                      })
+                  })).filter(group => group.sets.length > 0);
+                  
+                  // Group ad-hoc sets by exercise type
+                  const groupedAdHocSets = EXERCISE_TYPES.map(type => ({
+                    type,
+                    sets: adHocSets
                       .filter(cs => {
                         const ex = exerciseMap.get(cs.exerciseId);
                         return ex?.type === type;
@@ -565,37 +581,90 @@ export function SchedulePage() {
                   })).filter(group => group.sets.length > 0);
 
                   return (
-                    <div className="space-y-4">
-                      {groupedHistorySets.map(group => (
-                        <div key={group.type}>
-                          <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                            {EXERCISE_TYPE_LABELS[group.type]}
-                          </h5>
-                          <div className="space-y-2">
-                            {group.sets.map(completedSet => {
-                              const exercise = exerciseMap.get(completedSet.exerciseId);
-                              return (
-                                <div 
-                                  key={completedSet.id}
-                                  className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                                >
-                                  <span className="text-sm text-gray-900 dark:text-gray-100">
-                                    {exercise?.name || 'Unknown Exercise'}
-                                  </span>
-                                  <div className="text-sm">
-                                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                                      {completedSet.actualReps}
-                                    </span>
-                                    <span className="text-gray-500 dark:text-gray-400">
-                                      {' '}/ {completedSet.targetReps} reps
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                    <div className="space-y-6">
+                      {/* Scheduled Sets */}
+                      {scheduledSets.length > 0 && (
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Scheduled Sets ({scheduledSets.length})
+                          </h4>
+                          {groupedScheduledSets.map(group => (
+                            <div key={group.type}>
+                              <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                {EXERCISE_TYPE_LABELS[group.type]}
+                              </h5>
+                              <div className="space-y-2">
+                                {group.sets.map(completedSet => {
+                                  const exercise = exerciseMap.get(completedSet.exerciseId);
+                                  const wasSkipped = completedSet.actualReps === 0 && completedSet.notes === 'Skipped';
+                                  return (
+                                    <div 
+                                      key={completedSet.id}
+                                      className={`flex items-center justify-between py-2 px-3 rounded-lg ${
+                                        wasSkipped 
+                                          ? 'bg-orange-50 dark:bg-orange-900/20' 
+                                          : 'bg-gray-50 dark:bg-gray-800/50'
+                                      }`}
+                                    >
+                                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                                        {exercise?.name || 'Unknown Exercise'}
+                                      </span>
+                                      <div className="text-sm">
+                                        {wasSkipped ? (
+                                          <span className="text-orange-600 dark:text-orange-400">Skipped</span>
+                                        ) : (
+                                          <>
+                                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                                              {completedSet.actualReps}
+                                            </span>
+                                            <span className="text-gray-500 dark:text-gray-400">
+                                              {' '}/ {completedSet.targetReps}
+                                            </span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                      
+                      {/* Ad-hoc Sets */}
+                      {adHocSets.length > 0 && (
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                            Additional Sets ({adHocSets.length})
+                          </h4>
+                          {groupedAdHocSets.map(group => (
+                            <div key={group.type}>
+                              <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                                {EXERCISE_TYPE_LABELS[group.type]}
+                              </h5>
+                              <div className="space-y-2">
+                                {group.sets.map(completedSet => {
+                                  const exercise = exerciseMap.get(completedSet.exerciseId);
+                                  return (
+                                    <div 
+                                      key={completedSet.id}
+                                      className="flex items-center justify-between py-2 px-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
+                                    >
+                                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                                        {exercise?.name || 'Unknown Exercise'}
+                                      </span>
+                                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                        {completedSet.actualReps}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
