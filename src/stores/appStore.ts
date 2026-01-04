@@ -24,6 +24,11 @@ export interface RestTimerSettings {
   defaultDurationSeconds: number;
 }
 
+export interface MaxTestRestTimerSettings {
+  enabled: boolean;
+  defaultDurationSeconds: number;
+}
+
 interface AppState {
   // Theme
   theme: Theme;
@@ -41,6 +46,10 @@ interface AppState {
   // Rest timer settings
   restTimer: RestTimerSettings;
   setRestTimer: (settings: Partial<RestTimerSettings>) => void;
+  
+  // Max testing rest timer settings
+  maxTestRestTimer: MaxTestRestTimerSettings;
+  setMaxTestRestTimer: (settings: Partial<MaxTestRestTimerSettings>) => void;
   
   // Onboarding
   hasCompletedOnboarding: boolean;
@@ -69,6 +78,11 @@ const DEFAULT_SETTINGS: AppDefaults = {
 const DEFAULT_REST_TIMER: RestTimerSettings = {
   enabled: false,
   defaultDurationSeconds: 180
+};
+
+const DEFAULT_MAX_TEST_REST_TIMER: MaxTestRestTimerSettings = {
+  enabled: false,
+  defaultDurationSeconds: 300 // 5 minutes
 };
 
 export const useAppStore = create<AppState>()(
@@ -103,6 +117,12 @@ export const useAppStore = create<AppState>()(
         restTimer: { ...state.restTimer, ...settings }
       })),
       
+      // Max testing rest timer settings
+      maxTestRestTimer: DEFAULT_MAX_TEST_REST_TIMER,
+      setMaxTestRestTimer: (settings) => set((state) => ({
+        maxTestRestTimer: { ...state.maxTestRestTimer, ...settings }
+      })),
+      
       // Onboarding
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
@@ -118,6 +138,7 @@ export const useAppStore = create<AppState>()(
         defaults: state.defaults, 
         repDisplayMode: state.repDisplayMode,
         restTimer: state.restTimer,
+        maxTestRestTimer: state.maxTestRestTimer,
         hasCompletedOnboarding: state.hasCompletedOnboarding
       }),
     }

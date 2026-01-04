@@ -9,7 +9,7 @@ import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '../types';
 
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
-  const { defaults, setDefaults, setWeeklySetGoal, repDisplayMode, setRepDisplayMode, restTimer, setRestTimer } = useAppStore();
+  const { defaults, setDefaults, setWeeklySetGoal, repDisplayMode, setRepDisplayMode, restTimer, setRestTimer, maxTestRestTimer, setMaxTestRestTimer } = useAppStore();
   const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount, updatePassword } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
   
@@ -409,7 +409,7 @@ export function SettingsPage() {
             </h3>
             
             <Select
-              label="Rep Totals Display"
+              label="Progress Totals Timeframe"
               value={repDisplayMode}
               onChange={e => setRepDisplayMode(e.target.value as RepDisplayMode)}
               options={[
@@ -419,7 +419,7 @@ export function SettingsPage() {
               ]}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              How to display rep totals on exercise detail pages
+              Timeframe for totals on Progress tab and exercise detail pages
             </p>
           </CardContent>
         </Card>
@@ -471,6 +471,47 @@ export function SettingsPage() {
                 />
               </div>
             )}
+
+            {/* Max Testing Rest Timer */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Max testing rest timer</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Show timer after each max test set
+                  </p>
+                </div>
+                <button
+                  onClick={() => setMaxTestRestTimer({ enabled: !maxTestRestTimer.enabled })}
+                  className={`
+                    relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                    ${maxTestRestTimer.enabled 
+                      ? 'bg-primary-600' 
+                      : 'bg-gray-200 dark:bg-gray-700'
+                    }
+                  `}
+                >
+                  <span
+                    className={`
+                      inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                      ${maxTestRestTimer.enabled ? 'translate-x-6' : 'translate-x-1'}
+                    `}
+                  />
+                </button>
+              </div>
+
+              {maxTestRestTimer.enabled && (
+                <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800">
+                  <TimeDurationInput
+                    label="Default max test rest duration"
+                    value={maxTestRestTimer.defaultDurationSeconds}
+                    onChange={v => setMaxTestRestTimer({ defaultDurationSeconds: v })}
+                    minSeconds={30}
+                    maxSeconds={900}
+                  />
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -528,7 +569,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v0.14.2
+              Ascend v0.15.2
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

@@ -7,11 +7,11 @@ import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
 import { useSyncItem } from '../contexts/SyncContext';
 import { PageHeader } from '../components/layout';
-import { Button, Modal, EmptyState, Card, Badge, NumberInput } from '../components/ui';
+import { Button, Modal, EmptyState, Card, NumberInput } from '../components/ui';
 import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard, ExerciseTimer, ExerciseStopwatch } from '../components/workouts';
 import { ExerciseCard } from '../components/exercises';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
-import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
 
 // Helper to check if a date is today
 const isToday = (date: Date): boolean => {
@@ -23,7 +23,7 @@ const isToday = (date: Date): boolean => {
 
 export function TodayPage() {
   const navigate = useNavigate();
-  const { defaults, restTimer } = useAppStore();
+  const { defaults, restTimer, maxTestRestTimer } = useAppStore();
   const { syncItem } = useSyncItem();
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [showCycleWizard, setShowCycleWizard] = useState(false);
@@ -31,6 +31,7 @@ export function TodayPage() {
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [restTimerDuration, setRestTimerDuration] = useState(restTimer.defaultDurationSeconds);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [selectedScheduledSet, setSelectedScheduledSet] = useState<{
     set: ScheduledSet;
@@ -168,6 +169,24 @@ export function TodayPage() {
     );
   };
 
+  // Helper to group sets by exercise type, sorted alphabetically within each type
+  const groupSetsByType = (sets: ScheduledSet[]) => {
+    return EXERCISE_TYPES.map(type => ({
+      type,
+      sets: sets
+        .filter(set => set.exerciseType === type)
+        .sort((a, b) => {
+          const exA = exerciseMap.get(a.exerciseId);
+          const exB = exerciseMap.get(b.exerciseId);
+          return (exA?.name || '').localeCompare(exB?.name || '');
+        })
+    })).filter(group => group.sets.length > 0);
+  };
+
+  // Grouped sets for display
+  const groupedSetsRemaining = groupSetsByType(scheduledSetsRemaining);
+  const groupedSetsCompleted = groupSetsByType(scheduledSetsCompleted);
+
   // Handler to proceed to next workout after viewing completion
   const handleProceedToNextWorkout = () => {
     setShowCompletionView(false);
@@ -297,8 +316,9 @@ export function TodayPage() {
       setCompletionDismissed(false);
     } else {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-      // Show rest timer if enabled
+      // Show rest timer if enabled (regular sets only here, max test redirects above)
       if (restTimer.enabled) {
+        setRestTimerDuration(restTimer.defaultDurationSeconds);
         setShowRestTimer(true);
       }
     }
@@ -448,7 +468,14 @@ export function TodayPage() {
         } else if (newCompletedCount > 0 && displayWorkout) {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
           // Show rest timer if enabled and there are more sets
-          shouldShowTimer = restTimer.enabled;
+          // Use max test rest timer for max test sets, regular rest timer otherwise
+          if (set.isMaxTest && maxTestRestTimer.enabled) {
+            shouldShowTimer = true;
+            setRestTimerDuration(maxTestRestTimer.defaultDurationSeconds);
+          } else if (!set.isMaxTest && restTimer.enabled) {
+            shouldShowTimer = true;
+            setRestTimerDuration(restTimer.defaultDurationSeconds);
+          }
         }
         
         setSelectedScheduledSet(null);
@@ -464,7 +491,10 @@ export function TodayPage() {
         });
         setSelectedExercise(null);
         // Show rest timer for ad-hoc sets too if enabled
-        shouldShowTimer = restTimer.enabled;
+        if (restTimer.enabled) {
+          shouldShowTimer = true;
+          setRestTimerDuration(restTimer.defaultDurationSeconds);
+        }
       }
     } finally {
       setIsLogging(false);
@@ -614,61 +644,67 @@ export function TodayPage() {
 
             {/* Remaining sets (only show if not viewing completed workout) */}
             {!isShowingCompletedWorkout && scheduledSetsRemaining.length > 0 && (
-              <div className="p-3 space-y-2">
+              <div className="p-3 space-y-4">
                 {/* Swipe hint - only show once */}
                 {scheduledSetsRemaining.length > 0 && scheduledSetsCompleted.length === 0 && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 text-center mb-1">
                     Swipe right to complete • Swipe left to skip • Tap for details
                   </p>
                 )}
-                {scheduledSetsRemaining.map(set => {
-                  const exercise = exerciseMap.get(set.exerciseId);
-                  if (!exercise) return null;
-                  const targetReps = getTargetReps(set, displayWorkout);
-                  const isMaxTestSet = set.isMaxTest;
-                  const isWarmupSet = set.isWarmup;
+                {groupedSetsRemaining.map(group => (
+                  <div key={group.type}>
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      {EXERCISE_TYPE_LABELS[group.type]}
+                    </h4>
+                    <div className="space-y-2">
+                      {group.sets.map(set => {
+                        const exercise = exerciseMap.get(set.exerciseId);
+                        if (!exercise) return null;
+                        const targetReps = getTargetReps(set, displayWorkout);
+                        const isMaxTestSet = set.isMaxTest;
+                        const isWarmupSet = set.isWarmup;
 
-                  return (
-                    <SwipeableSetCard
-                      key={set.id}
-                      onSwipeRight={() => handleQuickComplete(set)}
-                      onSwipeLeft={() => handleInitiateSkipSet(set)}
-                      onTap={() => handleSelectScheduledSet(set)}
-                    >
-                      <div className="flex items-center gap-4 p-4 text-left">
-                        <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
-                            {exercise.name}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={exercise.type} className="text-xs">
-                              {EXERCISE_TYPE_LABELS[exercise.type]}
-                            </Badge>
-                            {isWarmupSet && (
-                              <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
-                                Warmup
-                              </span>
-                            )}
-                            {isMaxTestSet && (
-                              <span className="text-xs px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
-                                Max Test
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`}>
-                            {isMaxTestSet ? 'MAX' : exercise.measurementType === 'time' ? formatTime(targetReps) : targetReps}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : exercise.measurementType === 'time' ? 'hold' : 'reps'}
-                          </span>
-                        </div>
-                      </div>
-                    </SwipeableSetCard>
-                  );
-                })}
+                        return (
+                          <SwipeableSetCard
+                            key={set.id}
+                            onSwipeRight={() => handleQuickComplete(set)}
+                            onSwipeLeft={() => handleInitiateSkipSet(set)}
+                            onTap={() => handleSelectScheduledSet(set)}
+                          >
+                            <div className="flex items-center gap-4 p-4 text-left">
+                              <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
+                                  {exercise.name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {isWarmupSet && (
+                                    <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
+                                      Warmup
+                                    </span>
+                                  )}
+                                  {isMaxTestSet && (
+                                    <span className="text-xs px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
+                                      Max Test
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end">
+                                <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`}>
+                                  {isMaxTestSet ? 'MAX' : exercise.measurementType === 'time' ? formatTime(targetReps) : targetReps}
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : exercise.measurementType === 'time' ? 'hold' : 'reps'}
+                                </span>
+                              </div>
+                            </div>
+                          </SwipeableSetCard>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -678,49 +714,58 @@ export function TodayPage() {
                 {!isShowingCompletedWorkout && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Completed (tap to edit)</p>
                 )}
-                <div className="space-y-2">
-                  {scheduledSetsCompleted.map(set => {
-                    const exercise = exerciseMap.get(set.exerciseId);
-                    const completedSet = workoutCompletedSets?.find(s => s.scheduledSetId === set.id);
-                    if (!exercise || !completedSet) return null;
-                    
-                    const wasSkipped = completedSet.actualReps === 0 && completedSet.notes === 'Skipped';
-                    const hasWeight = completedSet.weight !== undefined && completedSet.weight > 0;
+                <div className="space-y-4">
+                  {groupedSetsCompleted.map(group => (
+                    <div key={group.type}>
+                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        {EXERCISE_TYPE_LABELS[group.type]}
+                      </h4>
+                      <div className="space-y-2">
+                        {group.sets.map(set => {
+                          const exercise = exerciseMap.get(set.exerciseId);
+                          const completedSet = workoutCompletedSets?.find(s => s.scheduledSetId === set.id);
+                          if (!exercise || !completedSet) return null;
+                          
+                          const wasSkipped = completedSet.actualReps === 0 && completedSet.notes === 'Skipped';
+                          const hasWeight = completedSet.weight !== undefined && completedSet.weight > 0;
 
-                    return (
-                      <button
-                        key={set.id}
-                        onClick={() => handleEditCompletedSet(completedSet)}
-                        className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left ${
-                          wasSkipped 
-                            ? 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30'
-                            : 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
-                        }`}
-                      >
-                        <CheckCircle className={`w-5 h-5 flex-shrink-0 ${
-                          wasSkipped ? 'text-orange-500' : 'text-green-500'
-                        }`} />
-                        <span className="text-base text-gray-700 dark:text-gray-300 truncate flex-1">
-                          {exercise.name}
-                        </span>
-                        <div className="flex items-baseline gap-1">
-                          <span className={`text-gym-xl ${
-                            wasSkipped 
-                              ? 'text-orange-600 dark:text-orange-400'
-                              : 'text-green-600 dark:text-green-400'
-                          }`}>
-                            {wasSkipped ? '—' : completedSet.actualReps}
-                          </span>
-                          {hasWeight && !wasSkipped && (
-                            <span className="text-sm text-purple-600 dark:text-purple-400">
-                              +{completedSet.weight}
-                            </span>
-                          )}
-                        </div>
-                        <Edit2 className="w-3 h-3 text-gray-400" />
-                      </button>
-                    );
-                  })}
+                          return (
+                            <button
+                              key={set.id}
+                              onClick={() => handleEditCompletedSet(completedSet)}
+                              className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left ${
+                                wasSkipped 
+                                  ? 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30'
+                                  : 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
+                              }`}
+                            >
+                              <CheckCircle className={`w-5 h-5 flex-shrink-0 ${
+                                wasSkipped ? 'text-orange-500' : 'text-green-500'
+                              }`} />
+                              <span className="text-base text-gray-700 dark:text-gray-300 truncate flex-1">
+                                {exercise.name}
+                              </span>
+                              <div className="flex items-baseline gap-1">
+                                <span className={`text-gym-xl ${
+                                  wasSkipped 
+                                    ? 'text-orange-600 dark:text-orange-400'
+                                    : 'text-green-600 dark:text-green-400'
+                                }`}>
+                                  {wasSkipped ? '—' : completedSet.actualReps}
+                                </span>
+                                {hasWeight && !wasSkipped && (
+                                  <span className="text-sm text-purple-600 dark:text-purple-400">
+                                    +{completedSet.weight}
+                                  </span>
+                                )}
+                              </div>
+                              <Edit2 className="w-3 h-3 text-gray-400" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1026,7 +1071,7 @@ export function TodayPage() {
         title="Rest Timer"
       >
         <RestTimer
-          initialSeconds={restTimer.defaultDurationSeconds}
+          initialSeconds={restTimerDuration}
           onDismiss={() => setShowRestTimer(false)}
         />
       </Modal>

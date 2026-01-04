@@ -289,17 +289,27 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
         if (editMode === 'continue') {
           // Only delete pending/partial workouts, keep completed/skipped
           const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(editCycle.id);
-          const pendingWorkouts = allWorkouts.filter(w => w.status === 'pending' || w.status === 'partial');
-          for (const workout of pendingWorkouts) {
-            await ScheduledWorkoutRepo.delete(workout.id);
+          const pendingWorkoutIds = allWorkouts
+            .filter(w => w.status === 'pending' || w.status === 'partial')
+            .map(w => w.id);
+          
+          // Delete all pending workouts
+          for (const id of pendingWorkoutIds) {
+            await ScheduledWorkoutRepo.delete(id);
           }
           
-          // Generate new schedule starting from current position
-          const completedCount = cycleProgress?.passed || 0;
+          // Recalculate actual remaining workout count after deletion
+          const remainingWorkouts = await ScheduledWorkoutRepo.getByCycleId(editCycle.id);
+          const maxExistingSequence = remainingWorkouts.reduce(
+            (max, w) => Math.max(max, w.sequenceNumber), 
+            0
+          );
+          
+          // Generate new schedule starting after the highest existing sequence
           const scheduleInput = {
             cycle,
             exercises: exerciseMap,
-            startFromWorkout: completedCount + 1
+            startFromWorkout: maxExistingSequence + 1
           };
           
           const workouts = generateSchedule(scheduleInput);
@@ -920,44 +930,66 @@ function GroupsStep({
         title="Add/Remove Exercises"
         size="lg"
       >
-        <div className="space-y-2">
-          {exercises.map(exercise => {
-            const group = groups.find(g => g.id === selectedGroup);
-            const isAdded = group?.exerciseAssignments.some(a => a.exerciseId === exercise.id);
+        <div className="space-y-4">
+          {EXERCISE_TYPES.map(type => {
+            const typeExercises = exercises
+              .filter(ex => ex.type === type)
+              .sort((a, b) => a.name.localeCompare(b.name));
+            
+            if (typeExercises.length === 0) return null;
             
             return (
-              <button
-                key={exercise.id}
-                onClick={() => {
-                  if (selectedGroup) {
-                    if (isAdded) {
-                      // Remove if already added
-                      onRemoveExercise(selectedGroup, exercise.id);
-                    } else {
-                      // Add if not added
-                      onAddExercise(selectedGroup, exercise.id);
-                    }
-                  }
-                }}
-                className={`
-                  w-full flex items-center gap-2 p-3 rounded-lg text-left transition-colors
-                  ${isAdded 
-                    ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800' 
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }
-                `}
-              >
-                <Badge variant={exercise.type}>
-                  {EXERCISE_TYPE_LABELS[exercise.type]}
-                </Badge>
-                <span className="flex-1">{exercise.name}</span>
-                {exercise.mode === 'conditioning' && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">conditioning</span>
-                )}
-                {isAdded && <Check className="w-4 h-4 text-primary-500" />}
-              </button>
+              <div key={type}>
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  {EXERCISE_TYPE_LABELS[type]}
+                </h3>
+                <div className="space-y-2">
+                  {typeExercises.map(exercise => {
+                    const group = groups.find(g => g.id === selectedGroup);
+                    const isAdded = group?.exerciseAssignments.some(a => a.exerciseId === exercise.id);
+                    
+                    return (
+                      <button
+                        key={exercise.id}
+                        onClick={() => {
+                          if (selectedGroup) {
+                            if (isAdded) {
+                              onRemoveExercise(selectedGroup, exercise.id);
+                            } else {
+                              onAddExercise(selectedGroup, exercise.id);
+                            }
+                          }
+                        }}
+                        className={`
+                          w-full flex items-center gap-2 p-3 rounded-lg text-left transition-colors
+                          ${isAdded 
+                            ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800' 
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }
+                        `}
+                      >
+                        <Badge variant={exercise.type}>
+                          {EXERCISE_TYPE_LABELS[exercise.type]}
+                        </Badge>
+                        <span className="flex-1">{exercise.name}</span>
+                        {exercise.mode === 'conditioning' && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">conditioning</span>
+                        )}
+                        {isAdded && <Check className="w-4 h-4 text-primary-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
+          
+          <Button 
+            className="w-full mt-4"
+            onClick={() => setShowExercisePicker(false)}
+          >
+            Done
+          </Button>
         </div>
       </Modal>
     </div>
@@ -1020,8 +1052,8 @@ function GoalsStep({
         
         <div className="grid grid-cols-2 gap-3">
           {EXERCISE_TYPES.filter(t => t !== 'other').map(type => (
-            <div key={type} className="flex items-center gap-2">
-              <Badge variant={type} className="w-20 justify-center">
+            <div key={type} className="flex flex-col gap-1">
+              <Badge variant={type} className="w-fit">
                 {EXERCISE_TYPE_LABELS[type]}
               </Badge>
               <NumberInput

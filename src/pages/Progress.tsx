@@ -5,7 +5,7 @@ import { CompletedSetRepo, ExerciseRepo, CycleRepo } from '../data/repositories'
 import { useAppStore, type RepDisplayMode } from '../stores/appStore';
 import { PageHeader } from '../components/layout';
 import { Card, CardContent, Badge, EmptyState, Button } from '../components/ui';
-import { EXERCISE_TYPE_LABELS, EXERCISE_TYPES, type ExerciseType, type CompletedSet, type Exercise } from '../types';
+import { EXERCISE_TYPE_LABELS, EXERCISE_TYPES, formatDuration, type ExerciseType, type CompletedSet, type Exercise } from '../types';
 
 const TIME_PERIOD_LABELS: Record<RepDisplayMode, string> = {
   week: 'This Week',
@@ -50,7 +50,16 @@ export function ProgressPage() {
   // Calculate stats
   const stats = {
     totalSets: filteredSets.length,
-    totalReps: filteredSets.reduce((sum, s) => sum + s.actualReps, 0),
+    totalReps: filteredSets.reduce((sum, s) => {
+      const exercise = exerciseMap.get(s.exerciseId);
+      // Only count reps for rep-based exercises
+      return sum + (exercise?.measurementType !== 'time' ? s.actualReps : 0);
+    }, 0),
+    totalTime: filteredSets.reduce((sum, s) => {
+      const exercise = exerciseMap.get(s.exerciseId);
+      // Only count time for time-based exercises
+      return sum + (exercise?.measurementType === 'time' ? s.actualReps : 0);
+    }, 0),
     uniqueExercises: new Set(filteredSets.map(s => s.exerciseId)).size,
     workoutDays: new Set(
       filteredSets.map(s => new Date(s.completedAt).toDateString())
@@ -174,6 +183,14 @@ export function ProgressPage() {
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Reps</p>
               </div>
+              {stats.totalTime > 0 && (
+                <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {formatDuration(stats.totalTime)}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Time</p>
+                </div>
+              )}
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                   {stats.workoutDays}
@@ -190,13 +207,13 @@ export function ProgressPage() {
           </CardContent>
         </Card>
 
-        {/* Reps by Exercise */}
+        {/* Totals by Exercise */}
         {exerciseStats.length > 0 && (
           <Card>
             <CardContent>
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
                 <Dumbbell className="w-4 h-4" />
-                Reps by Exercise
+                Totals by Exercise
               </h3>
               <div className="space-y-2">
                 {exerciseStats.map(({ exercise, sets, reps }) => (
@@ -211,7 +228,9 @@ export function ProgressPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                        {reps.toLocaleString()} reps
+                        {exercise.measurementType === 'time' 
+                          ? formatDuration(reps)
+                          : `${reps.toLocaleString()} reps`}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {sets} sets
@@ -297,6 +316,30 @@ export function ProgressPage() {
                   </div>
                 );
               })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Progress Totals Timeframe */}
+        <Card>
+          <CardContent>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+              Progress Totals Timeframe
+            </h3>
+            <div className="flex gap-2">
+              {(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setRepDisplayMode(mode)}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    repDisplayMode === mode
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {TIME_PERIOD_LABELS[mode]}
+                </button>
+              ))}
             </div>
           </CardContent>
         </Card>

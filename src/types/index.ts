@@ -134,7 +134,7 @@ export interface QuickLogData {
 
 // Utility types
 
-export const EXERCISE_TYPES: ExerciseType[] = ['push', 'pull', 'legs', 'core', 'balance', 'mobility', 'other'];
+export const EXERCISE_TYPES: ExerciseType[] = ['legs', 'push', 'pull', 'core', 'balance', 'mobility', 'other'];
 
 export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   push: 'Push',
@@ -198,4 +198,22 @@ export function parseTimeInput(input: string): number | null {
   }
   
   return null;
+}
+
+// Helper function to format duration in comprehensive format (e.g., "2d 3h 45m 30s")
+export function formatDuration(totalSeconds: number): string {
+  if (totalSeconds === 0) return '0s';
+  
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+  
+  return parts.join(' ');
 }

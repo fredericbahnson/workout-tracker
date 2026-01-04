@@ -8,7 +8,7 @@ import { useAppStore } from '../stores/appStore';
 import { PageHeader } from '../components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '../components/ui';
 import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '../components/cycles';
-import { EXERCISE_TYPE_LABELS, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
 
 export function SchedulePage() {
   const navigate = useNavigate();
@@ -77,12 +77,8 @@ export function SchedulePage() {
     );
   };
 
-  const handleWorkoutClick = (workout: ScheduledWorkout, isNext: boolean) => {
-    if (isNext) {
-      navigate('/');
-    } else {
-      setPreviewWorkout(workout);
-    }
+  const handleWorkoutClick = (workout: ScheduledWorkout) => {
+    setPreviewWorkout(workout);
   };
 
   const handleHistoryClick = async (workout: ScheduledWorkout) => {
@@ -256,7 +252,7 @@ export function SchedulePage() {
                   <Card
                     key={workout.id}
                     className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isNext ? 'ring-2 ring-primary-500' : ''}`}
-                    onClick={() => handleWorkoutClick(workout, isNext)}
+                    onClick={() => handleWorkoutClick(workout)}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`
@@ -371,56 +367,92 @@ export function SchedulePage() {
         title={`Workout #${previewWorkout?.sequenceNumber}`}
         size="lg"
       >
-        {previewWorkout && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                  {activeCycle?.groups.find(g => g.id === previewWorkout.groupId)?.name}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Week {previewWorkout.weekNumber} • RFEM -{previewWorkout.rfem}
-                </p>
+        {previewWorkout && (() => {
+          // Group sets by type for this preview
+          const groupedPreviewSets = EXERCISE_TYPES.map(type => ({
+            type,
+            sets: previewWorkout.scheduledSets
+              .filter(set => set.exerciseType === type)
+              .sort((a, b) => {
+                const exA = exerciseMap.get(a.exerciseId);
+                const exB = exerciseMap.get(b.exerciseId);
+                return (exA?.name || '').localeCompare(exB?.name || '');
+              })
+          })).filter(group => group.sets.length > 0);
+
+          // Check if this is the next workout
+          const isNextWorkout = pendingWorkouts.length > 0 && pendingWorkouts[0].id === previewWorkout.id;
+
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                    {activeCycle?.groups.find(g => g.id === previewWorkout.groupId)?.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Week {previewWorkout.weekNumber} • RFEM -{previewWorkout.rfem}
+                  </p>
+                </div>
+                <Badge className="text-sm">
+                  {previewWorkout.scheduledSets.length} sets
+                </Badge>
               </div>
-              <Badge className="text-sm">
-                {previewWorkout.scheduledSets.length} sets
-              </Badge>
-            </div>
 
-            <div className="space-y-2">
-              {previewWorkout.scheduledSets.map(set => {
-                const exercise = exerciseMap.get(set.exerciseId);
-                if (!exercise) return null;
-                const targetReps = getTargetReps(set, previewWorkout);
+              <div className="space-y-4">
+                {groupedPreviewSets.map(group => (
+                  <div key={group.type}>
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      {EXERCISE_TYPE_LABELS[group.type]}
+                    </h4>
+                    <div className="space-y-2">
+                      {group.sets.map(set => {
+                        const exercise = exerciseMap.get(set.exerciseId);
+                        if (!exercise) return null;
+                        const targetReps = getTargetReps(set, previewWorkout);
 
-                return (
-                  <div
-                    key={set.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
-                  >
-                    <Badge variant={exercise.type} className="text-[10px]">
-                      {EXERCISE_TYPE_LABELS[exercise.type]}
-                    </Badge>
-                    <span className="flex-1 text-gray-900 dark:text-gray-100">
-                      {exercise.name}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {targetReps} reps
-                    </span>
+                        return (
+                          <div
+                            key={set.id}
+                            className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                          >
+                            <span className="flex-1 text-gray-900 dark:text-gray-100">
+                              {exercise.name}
+                            </span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {targetReps} reps
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
 
-            <Button 
-              variant="secondary" 
-              className="w-full"
-              onClick={() => setPreviewWorkout(null)}
-            >
-              Close
-            </Button>
-          </div>
-        )}
+              <div className="flex gap-2">
+                {isNextWorkout && (
+                  <Button 
+                    className="flex-1"
+                    onClick={() => {
+                      setPreviewWorkout(null);
+                      navigate('/');
+                    }}
+                  >
+                    Start Workout
+                  </Button>
+                )}
+                <Button 
+                  variant="secondary" 
+                  className={isNextWorkout ? "flex-1" : "w-full"}
+                  onClick={() => setPreviewWorkout(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
 
       {/* History Detail Modal */}
@@ -465,7 +497,7 @@ export function SchedulePage() {
                 This workout was skipped
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
                   Sets Completed ({historyCompletedSets.length})
                 </h4>
@@ -473,36 +505,57 @@ export function SchedulePage() {
                   <p className="text-sm text-gray-400 dark:text-gray-500 py-2">
                     No set data recorded
                   </p>
-                ) : (
-                  historyCompletedSets.map(completedSet => {
-                    const exercise = exerciseMap.get(completedSet.exerciseId);
-                    return (
-                      <div 
-                        key={completedSet.id}
-                        className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-2">
-                          {exercise && (
-                            <Badge variant={exercise.type} className="text-[10px]">
-                              {EXERCISE_TYPE_LABELS[exercise.type]}
-                            </Badge>
-                          )}
-                          <span className="text-sm text-gray-900 dark:text-gray-100">
-                            {exercise?.name || 'Unknown Exercise'}
-                          </span>
+                ) : (() => {
+                  // Group completed sets by exercise type
+                  const groupedHistorySets = EXERCISE_TYPES.map(type => ({
+                    type,
+                    sets: historyCompletedSets
+                      .filter(cs => {
+                        const ex = exerciseMap.get(cs.exerciseId);
+                        return ex?.type === type;
+                      })
+                      .sort((a, b) => {
+                        const exA = exerciseMap.get(a.exerciseId);
+                        const exB = exerciseMap.get(b.exerciseId);
+                        return (exA?.name || '').localeCompare(exB?.name || '');
+                      })
+                  })).filter(group => group.sets.length > 0);
+
+                  return (
+                    <div className="space-y-4">
+                      {groupedHistorySets.map(group => (
+                        <div key={group.type}>
+                          <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                            {EXERCISE_TYPE_LABELS[group.type]}
+                          </h5>
+                          <div className="space-y-2">
+                            {group.sets.map(completedSet => {
+                              const exercise = exerciseMap.get(completedSet.exerciseId);
+                              return (
+                                <div 
+                                  key={completedSet.id}
+                                  className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                                >
+                                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                                    {exercise?.name || 'Unknown Exercise'}
+                                  </span>
+                                  <div className="text-sm">
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                      {completedSet.actualReps}
+                                    </span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      {' '}/ {completedSet.targetReps} reps
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="text-sm">
-                          <span className="font-medium text-gray-900 dark:text-gray-100">
-                            {completedSet.actualReps}
-                          </span>
-                          <span className="text-gray-500 dark:text-gray-400">
-                            {' '}/ {completedSet.targetReps} reps
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

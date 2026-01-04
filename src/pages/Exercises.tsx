@@ -66,6 +66,14 @@ export function ExercisesPage() {
     return matchesSearch && matchesType;
   });
 
+  // Group exercises by type (for "All" view), sorted alphabetically within each type
+  const groupedExercises = EXERCISE_TYPES.map(type => ({
+    type,
+    exercises: (filteredExercises || [])
+      .filter(ex => ex.type === type)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  })).filter(group => group.exercises.length > 0);
+
   // Count by type
   const typeCounts = exercises?.reduce((acc, ex) => {
     acc[ex.type] = (acc[ex.type] || 0) + 1;
@@ -130,15 +138,40 @@ export function ExercisesPage() {
 
         {/* Exercise List */}
         {filteredExercises && filteredExercises.length > 0 ? (
-          <div className="space-y-2">
-            {filteredExercises.map(exercise => (
-              <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                latestMax={latestMaxes?.get(exercise.id)}
-              />
-            ))}
-          </div>
+          filterType === 'all' ? (
+            // Grouped view when showing all
+            <div className="space-y-6">
+              {groupedExercises.map(group => (
+                <div key={group.type}>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    {EXERCISE_TYPE_LABELS[group.type]}
+                  </h3>
+                  <div className="space-y-2">
+                    {group.exercises.map(exercise => (
+                      <ExerciseCard
+                        key={exercise.id}
+                        exercise={exercise}
+                        latestMax={latestMaxes?.get(exercise.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Flat list when filtering by specific type (sorted alphabetically)
+            <div className="space-y-2">
+              {[...filteredExercises]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(exercise => (
+                  <ExerciseCard
+                    key={exercise.id}
+                    exercise={exercise}
+                    latestMax={latestMaxes?.get(exercise.id)}
+                  />
+                ))}
+            </div>
+          )
         ) : exercises && exercises.length > 0 ? (
           <EmptyState
             icon={Filter}
