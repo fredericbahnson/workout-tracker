@@ -21,7 +21,14 @@ export const ScheduledWorkoutRepo = {
   async getNextPending(cycleId: string): Promise<ScheduledWorkout | undefined> {
     const workouts = await this.getByCycleId(cycleId);
     // Return first workout that's pending OR partial (in progress)
-    return workouts.find(w => w.status === 'pending' || w.status === 'partial');
+    // Exclude ad-hoc workouts from "next pending" - they're user-initiated
+    return workouts.find(w => (w.status === 'pending' || w.status === 'partial') && !w.isAdHoc);
+  },
+
+  async getInProgressAdHoc(cycleId: string): Promise<ScheduledWorkout | undefined> {
+    const workouts = await this.getByCycleId(cycleId);
+    // Return ad-hoc workout that's in progress (partial status)
+    return workouts.find(w => w.isAdHoc && w.status === 'partial');
   },
 
   async getPendingWorkouts(cycleId: string): Promise<ScheduledWorkout[]> {
@@ -32,6 +39,11 @@ export const ScheduledWorkoutRepo = {
   async getCompletedWorkouts(cycleId: string): Promise<ScheduledWorkout[]> {
     const workouts = await this.getByCycleId(cycleId);
     return workouts.filter(w => w.status === 'completed' || w.status === 'partial');
+  },
+
+  async countAdHocWorkouts(cycleId: string): Promise<number> {
+    const workouts = await this.getByCycleId(cycleId);
+    return workouts.filter(w => w.isAdHoc).length;
   },
 
   async create(workout: Omit<ScheduledWorkout, 'id'>): Promise<ScheduledWorkout> {
@@ -63,6 +75,13 @@ export const ScheduledWorkoutRepo = {
     }
   },
 
+  async updateName(id: string, customName: string): Promise<void> {
+    const existing = await db.scheduledWorkouts.get(id);
+    if (existing) {
+      await db.scheduledWorkouts.put({ ...existing, customName });
+    }
+  },
+
   async delete(id: string): Promise<boolean> {
     const existing = await db.scheduledWorkouts.get(id);
     if (!existing) return false;
@@ -82,8 +101,10 @@ export const ScheduledWorkoutRepo = {
     total: number 
   }> {
     const workouts = await this.getByCycleId(cycleId);
-    const completed = workouts.filter(w => w.status === 'completed').length;
-    const skipped = workouts.filter(w => w.status === 'skipped').length;
-    return { completed, skipped, passed: completed + skipped, total: workouts.length };
+    // Only count non-ad-hoc workouts for cycle progress
+    const regularWorkouts = workouts.filter(w => !w.isAdHoc);
+    const completed = regularWorkouts.filter(w => w.status === 'completed').length;
+    const skipped = regularWorkouts.filter(w => w.status === 'skipped').length;
+    return { completed, skipped, passed: completed + skipped, total: regularWorkouts.length };
   }
 };

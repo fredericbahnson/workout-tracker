@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Calendar, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Trash2, Dumbbell } from 'lucide-react';
 import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo, CompletedSetRepo } from '../data/repositories';
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
@@ -15,7 +15,7 @@ import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout
 export function SchedulePage() {
   const navigate = useNavigate();
   const { defaults } = useAppStore();
-  const { deleteItem } = useSyncItem();
+  const { syncItem, deleteItem } = useSyncItem();
   const [showCycleWizard, setShowCycleWizard] = useState(false);
   const [isEditingCycle, setIsEditingCycle] = useState(false);  // true = edit existing, false = create new
   const [showCycleTypeSelector, setShowCycleTypeSelector] = useState(false);
@@ -113,6 +113,42 @@ export function SchedulePage() {
     }
   };
 
+  const handleStartAdHocWorkout = async () => {
+    if (!activeCycle) return;
+    
+    // Count existing ad-hoc workouts in this cycle
+    const adHocCount = await ScheduledWorkoutRepo.countAdHocWorkouts(activeCycle.id);
+    const workoutName = `Ad Hoc Workout ${adHocCount + 1}`;
+    
+    // Get the max sequence number to place this workout in order
+    const cycleWorkouts = await ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
+    const maxSequence = Math.max(...cycleWorkouts.map(w => w.sequenceNumber), 0);
+    
+    // Calculate current week based on progress
+    const progress = await ScheduledWorkoutRepo.getCycleProgress(activeCycle.id);
+    const currentWeek = Math.ceil((progress.passed + 1) / activeCycle.workoutDaysPerWeek) || 1;
+    
+    // Create ad-hoc workout
+    const adHocWorkout = await ScheduledWorkoutRepo.create({
+      cycleId: activeCycle.id,
+      sequenceNumber: maxSequence + 0.5,
+      weekNumber: currentWeek,
+      dayInWeek: 1,
+      groupId: 'ad-hoc',
+      rfem: 0,
+      scheduledSets: [],
+      status: 'partial',
+      isAdHoc: true,
+      customName: workoutName
+    });
+    
+    // Sync the new workout
+    await syncItem('scheduled_workouts', adHocWorkout);
+    
+    // Navigate to Today page to start logging
+    navigate('/');
+  };
+
   if (!activeCycle) {
     return (
       <>
@@ -193,27 +229,38 @@ export function SchedulePage() {
 
       <div className="px-4 py-4 space-y-6">
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="primary"
+              size="sm"
+              onClick={() => setShowCycleTypeSelector(true)}
+              className="flex-1"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Create New Cycle
+            </Button>
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => {
+                setIsEditingCycle(true);
+                setShowCycleWizard(true);
+              }}
+              className="flex-1"
+            >
+              <Edit2 className="w-4 h-4 mr-1" />
+              Edit Cycle
+            </Button>
+          </div>
           <Button 
-            variant="primary"
+            variant="secondary"
             size="sm"
-            onClick={() => setShowCycleTypeSelector(true)}
-            className="flex-1"
+            onClick={handleStartAdHocWorkout}
+            className="w-full"
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Create New Cycle
-          </Button>
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={() => {
-              setIsEditingCycle(true);
-              setShowCycleWizard(true);
-            }}
-            className="flex-1"
-          >
-            <Edit2 className="w-4 h-4 mr-1" />
-            Edit Cycle
+            <Dumbbell className="w-4 h-4 mr-1" />
+            Log Ad-Hoc Workout
           </Button>
         </div>
 
@@ -345,18 +392,22 @@ export function SchedulePage() {
                 const group = activeCycle.groups.find(g => g.id === workout.groupId);
                 const status = getStatusIcon(workout.status);
                 const isSkipped = workout.status === 'skipped';
+                const isAdHoc = workout.isAdHoc;
                 
                 return (
                   <Card
                     key={workout.id}
-                    className={`p-3 cursor-pointer transition-colors ${isSkipped 
-                      ? 'bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50' 
-                      : 'bg-green-50/50 dark:bg-green-900/10 hover:bg-green-100/50 dark:hover:bg-green-900/20'
+                    className={`p-3 cursor-pointer transition-colors ${
+                      isSkipped 
+                        ? 'bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50' 
+                        : isAdHoc
+                          ? 'bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-100/50 dark:hover:bg-blue-900/20'
+                          : 'bg-green-50/50 dark:bg-green-900/10 hover:bg-green-100/50 dark:hover:bg-green-900/20'
                     }`}
                     onClick={() => handleHistoryClick(workout)}
                   >
                     <div className="flex items-center gap-3">
-                      <status.icon className={`w-5 h-5 ${status.color} flex-shrink-0`} />
+                      <status.icon className={`w-5 h-5 ${isAdHoc ? 'text-blue-500' : status.color} flex-shrink-0`} />
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -364,16 +415,27 @@ export function SchedulePage() {
                             ? 'text-gray-500 dark:text-gray-400' 
                             : 'text-gray-900 dark:text-gray-100'
                           }`}>
-                            #{workout.sequenceNumber} {group?.name}
+                            {isAdHoc 
+                              ? workout.customName || 'Ad Hoc Workout'
+                              : `#${workout.sequenceNumber} ${group?.name}`
+                            }
                           </span>
                           {isSkipped && (
                             <Badge className="text-[10px] bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                               Skipped
                             </Badge>
                           )}
+                          {isAdHoc && !isSkipped && (
+                            <Badge className="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                              Ad Hoc
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Week {workout.weekNumber} • {workout.scheduledSets.length} sets
+                          {isAdHoc 
+                            ? `${workout.scheduledSets.length === 0 ? 'Logged sets' : `${workout.scheduledSets.length} sets`}`
+                            : `Week ${workout.weekNumber} • ${workout.scheduledSets.length} sets`
+                          }
                           {workout.completedAt && (
                             <> • {new Date(workout.completedAt).toLocaleDateString()}</>
                           )}
@@ -505,7 +567,10 @@ export function SchedulePage() {
           setHistoryWorkout(null);
           setHistoryCompletedSets([]);
         }}
-        title={`Workout #${historyWorkout?.sequenceNumber} Details`}
+        title={historyWorkout?.isAdHoc 
+          ? historyWorkout.customName || 'Ad Hoc Workout'
+          : `Workout #${historyWorkout?.sequenceNumber} Details`
+        }
         size="lg"
       >
         {historyWorkout && (
@@ -513,10 +578,17 @@ export function SchedulePage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                  {activeCycle?.groups.find(g => g.id === historyWorkout.groupId)?.name}
+                  {historyWorkout.isAdHoc
+                    ? historyWorkout.customName || 'Ad Hoc Workout'
+                    : activeCycle?.groups.find(g => g.id === historyWorkout.groupId)?.name
+                  }
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Week {historyWorkout.weekNumber} • {historyWorkout.completedAt 
+                  {historyWorkout.isAdHoc 
+                    ? '' 
+                    : `Week ${historyWorkout.weekNumber} • `
+                  }
+                  {historyWorkout.completedAt 
                     ? new Date(historyWorkout.completedAt).toLocaleDateString(undefined, {
                         weekday: 'long',
                         year: 'numeric',
@@ -527,11 +599,14 @@ export function SchedulePage() {
                   }
                 </p>
               </div>
-              <Badge className={historyWorkout.status === 'skipped' 
-                ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              <Badge className={
+                historyWorkout.status === 'skipped' 
+                  ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                  : historyWorkout.isAdHoc
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
               }>
-                {historyWorkout.status === 'skipped' ? 'Skipped' : 'Completed'}
+                {historyWorkout.status === 'skipped' ? 'Skipped' : historyWorkout.isAdHoc ? 'Ad Hoc' : 'Completed'}
               </Badge>
             </div>
 

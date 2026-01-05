@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Dumbbell, Calendar, CheckCircle, Circle, SkipForward, StopCircle, PartyPopper, ChevronRight, ChevronDown, ChevronUp, BarChart3, Edit2 } from 'lucide-react';
+import { Plus, Dumbbell, Calendar, CheckCircle, Circle, SkipForward, StopCircle, PartyPopper, ChevronRight, ChevronDown, ChevronUp, BarChart3, Edit2, Pencil } from 'lucide-react';
 import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRecordRepo } from '../data/repositories';
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
 import { useSyncItem } from '../contexts/SyncContext';
 import { isToday } from '../utils';
 import { PageHeader } from '../components/layout';
-import { Button, Modal, EmptyState, Card, NumberInput } from '../components/ui';
+import { Button, Modal, EmptyState, Card, NumberInput, Input } from '../components/ui';
 import { QuickLogForm, CompletedSetCard, RestTimer, SwipeableSetCard, ExerciseTimer, ExerciseStopwatch } from '../components/workouts';
 import { ExerciseCard } from '../components/exercises';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
@@ -63,6 +63,10 @@ export function TodayPage() {
   const [showCompletionView, setShowCompletionView] = useState(false);
   const [completionDismissed, setCompletionDismissed] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  
+  // Ad-hoc workout state
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [adHocWorkoutName, setAdHocWorkoutName] = useState('');
 
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
@@ -82,11 +86,20 @@ export function TodayPage() {
     return ScheduledWorkoutRepo.getNextPending(activeCycle.id);
   }, [activeCycle?.id]);
 
+  // Get any in-progress ad-hoc workout
+  const inProgressAdHocWorkout = useLiveQuery(async () => {
+    if (!activeCycle) return null;
+    return ScheduledWorkoutRepo.getInProgressAdHoc(activeCycle.id);
+  }, [activeCycle?.id]);
+
   // Determine which workout to display
   // Show completion view if:
   // 1. User just completed a workout this session (showCompletionView is true), OR
   // 2. Most recent completed workout was today and user hasn't dismissed it
   const shouldShowCompletedWorkout = (): boolean => {
+    // If there's an in-progress ad-hoc workout, don't show completed view
+    if (inProgressAdHocWorkout) return false;
+    
     // If user dismissed the completion view, don't show it
     if (completionDismissed) return false;
     
@@ -102,8 +115,14 @@ export function TodayPage() {
   };
 
   // The workout to display in the UI
-  const displayWorkout = shouldShowCompletedWorkout() ? lastCompletedWorkout : nextPendingWorkout;
-  const isShowingCompletedWorkout = shouldShowCompletedWorkout();
+  // Priority: in-progress ad-hoc > completed view > next pending
+  const displayWorkout = inProgressAdHocWorkout 
+    ? inProgressAdHocWorkout 
+    : shouldShowCompletedWorkout() 
+      ? lastCompletedWorkout 
+      : nextPendingWorkout;
+  const isShowingCompletedWorkout = !inProgressAdHocWorkout && shouldShowCompletedWorkout();
+  const isShowingAdHocWorkout = displayWorkout?.isAdHoc === true;
 
   const cycleProgress = useLiveQuery(async () => {
     if (!activeCycle) return null;
@@ -521,6 +540,63 @@ export function TodayPage() {
     setShowCycleWizard(false);
   };
 
+  // Ad-hoc workout handlers
+  const handleStartAdHocWorkout = async () => {
+    if (!activeCycle) return;
+    
+    // Count existing ad-hoc workouts in this cycle
+    const adHocCount = await ScheduledWorkoutRepo.countAdHocWorkouts(activeCycle.id);
+    const workoutName = `Ad Hoc Workout ${adHocCount + 1}`;
+    
+    // Get the max sequence number to place this workout in order
+    const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
+    const maxSequence = Math.max(...allWorkouts.map(w => w.sequenceNumber), 0);
+    
+    // Create ad-hoc workout
+    const adHocWorkout = await ScheduledWorkoutRepo.create({
+      cycleId: activeCycle.id,
+      sequenceNumber: maxSequence + 0.5, // Place between existing workouts (will sort after completed ones)
+      weekNumber: Math.ceil((cycleProgress?.passed || 0) / activeCycle.workoutDaysPerWeek) || 1,
+      dayInWeek: 1,
+      groupId: 'ad-hoc',
+      rfem: 0,
+      scheduledSets: [],
+      status: 'partial',
+      isAdHoc: true,
+      customName: workoutName
+    });
+    
+    // Sync the new workout
+    await syncItem('scheduled_workouts', adHocWorkout);
+    
+    // Reset completion view state so we show the ad-hoc workout
+    setCompletionDismissed(true);
+    setShowCompletionView(false);
+  };
+
+  const handleCompleteAdHocWorkout = async () => {
+    if (!displayWorkout?.isAdHoc) return;
+    
+    await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+    
+    // Show completion celebration
+    setJustCompletedWorkoutId(displayWorkout.id);
+    setShowCompletionView(true);
+    setCompletionDismissed(false);
+  };
+
+  const handleRenameAdHocWorkout = async () => {
+    if (!displayWorkout?.isAdHoc || !adHocWorkoutName.trim()) return;
+    
+    await ScheduledWorkoutRepo.updateName(displayWorkout.id, adHocWorkoutName.trim());
+    setShowRenameModal(false);
+  };
+
+  const openRenameModal = () => {
+    setAdHocWorkoutName(displayWorkout?.customName || '');
+    setShowRenameModal(true);
+  };
+
   // Stats
   const todayStats = {
     totalSets: todaysSets?.length || 0,
@@ -621,41 +697,88 @@ export function TodayPage() {
                   <PartyPopper className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <p className="text-sm text-green-600 dark:text-green-400">
-                  Great job finishing {currentGroup?.name} #{displayWorkout.sequenceNumber}
+                  {displayWorkout.isAdHoc 
+                    ? `Great job finishing ${displayWorkout.customName || 'Ad Hoc Workout'}`
+                    : `Great job finishing ${currentGroup?.name} #${displayWorkout.sequenceNumber}`
+                  }
                 </p>
               </div>
             )}
 
             <div className={`px-4 py-3 border-b ${isShowingCompletedWorkout 
               ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' 
-              : 'bg-primary-50 dark:bg-primary-900/20 border-primary-100 dark:border-primary-800'
+              : isShowingAdHocWorkout
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
+                : 'bg-primary-50 dark:bg-primary-900/20 border-primary-100 dark:border-primary-800'
             }`}>
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-                    {currentGroup?.name || 'Workout'} 
-                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
-                      #{displayWorkout.sequenceNumber}
-                    </span>
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Week {displayWorkout.weekNumber} • RFEM -{displayWorkout.rfem}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  {isShowingAdHocWorkout && !isShowingCompletedWorkout ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">
+                          {displayWorkout.customName || 'Ad Hoc Workout'}
+                        </h2>
+                        <button
+                          onClick={openRenameModal}
+                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                        Log any exercises you want
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="font-semibold text-gray-900 dark:text-gray-100">
+                        {displayWorkout.isAdHoc 
+                          ? displayWorkout.customName || 'Ad Hoc Workout'
+                          : `${currentGroup?.name || 'Workout'}`
+                        }
+                        {!displayWorkout.isAdHoc && (
+                          <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+                            #{displayWorkout.sequenceNumber}
+                          </span>
+                        )}
+                      </h2>
+                      {!displayWorkout.isAdHoc && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Week {displayWorkout.weekNumber} • RFEM -{displayWorkout.rfem}
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
                 <div className="text-right">
-                  <p className={`text-gym-xl ${isShowingCompletedWorkout 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-primary-600 dark:text-primary-400'
-                  }`}>
-                    {scheduledSetsCompleted.length}/{displayWorkout.scheduledSets.length}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">sets done</p>
+                  {displayWorkout.isAdHoc ? (
+                    <>
+                      <p className={`text-gym-xl ${isShowingCompletedWorkout 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {adHocCompletedSets.length}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">sets logged</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className={`text-gym-xl ${isShowingCompletedWorkout 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-primary-600 dark:text-primary-400'
+                      }`}>
+                        {scheduledSetsCompleted.length}/{displayWorkout.scheduledSets.length}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">sets done</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Remaining sets (only show if not viewing completed workout) */}
-            {!isShowingCompletedWorkout && scheduledSetsRemaining.length > 0 && (
+            {/* Remaining sets (only show if not viewing completed workout and not ad-hoc workout) */}
+            {!isShowingCompletedWorkout && !isShowingAdHocWorkout && scheduledSetsRemaining.length > 0 && (
               <div className="p-3 space-y-4">
                 {/* Swipe hint - only show once */}
                 {scheduledSetsRemaining.length > 0 && scheduledSetsCompleted.length === 0 && (
@@ -785,8 +908,10 @@ export function TodayPage() {
 
             {/* Ad-hoc completed sets (logged via "+ Log") */}
             {adHocCompletedSets.length > 0 && (
-              <div className={`p-3 ${(scheduledSetsCompleted.length > 0 || !isShowingCompletedWorkout) && 'border-t border-gray-100 dark:border-gray-800'}`}>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Additional Sets (tap to edit)</p>
+              <div className={`p-3 ${(scheduledSetsCompleted.length > 0 || !isShowingCompletedWorkout) && !isShowingAdHocWorkout && 'border-t border-gray-100 dark:border-gray-800'}`}>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  {isShowingAdHocWorkout ? 'Logged Sets (tap to edit)' : 'Additional Sets (tap to edit)'}
+                </p>
                 <div className="space-y-4">
                   {groupedAdHocSets.map(group => (
                     <div key={group.type}>
@@ -832,6 +957,29 @@ export function TodayPage() {
               </div>
             )}
 
+            {/* Ad-hoc workout action buttons */}
+            {isShowingAdHocWorkout && !isShowingCompletedWorkout && (
+              <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => setShowExercisePicker(true)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Log a Set
+                </Button>
+                {adHocCompletedSets.length > 0 && (
+                  <Button
+                    className="w-full"
+                    onClick={handleCompleteAdHocWorkout}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Complete Workout
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Continue to next workout button (when showing completed workout) */}
             {isShowingCompletedWorkout && nextPendingWorkout && (
               <div className="p-4 border-t border-gray-100 dark:border-gray-800">
@@ -845,8 +993,8 @@ export function TodayPage() {
               </div>
             )}
 
-            {/* Skip / End Workout buttons (only when actively working out) */}
-            {!isShowingCompletedWorkout && scheduledSetsRemaining.length > 0 && (
+            {/* Skip / End Workout buttons (only when actively working out regular workout) */}
+            {!isShowingCompletedWorkout && !isShowingAdHocWorkout && scheduledSetsRemaining.length > 0 && (
               <div className="p-3 border-t border-gray-100 dark:border-gray-800 flex gap-2">
                 <Button
                   variant="ghost"
@@ -871,6 +1019,18 @@ export function TodayPage() {
               </div>
             )}
           </Card>
+        )}
+
+        {/* Log Ad-Hoc Workout button - show when completed workout is shown or no workout in progress */}
+        {activeCycle && (isShowingCompletedWorkout || (!displayWorkout && !isCycleComplete)) && (
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={handleStartAdHocWorkout}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Log Ad-Hoc Workout
+          </Button>
         )}
 
         {/* Collapsible Stats Summary */}
@@ -1311,6 +1471,38 @@ export function TodayPage() {
           onCancel={() => setShowStandaloneMaxTesting(false)}
         />
       )}
+
+      {/* Rename Ad-Hoc Workout Modal */}
+      <Modal
+        isOpen={showRenameModal}
+        onClose={() => setShowRenameModal(false)}
+        title="Rename Workout"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Workout Name"
+            value={adHocWorkoutName}
+            onChange={(e) => setAdHocWorkoutName(e.target.value)}
+            placeholder="Enter workout name"
+          />
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowRenameModal(false)} 
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRenameAdHocWorkout}
+              className="flex-1"
+              disabled={!adHocWorkoutName.trim()}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

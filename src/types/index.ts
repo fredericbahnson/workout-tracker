@@ -98,6 +98,8 @@ export interface ScheduledWorkout {
   scheduledSets: ScheduledSet[];
   status: 'pending' | 'completed' | 'partial' | 'skipped';
   completedAt?: Date;               // When the workout was completed
+  isAdHoc?: boolean;                // True if this is an ad-hoc workout (not from cycle schedule)
+  customName?: string;              // User-editable name for ad-hoc workouts
 }
 
 // Tracking types
