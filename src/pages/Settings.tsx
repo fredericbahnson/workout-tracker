@@ -619,7 +619,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v1.1.0
+              Ascend v1.1.1
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

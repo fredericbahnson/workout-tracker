@@ -105,6 +105,17 @@ export const CompletedSetRepo = {
     return true;
   },
 
+  async deleteByScheduledWorkoutId(workoutId: string): Promise<string[]> {
+    const sets = await db.completedSets
+      .where('scheduledWorkoutId')
+      .equals(workoutId)
+      .toArray();
+    
+    const ids = sets.map(s => s.id);
+    await db.completedSets.where('scheduledWorkoutId').equals(workoutId).delete();
+    return ids;
+  },
+
   async getStats(exerciseId: string): Promise<{ totalSets: number; totalReps: number; avgReps: number }> {
     const sets = await this.getForExercise(exerciseId);
     const totalSets = sets.length;

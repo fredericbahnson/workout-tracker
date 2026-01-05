@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Dumbbell, Calendar, CheckCircle, Circle, SkipForward, StopCircle, PartyPopper, ChevronRight, ChevronDown, ChevronUp, BarChart3, Edit2, Pencil } from 'lucide-react';
+import { Plus, Dumbbell, Calendar, CheckCircle, Circle, SkipForward, StopCircle, PartyPopper, ChevronRight, ChevronDown, ChevronUp, BarChart3, Edit2, Pencil, X } from 'lucide-react';
 import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRecordRepo } from '../data/repositories';
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
@@ -17,7 +17,7 @@ import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type Exercise, type S
 export function TodayPage() {
   const navigate = useNavigate();
   const { defaults, restTimer, maxTestRestTimer } = useAppStore();
-  const { syncItem } = useSyncItem();
+  const { syncItem, deleteItem } = useSyncItem();
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [showCycleWizard, setShowCycleWizard] = useState(false);
   const [showCycleTypeSelector, setShowCycleTypeSelector] = useState(false);
@@ -67,6 +67,8 @@ export function TodayPage() {
   // Ad-hoc workout state
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [adHocWorkoutName, setAdHocWorkoutName] = useState('');
+  const [showCancelAdHocConfirm, setShowCancelAdHocConfirm] = useState(false);
+  const [isCancellingAdHoc, setIsCancellingAdHoc] = useState(false);
 
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
@@ -597,6 +599,35 @@ export function TodayPage() {
     setShowRenameModal(true);
   };
 
+  const handleCancelAdHocWorkout = async () => {
+    if (!displayWorkout?.isAdHoc) return;
+    
+    setIsCancellingAdHoc(true);
+    try {
+      // Delete all completed sets associated with this workout
+      const deletedSetIds = await CompletedSetRepo.deleteByScheduledWorkoutId(displayWorkout.id);
+      
+      // Sync deletions for completed sets
+      for (const setId of deletedSetIds) {
+        await deleteItem('completed_sets', setId);
+      }
+      
+      // Delete the ad-hoc workout
+      await ScheduledWorkoutRepo.delete(displayWorkout.id);
+      await deleteItem('scheduled_workouts', displayWorkout.id);
+      
+      // Reset state to show previous workout state
+      setShowCancelAdHocConfirm(false);
+      setCompletionDismissed(false);
+      setShowCompletionView(false);
+      setJustCompletedWorkoutId(null);
+    } catch (error) {
+      console.error('Failed to cancel ad-hoc workout:', error);
+    } finally {
+      setIsCancellingAdHoc(false);
+    }
+  };
+
   // Stats
   const todayStats = {
     totalSets: todaysSets?.length || 0,
@@ -977,6 +1008,15 @@ export function TodayPage() {
                     Complete Workout
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => setShowCancelAdHocConfirm(true)}
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel Workout
+                </Button>
               </div>
             )}
 
@@ -1499,6 +1539,37 @@ export function TodayPage() {
               disabled={!adHocWorkoutName.trim()}
             >
               Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Cancel Ad-Hoc Workout Confirmation Modal */}
+      <Modal
+        isOpen={showCancelAdHocConfirm}
+        onClose={() => setShowCancelAdHocConfirm(false)}
+        title="Cancel Workout?"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-400">
+            This will delete the ad-hoc workout and all {adHocCompletedSets.length} logged set{adHocCompletedSets.length !== 1 ? 's' : ''}. This cannot be undone.
+          </p>
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowCancelAdHocConfirm(false)} 
+              className="flex-1"
+              disabled={isCancellingAdHoc}
+            >
+              Keep Workout
+            </Button>
+            <Button 
+              variant="danger"
+              onClick={handleCancelAdHocWorkout}
+              className="flex-1"
+              disabled={isCancellingAdHoc}
+            >
+              {isCancellingAdHoc ? 'Deleting...' : 'Delete Workout'}
             </Button>
           </div>
         </div>
