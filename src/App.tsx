@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Layout } from './components/layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { 
   TodayPage, 
   ExercisesPage, 
@@ -60,30 +61,38 @@ function AppContent() {
 
   // If Supabase is configured and no user, show auth gate
   if (isConfigured && !user) {
-    return <AuthGate onAuthComplete={handleAuthComplete} />;
+    return (
+      <ErrorBoundary level="page">
+        <AuthGate onAuthComplete={handleAuthComplete} />
+      </ErrorBoundary>
+    );
   }
 
   // If new user needs onboarding
   if (showOnboarding) {
     return (
-      <OnboardingFlow 
-        onComplete={handleOnboardingComplete} 
-        onSkip={handleOnboardingSkip}
-      />
+      <ErrorBoundary level="page">
+        <OnboardingFlow 
+          onComplete={handleOnboardingComplete} 
+          onSkip={handleOnboardingSkip}
+        />
+      </ErrorBoundary>
     );
   }
 
   // Normal app
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<TodayPage />} />
-        <Route path="/schedule" element={<SchedulePage />} />
-        <Route path="/exercises" element={<ExercisesPage />} />
-        <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
-        <Route path="/progress" element={<ProgressPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
+      <ErrorBoundary level="page">
+        <Routes>
+          <Route path="/" element={<TodayPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/exercises" element={<ExercisesPage />} />
+          <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
+          <Route path="/progress" element={<ProgressPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </ErrorBoundary>
     </Layout>
   );
 }
@@ -131,13 +140,15 @@ function App() {
   }, [fontSize]);
 
   return (
-    <AuthProvider>
-      <SyncProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </SyncProvider>
-    </AuthProvider>
+    <ErrorBoundary level="app">
+      <AuthProvider>
+        <SyncProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </SyncProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

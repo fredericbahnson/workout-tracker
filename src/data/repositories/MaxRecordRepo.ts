@@ -1,32 +1,34 @@
 import { db, generateId } from '../db';
 import type { MaxRecord } from '../../types';
+import { now, normalizeDates, normalizeDatesArray, compareDates } from '../../utils/dateUtils';
+
+const DATE_FIELDS: (keyof MaxRecord)[] = ['recordedAt'];
 
 export const MaxRecordRepo = {
   async getAllForExercise(exerciseId: string): Promise<MaxRecord[]> {
-    return db.maxRecords
-      .where('exerciseId')
-      .equals(exerciseId)
-      .reverse()
-      .sortBy('recordedAt');
-  },
-
-  async getLatestForExercise(exerciseId: string): Promise<MaxRecord | undefined> {
     const records = await db.maxRecords
       .where('exerciseId')
       .equals(exerciseId)
-      .reverse()
-      .sortBy('recordedAt');
+      .toArray();
+    const normalized = normalizeDatesArray(records, DATE_FIELDS);
+    // Sort descending by recordedAt
+    return normalized.sort((a, b) => compareDates(b.recordedAt, a.recordedAt));
+  },
+
+  async getLatestForExercise(exerciseId: string): Promise<MaxRecord | undefined> {
+    const records = await this.getAllForExercise(exerciseId);
     return records[0];
   },
 
   async getLatestForAllExercises(): Promise<Map<string, MaxRecord>> {
     const allRecords = await db.maxRecords.toArray();
+    const normalized = normalizeDatesArray(allRecords, DATE_FIELDS);
     const latestByExercise = new Map<string, MaxRecord>();
     
-    // Sort by date and keep latest for each exercise
-    allRecords.sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
+    // Sort by date descending and keep latest for each exercise
+    normalized.sort((a, b) => compareDates(b.recordedAt, a.recordedAt));
     
-    for (const record of allRecords) {
+    for (const record of normalized) {
       if (!latestByExercise.has(record.exerciseId)) {
         latestByExercise.set(record.exerciseId, record);
       }
@@ -43,7 +45,7 @@ export const MaxRecordRepo = {
       maxTime,
       weight,
       notes,
-      recordedAt: new Date()
+      recordedAt: now()
     };
     await db.maxRecords.add(record);
     return record;
@@ -53,7 +55,10 @@ export const MaxRecordRepo = {
     const existing = await db.maxRecords.get(id);
     if (!existing) return undefined;
 
-    const updated: MaxRecord = { ...existing, ...data };
+    const updated: MaxRecord = { 
+      ...normalizeDates(existing, DATE_FIELDS), 
+      ...data 
+    };
     await db.maxRecords.put(updated);
     return updated;
   },

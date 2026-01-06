@@ -1,13 +1,31 @@
 import { db, generateId } from '../db';
 import type { ScheduledWorkout } from '../../types';
+import { now, normalizeDates, compareDates } from '../../utils/dateUtils';
+
+// ScheduledWorkout has optional completedAt
+const DATE_FIELDS: (keyof ScheduledWorkout)[] = ['completedAt'];
+
+function normalizeWorkout(workout: ScheduledWorkout): ScheduledWorkout {
+  // Only normalize completedAt if it exists
+  if (workout.completedAt) {
+    return normalizeDates(workout, DATE_FIELDS);
+  }
+  return workout;
+}
+
+function normalizeWorkouts(workouts: ScheduledWorkout[]): ScheduledWorkout[] {
+  return workouts.map(normalizeWorkout);
+}
 
 export const ScheduledWorkoutRepo = {
   async getAll(): Promise<ScheduledWorkout[]> {
-    return db.scheduledWorkouts.toArray();
+    const records = await db.scheduledWorkouts.toArray();
+    return normalizeWorkouts(records);
   },
 
   async getById(id: string): Promise<ScheduledWorkout | undefined> {
-    return db.scheduledWorkouts.get(id);
+    const record = await db.scheduledWorkouts.get(id);
+    return record ? normalizeWorkout(record) : undefined;
   },
 
   async getByCycleId(cycleId: string): Promise<ScheduledWorkout[]> {
@@ -15,7 +33,8 @@ export const ScheduledWorkoutRepo = {
       .where('cycleId')
       .equals(cycleId)
       .toArray();
-    return workouts.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+    const normalized = normalizeWorkouts(workouts);
+    return normalized.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
   },
 
   async getNextPending(cycleId: string): Promise<ScheduledWorkout | undefined> {
@@ -43,9 +62,10 @@ export const ScheduledWorkoutRepo = {
 
   async getAllCompleted(): Promise<ScheduledWorkout[]> {
     const allWorkouts = await db.scheduledWorkouts.toArray();
-    return allWorkouts
+    const normalized = normalizeWorkouts(allWorkouts);
+    return normalized
       .filter(w => w.status === 'completed' && w.completedAt)
-      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
+      .sort((a, b) => compareDates(b.completedAt!, a.completedAt!));
   },
 
   async countAdHocWorkouts(cycleId: string): Promise<number> {
@@ -72,18 +92,18 @@ export const ScheduledWorkoutRepo = {
   },
 
   async updateStatus(id: string, status: ScheduledWorkout['status']): Promise<void> {
-    const existing = await db.scheduledWorkouts.get(id);
+    const existing = await this.getById(id);
     if (existing) {
       const updates: Partial<ScheduledWorkout> = { status };
       if (status === 'completed') {
-        updates.completedAt = new Date();
+        updates.completedAt = now();
       }
       await db.scheduledWorkouts.put({ ...existing, ...updates });
     }
   },
 
   async updateName(id: string, customName: string): Promise<void> {
-    const existing = await db.scheduledWorkouts.get(id);
+    const existing = await this.getById(id);
     if (existing) {
       await db.scheduledWorkouts.put({ ...existing, customName });
     }

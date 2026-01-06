@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../data/supabase';
 import { db, generateId } from '../data/db';
 import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '../types';
+import { now, toDate, toDateRequired, toISOString, isAfter } from '../utils/dateUtils';
 
 // Remote data types (from Supabase)
 interface RemoteExercise {
@@ -137,7 +138,7 @@ export const SyncService = {
       // Then push local changes
       await this.pushToCloud(userId);
       
-      lastSyncTime = new Date();
+      lastSyncTime = now();
       this.setStatus('idle');
       return { success: true };
     } catch (error) {
@@ -168,7 +169,7 @@ export const SyncService = {
     if (exercises) {
       for (const remote of exercises as RemoteExercise[]) {
         const local = await db.exercises.get(remote.id);
-        if (!local || new Date(remote.updated_at) > new Date(local.updatedAt)) {
+        if (!local || isAfter(remote.updated_at, local.updatedAt)) {
           await db.exercises.put(this.remoteToLocalExercise(remote));
         }
       }
@@ -198,7 +199,7 @@ export const SyncService = {
     if (cycles) {
       for (const remote of cycles as RemoteCycle[]) {
         const local = await db.cycles.get(remote.id);
-        if (!local || new Date(remote.updated_at) > new Date(local.updatedAt)) {
+        if (!local || isAfter(remote.updated_at, local.updatedAt)) {
           await db.cycles.put(this.remoteToLocalCycle(remote));
         }
       }
@@ -208,7 +209,7 @@ export const SyncService = {
     if (scheduledWorkouts) {
       for (const remote of scheduledWorkouts as RemoteScheduledWorkout[]) {
         const local = await db.scheduledWorkouts.get(remote.id);
-        if (!local || (remote.completed_at && (!local.completedAt || new Date(remote.completed_at) > new Date(local.completedAt)))) {
+        if (!local || (remote.completed_at && (!local.completedAt || isAfter(remote.completed_at, local.completedAt)))) {
           await db.scheduledWorkouts.put(this.remoteToLocalScheduledWorkout(remote));
         }
       }
@@ -374,7 +375,7 @@ export const SyncService = {
     try {
       await supabase
         .from(table)
-        .update({ deleted_at: new Date().toISOString() })
+        .update({ deleted_at: toISOString(now()) })
         .eq('id', id)
         .eq('user_id', userId);
     } catch (error) {
@@ -416,7 +417,7 @@ export const SyncService = {
       await db.syncQueue.update(existing.id, {
         data: item,
         operation,
-        createdAt: new Date()
+        createdAt: now()
       });
     } else {
       // Add new queue item
@@ -426,7 +427,7 @@ export const SyncService = {
         operation,
         itemId,
         data: item,
-        createdAt: new Date(),
+        createdAt: now(),
         retryCount: 0
       });
     }
@@ -469,7 +470,7 @@ export const SyncService = {
         } else if (queueItem.operation === 'delete') {
           await supabase
             .from(queueItem.table)
-            .update({ deleted_at: new Date().toISOString() })
+            .update({ deleted_at: toISOString(now()) })
             .eq('id', queueItem.itemId)
             .eq('user_id', userId);
         }
@@ -516,8 +517,8 @@ export const SyncService = {
       defaultConditioningTime: remote.default_conditioning_time ?? undefined,
       weightEnabled: remote.weight_enabled ?? undefined,
       defaultWeight: remote.default_weight ?? undefined,
-      createdAt: new Date(remote.created_at),
-      updatedAt: new Date(remote.updated_at),
+      createdAt: toDateRequired(remote.created_at),
+      updatedAt: toDateRequired(remote.updated_at),
     };
   },
 
@@ -529,7 +530,7 @@ export const SyncService = {
       maxTime: remote.max_time ?? undefined,
       weight: remote.weight ?? undefined,
       notes: remote.notes || '',
-      recordedAt: new Date(remote.recorded_at),
+      recordedAt: toDateRequired(remote.recorded_at),
     };
   },
 
@@ -542,7 +543,7 @@ export const SyncService = {
       targetReps: remote.target_reps,
       actualReps: remote.actual_reps,
       weight: remote.weight ?? undefined,
-      completedAt: new Date(remote.completed_at),
+      completedAt: toDateRequired(remote.completed_at),
       notes: remote.notes || '',
       parameters: (remote.parameters as Record<string, string | number>) || {},
     };
@@ -554,7 +555,7 @@ export const SyncService = {
       name: remote.name,
       cycleType: (remote.cycle_type as Cycle['cycleType']) || 'training',
       previousCycleId: remote.previous_cycle_id || undefined,
-      startDate: new Date(remote.start_date),
+      startDate: toDateRequired(remote.start_date),
       numberOfWeeks: remote.number_of_weeks,
       workoutDaysPerWeek: remote.workout_days_per_week,
       weeklySetGoals: remote.weekly_set_goals as Cycle['weeklySetGoals'],
@@ -563,8 +564,8 @@ export const SyncService = {
       rfemRotation: remote.rfem_rotation as number[],
       conditioningWeeklyRepIncrement: remote.conditioning_weekly_rep_increment,
       status: remote.status as Cycle['status'],
-      createdAt: new Date(remote.created_at),
-      updatedAt: new Date(remote.updated_at),
+      createdAt: toDateRequired(remote.created_at),
+      updatedAt: toDateRequired(remote.updated_at),
     };
   },
 
@@ -579,7 +580,7 @@ export const SyncService = {
       rfem: remote.rfem,
       scheduledSets: remote.scheduled_sets as ScheduledWorkout['scheduledSets'],
       status: remote.status as ScheduledWorkout['status'],
-      completedAt: remote.completed_at ? new Date(remote.completed_at) : undefined,
+      completedAt: toDate(remote.completed_at),
     };
   },
 
@@ -598,8 +599,8 @@ export const SyncService = {
       default_conditioning_time: local.defaultConditioningTime || null,
       weight_enabled: local.weightEnabled || false,
       default_weight: local.defaultWeight || null,
-      created_at: local.createdAt.toISOString(),
-      updated_at: local.updatedAt.toISOString(),
+      created_at: toISOString(local.createdAt),
+      updated_at: toISOString(local.updatedAt),
     };
   },
 
@@ -612,7 +613,7 @@ export const SyncService = {
       max_time: local.maxTime || null,
       weight: local.weight || null,
       notes: local.notes,
-      recorded_at: local.recordedAt.toISOString(),
+      recorded_at: toISOString(local.recordedAt),
     };
   },
 
@@ -626,7 +627,7 @@ export const SyncService = {
       target_reps: local.targetReps,
       actual_reps: local.actualReps,
       weight: local.weight || null,
-      completed_at: local.completedAt.toISOString(),
+      completed_at: toISOString(local.completedAt),
       notes: local.notes,
       parameters: local.parameters,
     };
@@ -639,7 +640,7 @@ export const SyncService = {
       name: local.name,
       cycle_type: local.cycleType,
       previous_cycle_id: local.previousCycleId || null,
-      start_date: local.startDate.toISOString(),
+      start_date: toISOString(local.startDate),
       number_of_weeks: local.numberOfWeeks,
       workout_days_per_week: local.workoutDaysPerWeek,
       weekly_set_goals: local.weeklySetGoals,
@@ -648,8 +649,8 @@ export const SyncService = {
       rfem_rotation: local.rfemRotation,
       conditioning_weekly_rep_increment: local.conditioningWeeklyRepIncrement,
       status: local.status,
-      created_at: local.createdAt.toISOString(),
-      updated_at: local.updatedAt.toISOString(),
+      created_at: toISOString(local.createdAt),
+      updated_at: toISOString(local.updatedAt),
     };
   },
 
@@ -665,7 +666,7 @@ export const SyncService = {
       rfem: local.rfem,
       scheduled_sets: local.scheduledSets,
       status: local.status,
-      completed_at: local.completedAt?.toISOString() || null,
+      completed_at: local.completedAt ? toISOString(local.completedAt) : null,
     };
   },
 };

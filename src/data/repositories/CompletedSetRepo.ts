@@ -1,41 +1,57 @@
 import { db, generateId } from '../db';
 import type { CompletedSet, QuickLogData } from '../../types';
+import { 
+  now, 
+  normalizeDates, 
+  normalizeDatesArray, 
+  startOfDay, 
+  addDays,
+  toDateRequired,
+  compareDates,
+  type DateLike
+} from '../../utils/dateUtils';
+
+const DATE_FIELDS: (keyof CompletedSet)[] = ['completedAt'];
 
 export const CompletedSetRepo = {
   async getAll(): Promise<CompletedSet[]> {
-    return db.completedSets.orderBy('completedAt').reverse().toArray();
+    const records = await db.completedSets.orderBy('completedAt').reverse().toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   },
 
   async getForExercise(exerciseId: string): Promise<CompletedSet[]> {
-    return db.completedSets
+    const records = await db.completedSets
       .where('exerciseId')
       .equals(exerciseId)
-      .reverse()
-      .sortBy('completedAt');
+      .toArray();
+    const normalized = normalizeDatesArray(records, DATE_FIELDS);
+    // Sort descending by completedAt
+    return normalized.sort((a, b) => compareDates(b.completedAt, a.completedAt));
   },
 
-  async getForDateRange(start: Date, end: Date): Promise<CompletedSet[]> {
-    return db.completedSets
+  async getForDateRange(start: DateLike, end: DateLike): Promise<CompletedSet[]> {
+    const startDate = toDateRequired(start);
+    const endDate = toDateRequired(end);
+    const records = await db.completedSets
       .where('completedAt')
-      .between(start, end)
+      .between(startDate, endDate)
       .toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   },
 
   async getForToday(): Promise<CompletedSet[]> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
+    const today = startOfDay(now());
+    const tomorrow = addDays(today, 1);
     return this.getForDateRange(today, tomorrow);
   },
 
   async getRecent(limit: number = 50): Promise<CompletedSet[]> {
-    return db.completedSets
+    const records = await db.completedSets
       .orderBy('completedAt')
       .reverse()
       .limit(limit)
       .toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   },
 
   async create(data: QuickLogData, scheduledWorkoutId?: string): Promise<CompletedSet> {
@@ -47,7 +63,7 @@ export const CompletedSetRepo = {
       targetReps: data.reps,
       actualReps: data.reps,
       weight: data.weight,
-      completedAt: new Date(),
+      completedAt: now(),
       notes: data.notes,
       parameters: data.parameters
     };
@@ -73,7 +89,7 @@ export const CompletedSetRepo = {
       targetReps,
       actualReps,
       weight,
-      completedAt: new Date(),
+      completedAt: now(),
       notes,
       parameters
     };
@@ -82,17 +98,21 @@ export const CompletedSetRepo = {
   },
 
   async getForScheduledWorkout(workoutId: string): Promise<CompletedSet[]> {
-    return db.completedSets
+    const records = await db.completedSets
       .where('scheduledWorkoutId')
       .equals(workoutId)
       .toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   },
 
   async update(id: string, data: Partial<Omit<CompletedSet, 'id' | 'completedAt'>>): Promise<CompletedSet | undefined> {
     const existing = await db.completedSets.get(id);
     if (!existing) return undefined;
 
-    const updated: CompletedSet = { ...existing, ...data };
+    const updated: CompletedSet = { 
+      ...normalizeDates(existing, DATE_FIELDS), 
+      ...data 
+    };
     await db.completedSets.put(updated);
     return updated;
   },
@@ -127,13 +147,15 @@ export const CompletedSetRepo = {
 
   async getStatsForDateRange(
     exerciseId: string, 
-    start: Date, 
-    end: Date
+    start: DateLike, 
+    end: DateLike
   ): Promise<{ totalSets: number; totalReps: number }> {
+    const startDate = toDateRequired(start);
+    const endDate = toDateRequired(end);
     const allSets = await this.getForExercise(exerciseId);
     const filteredSets = allSets.filter(s => {
-      const completedAt = new Date(s.completedAt);
-      return completedAt >= start && completedAt < end;
+      // Sets are already normalized, so completedAt is a Date
+      return s.completedAt >= startDate && s.completedAt < endDate;
     });
     const totalSets = filteredSets.length;
     const totalReps = filteredSets.reduce((sum, s) => sum + s.actualReps, 0);
@@ -143,12 +165,13 @@ export const CompletedSetRepo = {
 
   async getStatsForCycle(
     exerciseId: string, 
-    cycleStartDate: Date
+    cycleStartDate: DateLike
   ): Promise<{ totalSets: number; totalReps: number }> {
+    const startDate = toDateRequired(cycleStartDate);
     const allSets = await this.getForExercise(exerciseId);
     const filteredSets = allSets.filter(s => {
-      const completedAt = new Date(s.completedAt);
-      return completedAt >= cycleStartDate;
+      // Sets are already normalized, so completedAt is a Date
+      return s.completedAt >= startDate;
     });
     const totalSets = filteredSets.length;
     const totalReps = filteredSets.reduce((sum, s) => sum + s.actualReps, 0);

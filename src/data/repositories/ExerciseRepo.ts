@@ -1,39 +1,45 @@
 import { db, generateId } from '../db';
 import type { Exercise, ExerciseFormData, ExerciseType } from '../../types';
+import { now, normalizeDates, normalizeDatesArray } from '../../utils/dateUtils';
+
+const DATE_FIELDS: (keyof Exercise)[] = ['createdAt', 'updatedAt'];
 
 export const ExerciseRepo = {
   async getAll(): Promise<Exercise[]> {
-    return db.exercises.orderBy('name').toArray();
+    const records = await db.exercises.orderBy('name').toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   },
 
   async getById(id: string): Promise<Exercise | undefined> {
-    return db.exercises.get(id);
+    const record = await db.exercises.get(id);
+    return record ? normalizeDates(record, DATE_FIELDS) : undefined;
   },
 
   async getByType(type: ExerciseType): Promise<Exercise[]> {
-    return db.exercises.where('type').equals(type).toArray();
+    const records = await db.exercises.where('type').equals(type).toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   },
 
   async create(data: ExerciseFormData): Promise<Exercise> {
-    const now = new Date();
+    const timestamp = now();
     const exercise: Exercise = {
       ...data,
       id: generateId(),
-      createdAt: now,
-      updatedAt: now
+      createdAt: timestamp,
+      updatedAt: timestamp
     };
     await db.exercises.add(exercise);
     return exercise;
   },
 
   async update(id: string, data: Partial<ExerciseFormData>): Promise<Exercise | undefined> {
-    const existing = await db.exercises.get(id);
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const updated: Exercise = {
       ...existing,
       ...data,
-      updatedAt: new Date()
+      updatedAt: now()
     };
     await db.exercises.put(updated);
     return updated;
@@ -49,8 +55,9 @@ export const ExerciseRepo = {
 
   async search(query: string): Promise<Exercise[]> {
     const lowerQuery = query.toLowerCase();
-    return db.exercises
+    const records = await db.exercises
       .filter(ex => ex.name.toLowerCase().includes(lowerQuery))
       .toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   }
 };

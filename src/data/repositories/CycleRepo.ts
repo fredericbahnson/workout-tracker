@@ -1,41 +1,49 @@
 import { db, generateId } from '../db';
 import type { Cycle, Group, ExerciseAssignment } from '../../types';
+import { now, normalizeDates, normalizeDatesArray, compareDates } from '../../utils/dateUtils';
 
 export type CycleFormData = Omit<Cycle, 'id' | 'createdAt' | 'updatedAt'>;
 
+const DATE_FIELDS: (keyof Cycle)[] = ['startDate', 'createdAt', 'updatedAt'];
+
 export const CycleRepo = {
   async getAll(): Promise<Cycle[]> {
-    return db.cycles.orderBy('startDate').reverse().toArray();
+    const records = await db.cycles.toArray();
+    const normalized = normalizeDatesArray(records, DATE_FIELDS);
+    // Sort descending by startDate
+    return normalized.sort((a, b) => compareDates(b.startDate, a.startDate));
   },
 
   async getById(id: string): Promise<Cycle | undefined> {
-    return db.cycles.get(id);
+    const record = await db.cycles.get(id);
+    return record ? normalizeDates(record, DATE_FIELDS) : undefined;
   },
 
   async getActive(): Promise<Cycle | undefined> {
-    return db.cycles.where('status').equals('active').first();
+    const record = await db.cycles.where('status').equals('active').first();
+    return record ? normalizeDates(record, DATE_FIELDS) : undefined;
   },
 
   async create(data: CycleFormData): Promise<Cycle> {
-    const now = new Date();
+    const timestamp = now();
     const cycle: Cycle = {
       ...data,
       id: generateId(),
-      createdAt: now,
-      updatedAt: now
+      createdAt: timestamp,
+      updatedAt: timestamp
     };
     await db.cycles.add(cycle);
     return cycle;
   },
 
   async update(id: string, data: Partial<CycleFormData>): Promise<Cycle | undefined> {
-    const existing = await db.cycles.get(id);
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const updated: Cycle = {
       ...existing,
       ...data,
-      updatedAt: new Date()
+      updatedAt: now()
     };
     await db.cycles.put(updated);
     return updated;
