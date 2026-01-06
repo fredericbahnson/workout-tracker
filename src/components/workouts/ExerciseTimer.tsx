@@ -202,7 +202,7 @@ export function ExerciseTimer({
       {/* Timer circle */}
       <div className="relative w-64 h-64 mb-8">
         {/* Background circle */}
-        <svg className="w-full h-full transform -rotate-90">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 256 256">
           <circle
             cx="128"
             cy="128"

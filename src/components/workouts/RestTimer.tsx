@@ -168,7 +168,7 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
       {/* Timer Display */}
       <div className="relative w-48 h-48">
         {/* Background circle */}
-        <svg className="w-full h-full transform -rotate-90">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 192 192">
           <circle
             cx="96"
             cy="96"

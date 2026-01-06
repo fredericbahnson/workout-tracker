@@ -181,7 +181,7 @@ export function ExerciseStopwatch({
       {/* Stopwatch circle */}
       <div className="relative w-64 h-64 mb-6">
         {/* Background circle */}
-        <svg className="w-full h-full">
+        <svg className="w-full h-full" viewBox="0 0 256 256">
           <circle
             cx="128"
             cy="128"
@@ -204,7 +204,7 @@ export function ExerciseStopwatch({
               strokeDasharray={2 * Math.PI * 120}
               strokeDashoffset={2 * Math.PI * 120 * Math.max(0, 1 - elapsedSeconds / previousMax)}
               className={`transition-all duration-200 ${getProgressColor()}`}
-              style={{ transform: 'rotate(-90deg)', transformOrigin: '128px 128px' }}
+              style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
             />
           )}
         </svg>
