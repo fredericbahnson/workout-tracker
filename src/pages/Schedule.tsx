@@ -321,58 +321,72 @@ export function SchedulePage() {
                 const setsSummary = getSetsSummary(workout);
                 const isNext = index === 0;
                 
+                // Show week divider after this workout if it's the last of its week
+                // and there are more workouts after it
+                const isLastOfWeek = workout.sequenceNumber % activeCycle.workoutDaysPerWeek === 0;
+                const hasMoreWorkouts = index < pendingWorkouts.length - 1;
+                const showWeekDivider = isLastOfWeek && hasMoreWorkouts;
+                
                 return (
-                  <SwipeableWorkoutCard
-                    key={workout.id}
-                    onSwipeLeft={() => setWorkoutToDelete(workout)}
-                    onTap={() => handleWorkoutClick(workout)}
-                  >
-                    <Card
-                      className={`p-3 ${isNext ? 'ring-2 ring-primary-500' : ''}`}
+                  <div key={workout.id}>
+                    <SwipeableWorkoutCard
+                      onSwipeLeft={() => setWorkoutToDelete(workout)}
+                      onTap={() => handleWorkoutClick(workout)}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className={`
-                          w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0
-                          ${isNext 
-                            ? 'bg-primary-600 text-white' 
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                          }
-                        `}>
-                          <span className="text-xs font-medium">#{workout.sequenceNumber}</span>
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900 dark:text-gray-100">
-                              {group?.name || 'Workout'}
-                            </span>
-                            {isNext && (
-                              <Badge className="text-[10px] bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
-                                NEXT
-                              </Badge>
-                            )}
+                      <Card
+                        className={`p-3 ${isNext ? 'ring-2 ring-primary-500' : ''}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`
+                            w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0
+                            ${isNext 
+                              ? 'bg-primary-600 text-white' 
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                            }
+                          `}>
+                            <span className="text-xs font-medium">#{workout.sequenceNumber}</span>
                           </div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Week {workout.weekNumber} • RFEM -{workout.rfem} • {workout.scheduledSets.length} sets
-                          </p>
-                          
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {Object.entries(setsSummary).map(([type, count]) => (
-                              <Badge 
-                                key={type} 
-                                variant={type as any} 
-                                className="text-[10px]"
-                              >
-                                {count} {EXERCISE_TYPE_LABELS[type as keyof typeof EXERCISE_TYPE_LABELS]}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
 
-                        <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
+                                {group?.name || 'Workout'}
+                              </span>
+                              {isNext && (
+                                <Badge className="text-[10px] bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
+                                  NEXT
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Week {workout.weekNumber} • RFEM -{workout.rfem} • {workout.scheduledSets.length} sets
+                            </p>
+                            
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {Object.entries(setsSummary).map(([type, count]) => (
+                                <Badge 
+                                  key={type} 
+                                  variant={type as any} 
+                                  className="text-[10px]"
+                                >
+                                  {count} {EXERCISE_TYPE_LABELS[type as keyof typeof EXERCISE_TYPE_LABELS]}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                        </div>
+                      </Card>
+                    </SwipeableWorkoutCard>
+                    {showWeekDivider && (
+                      <div className="flex items-center gap-3 py-2 mt-2">
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                        <span className="text-xs text-gray-400 dark:text-gray-500">Week {workout.weekNumber + 1}</span>
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
                       </div>
-                    </Card>
-                  </SwipeableWorkoutCard>
+                    )}
+                  </div>
                 );
               })}
             </div>
