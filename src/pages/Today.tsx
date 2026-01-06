@@ -1155,14 +1155,31 @@ export function TodayPage() {
         size="lg"
       >
         {exercises && exercises.length > 0 ? (
-          <div className="space-y-2">
-            {exercises.map(exercise => (
-              <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                onClick={() => handleSelectExercise(exercise)}
-              />
-            ))}
+          <div className="space-y-4">
+            {EXERCISE_TYPES.map(type => {
+              const typeExercises = exercises
+                .filter(ex => ex.type === type)
+                .sort((a, b) => a.name.localeCompare(b.name));
+              
+              if (typeExercises.length === 0) return null;
+              
+              return (
+                <div key={type}>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    {EXERCISE_TYPE_LABELS[type]}
+                  </h4>
+                  <div className="space-y-2">
+                    {typeExercises.map(exercise => (
+                      <ExerciseCard
+                        key={exercise.id}
+                        exercise={exercise}
+                        onClick={() => handleSelectExercise(exercise)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <EmptyState

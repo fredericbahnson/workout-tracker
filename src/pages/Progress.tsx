@@ -91,8 +91,15 @@ export function ProgressPage() {
       sets: data.sets,
       reps: data.reps
     }))
-    .filter((item): item is { exercise: Exercise; sets: number; reps: number } => item.exercise !== undefined)
-    .sort((a, b) => b.reps - a.reps);
+    .filter((item): item is { exercise: Exercise; sets: number; reps: number } => item.exercise !== undefined);
+
+  // Group exerciseStats by type in standard order
+  const exerciseStatsByType = EXERCISE_TYPES.map(type => ({
+    type,
+    exercises: exerciseStats
+      .filter(item => item.exercise.type === type)
+      .sort((a, b) => a.exercise.name.localeCompare(b.exercise.name))
+  })).filter(group => group.exercises.length > 0);
 
   // Group by day of week (for last 30 days regardless of filter)
   const recentSets = allSets?.filter(s => {
@@ -188,7 +195,7 @@ export function ProgressPage() {
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {formatDuration(stats.totalTime)}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Time</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Timed Sets</p>
                 </div>
               )}
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -208,33 +215,39 @@ export function ProgressPage() {
         </Card>
 
         {/* Totals by Exercise */}
-        {exerciseStats.length > 0 && (
+        {exerciseStatsByType.length > 0 && (
           <Card>
             <CardContent>
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
                 <Dumbbell className="w-4 h-4" />
                 Totals by Exercise
               </h3>
-              <div className="space-y-2">
-                {exerciseStats.map(({ exercise, sets, reps }) => (
-                  <div key={exercise.id} className="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                    <Badge variant={exercise.type} className="text-[10px]">
-                      {EXERCISE_TYPE_LABELS[exercise.type]}
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {exercise.name}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                        {exercise.measurementType === 'time' 
-                          ? formatDuration(reps)
-                          : `${reps.toLocaleString()} reps`}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {sets} sets
-                      </p>
+              <div className="space-y-4">
+                {exerciseStatsByType.map(({ type, exercises }) => (
+                  <div key={type}>
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      {EXERCISE_TYPE_LABELS[type]}
+                    </h4>
+                    <div className="space-y-2">
+                      {exercises.map(({ exercise, sets, reps }) => (
+                        <div key={exercise.id} className="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {exercise.name}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              {exercise.measurementType === 'time' 
+                                ? formatDuration(reps)
+                                : `${reps.toLocaleString()} reps`}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {sets} sets
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
