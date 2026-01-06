@@ -41,6 +41,13 @@ export const ScheduledWorkoutRepo = {
     return workouts.filter(w => w.status === 'completed' || w.status === 'partial');
   },
 
+  async getAllCompleted(): Promise<ScheduledWorkout[]> {
+    const allWorkouts = await db.scheduledWorkouts.toArray();
+    return allWorkouts
+      .filter(w => w.status === 'completed' && w.completedAt)
+      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
+  },
+
   async countAdHocWorkouts(cycleId: string): Promise<number> {
     const workouts = await this.getByCycleId(cycleId);
     return workouts.filter(w => w.isAdHoc).length;

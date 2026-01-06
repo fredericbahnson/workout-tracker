@@ -39,11 +39,33 @@ export function SchedulePage() {
     return ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
   }, [activeCycle?.id]);
 
+  // All-time completed workouts for calendar view
+  const allCompletedWorkouts = useLiveQuery(() => 
+    ScheduledWorkoutRepo.getAllCompleted()
+  , []);
+
+  // All cycles for looking up group names from past cycles
+  const allCycles = useLiveQuery(() => CycleRepo.getAll(), []);
+
   const exercises = useLiveQuery(() => ExerciseRepo.getAll(), []);
   const maxRecords = useLiveQuery(() => MaxRecordRepo.getLatestForAllExercises(), []);
 
   const exerciseMap = new Map<string, Exercise>();
   exercises?.forEach(ex => exerciseMap.set(ex.id, ex));
+
+  // Helper to get group name from any cycle
+  const getGroupName = (workout: ScheduledWorkout): string | undefined => {
+    if (workout.isAdHoc) return undefined;
+    // Try active cycle first
+    const activeGroup = activeCycle?.groups.find(g => g.id === workout.groupId);
+    if (activeGroup) return activeGroup.name;
+    // Search all cycles
+    for (const cycle of allCycles || []) {
+      const group = cycle.groups.find(g => g.id === workout.groupId);
+      if (group) return group.name;
+    }
+    return undefined;
+  };
 
   // Split workouts into pending, done, and skipped
   const pendingWorkouts = allWorkouts?.filter(w => w.status === 'pending' || w.status === 'partial') || [];
@@ -281,7 +303,7 @@ export function SchedulePage() {
         </div>
 
         {/* View Toggle */}
-        {passedWorkouts.length > 0 && (
+        {(allCompletedWorkouts?.length || 0) > 0 && (
           <div className="flex justify-center">
             <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-100 dark:bg-gray-800">
               <button
@@ -311,9 +333,9 @@ export function SchedulePage() {
         )}
 
         {/* Calendar View */}
-        {showCalendarView && passedWorkouts.length > 0 && (
+        {showCalendarView && (allCompletedWorkouts?.length || 0) > 0 && (
           <WorkoutCalendar
-            workouts={passedWorkouts}
+            workouts={allCompletedWorkouts || []}
             onSelectDate={handleCalendarDateSelect}
           />
         )}
@@ -653,7 +675,7 @@ export function SchedulePage() {
                 <h3 className="font-medium text-gray-900 dark:text-gray-100">
                   {historyWorkout.isAdHoc
                     ? historyWorkout.customName || 'Ad Hoc Workout'
-                    : activeCycle?.groups.find(g => g.id === historyWorkout.groupId)?.name
+                    : getGroupName(historyWorkout) || 'Workout'
                   }
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -945,7 +967,7 @@ export function SchedulePage() {
             {selectedDateWorkouts.length} workout{selectedDateWorkouts.length !== 1 ? 's' : ''} completed
           </p>
           {selectedDateWorkouts.map(workout => {
-            const group = activeCycle?.groups.find(g => g.id === workout.groupId);
+            const groupName = getGroupName(workout);
             const isAdHoc = workout.isAdHoc;
             
             return (
@@ -970,7 +992,7 @@ export function SchedulePage() {
                       <span className="font-medium text-gray-900 dark:text-gray-100">
                         {isAdHoc 
                           ? workout.customName || 'Ad Hoc Workout'
-                          : `#${workout.sequenceNumber} ${group?.name}`
+                          : `#${workout.sequenceNumber} ${groupName || 'Workout'}`
                         }
                       </span>
                       {isAdHoc && (
