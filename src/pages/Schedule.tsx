@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Calendar, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Trash2, Dumbbell } from 'lucide-react';
+import { Calendar, CalendarDays, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Trash2, Dumbbell, List } from 'lucide-react';
 import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo, CompletedSetRepo } from '../data/repositories';
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
@@ -9,7 +9,7 @@ import { useSyncItem } from '../contexts/SyncContext';
 import { PageHeader } from '../components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '../components/ui';
 import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '../components/cycles';
-import { SwipeableWorkoutCard } from '../components/workouts';
+import { SwipeableWorkoutCard, WorkoutCalendar } from '../components/workouts';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
 
 export function SchedulePage() {
@@ -25,6 +25,11 @@ export function SchedulePage() {
   const [historyCompletedSets, setHistoryCompletedSets] = useState<CompletedSet[]>([]);
   const [workoutToDelete, setWorkoutToDelete] = useState<ScheduledWorkout | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Calendar view state
+  const [showCalendarView, setShowCalendarView] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
+  const [selectedDateWorkouts, setSelectedDateWorkouts] = useState<ScheduledWorkout[]>([]);
 
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
@@ -90,6 +95,17 @@ export function SchedulePage() {
     setHistoryWorkout(workout);
     const completedSets = await CompletedSetRepo.getForScheduledWorkout(workout.id);
     setHistoryCompletedSets(completedSets);
+  };
+
+  const handleCalendarDateSelect = (date: Date, workouts: ScheduledWorkout[]) => {
+    if (workouts.length === 1) {
+      // Single workout - go directly to history view
+      handleHistoryClick(workouts[0]);
+    } else {
+      // Multiple workouts - show picker
+      setSelectedCalendarDate(date);
+      setSelectedDateWorkouts(workouts);
+    }
   };
 
   const handleDeleteWorkout = async () => {
@@ -264,6 +280,47 @@ export function SchedulePage() {
           </Button>
         </div>
 
+        {/* View Toggle */}
+        {passedWorkouts.length > 0 && (
+          <div className="flex justify-center">
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-100 dark:bg-gray-800">
+              <button
+                onClick={() => setShowCalendarView(false)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  !showCalendarView 
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' 
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                List
+              </button>
+              <button
+                onClick={() => setShowCalendarView(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  showCalendarView 
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' 
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                <CalendarDays className="w-4 h-4" />
+                Calendar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Calendar View */}
+        {showCalendarView && passedWorkouts.length > 0 && (
+          <WorkoutCalendar
+            workouts={passedWorkouts}
+            onSelectDate={handleCalendarDateSelect}
+          />
+        )}
+
+        {/* List View */}
+        {!showCalendarView && (
+          <>
         {/* Cycle Progress or Cycle Complete */}
         {pendingWorkouts.length === 0 && passedWorkouts.length > 0 ? (
           /* Cycle Complete */
@@ -463,6 +520,8 @@ export function SchedulePage() {
               })}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
 
@@ -865,6 +924,74 @@ export function SchedulePage() {
               {isDeleting ? 'Deleting...' : 'Delete Workout'}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Calendar Date Workouts Modal */}
+      <Modal
+        isOpen={!!selectedCalendarDate}
+        onClose={() => {
+          setSelectedCalendarDate(null);
+          setSelectedDateWorkouts([]);
+        }}
+        title={selectedCalendarDate?.toLocaleDateString(undefined, {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric'
+        }) || 'Workouts'}
+      >
+        <div className="space-y-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            {selectedDateWorkouts.length} workout{selectedDateWorkouts.length !== 1 ? 's' : ''} completed
+          </p>
+          {selectedDateWorkouts.map(workout => {
+            const group = activeCycle?.groups.find(g => g.id === workout.groupId);
+            const isAdHoc = workout.isAdHoc;
+            
+            return (
+              <Card
+                key={workout.id}
+                className={`p-3 cursor-pointer transition-colors ${
+                  isAdHoc
+                    ? 'bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-100/50 dark:hover:bg-blue-900/20'
+                    : 'bg-green-50/50 dark:bg-green-900/10 hover:bg-green-100/50 dark:hover:bg-green-900/20'
+                }`}
+                onClick={() => {
+                  setSelectedCalendarDate(null);
+                  setSelectedDateWorkouts([]);
+                  handleHistoryClick(workout);
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle className={`w-5 h-5 ${isAdHoc ? 'text-blue-500' : 'text-green-500'} flex-shrink-0`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {isAdHoc 
+                          ? workout.customName || 'Ad Hoc Workout'
+                          : `#${workout.sequenceNumber} ${group?.name}`
+                        }
+                      </span>
+                      {isAdHoc && (
+                        <Badge className="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                          Ad Hoc
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {isAdHoc 
+                        ? 'Logged sets'
+                        : `Week ${workout.weekNumber} • ${workout.scheduledSets.length} sets`
+                      }
+                    </p>
+                  </div>
+                  
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </div>
+              </Card>
+            );
+          })}
         </div>
       </Modal>
     </>
