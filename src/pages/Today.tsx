@@ -14,6 +14,29 @@ import { ExerciseCard } from '../components/exercises';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
 
+// localStorage key for persisting dismissed workout ID across navigation
+const DISMISSED_WORKOUT_KEY = 'ascend_dismissed_workout_id';
+
+function getDismissedWorkoutId(): string | null {
+  try {
+    return localStorage.getItem(DISMISSED_WORKOUT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setDismissedWorkoutId(workoutId: string | null): void {
+  try {
+    if (workoutId) {
+      localStorage.setItem(DISMISSED_WORKOUT_KEY, workoutId);
+    } else {
+      localStorage.removeItem(DISMISSED_WORKOUT_KEY);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
 export function TodayPage() {
   const navigate = useNavigate();
   const { defaults, restTimer, maxTestRestTimer } = useAppStore();
@@ -102,14 +125,19 @@ export function TodayPage() {
     // If there's an in-progress ad-hoc workout, don't show completed view
     if (inProgressAdHocWorkout) return false;
     
-    // If user dismissed the completion view, don't show it
+    // If user dismissed the completion view (in this session), don't show it
     if (completionDismissed) return false;
     
     // If user just completed a workout this session
     if (showCompletionView && justCompletedWorkoutId) return true;
     
-    // If workout was completed today (on app reopen)
+    // If workout was completed today (on app reopen), check if it was dismissed
     if (lastCompletedWorkout?.completedAt && isToday(new Date(lastCompletedWorkout.completedAt))) {
+      // Check if this specific workout was already dismissed (persisted across navigation)
+      const dismissedId = getDismissedWorkoutId();
+      if (dismissedId === lastCompletedWorkout.id) {
+        return false;
+      }
       return true;
     }
     
@@ -221,6 +249,11 @@ export function TodayPage() {
 
   // Handler to proceed to next workout after viewing completion
   const handleProceedToNextWorkout = () => {
+    // Save the dismissed workout ID to localStorage so it persists across navigation
+    const workoutIdToDismiss = justCompletedWorkoutId || lastCompletedWorkout?.id;
+    if (workoutIdToDismiss) {
+      setDismissedWorkoutId(workoutIdToDismiss);
+    }
     setShowCompletionView(false);
     setJustCompletedWorkoutId(null);
     setCompletionDismissed(true);
@@ -277,6 +310,7 @@ export function TodayPage() {
       setJustCompletedWorkoutId(displayWorkout.id);
       setShowCompletionView(true);
       setCompletionDismissed(false);
+      setDismissedWorkoutId(null); // Clear any previously dismissed workout
     }
     setShowEndConfirm(false);
   };
@@ -346,6 +380,7 @@ export function TodayPage() {
       setJustCompletedWorkoutId(displayWorkout.id);
       setShowCompletionView(true);
       setCompletionDismissed(false);
+      setDismissedWorkoutId(null); // Clear any previously dismissed workout
     } else {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
       // Show rest timer if enabled (regular sets only here, max test redirects above)
@@ -388,6 +423,7 @@ export function TodayPage() {
       setJustCompletedWorkoutId(displayWorkout.id);
       setShowCompletionView(true);
       setCompletionDismissed(false);
+      setDismissedWorkoutId(null); // Clear any previously dismissed workout
     } else if (newCompletedCount > 0) {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
     }
@@ -496,6 +532,7 @@ export function TodayPage() {
           setJustCompletedWorkoutId(displayWorkout.id);
           setShowCompletionView(true);
           setCompletionDismissed(false); // Reset so completion view shows
+          setDismissedWorkoutId(null); // Clear any previously dismissed workout
           // Don't show timer when workout is complete
         } else if (newCompletedCount > 0 && displayWorkout) {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
@@ -585,6 +622,7 @@ export function TodayPage() {
     setJustCompletedWorkoutId(displayWorkout.id);
     setShowCompletionView(true);
     setCompletionDismissed(false);
+    setDismissedWorkoutId(null); // Clear any previously dismissed workout
   };
 
   const handleRenameAdHocWorkout = async () => {
