@@ -10,6 +10,7 @@ export interface SyncQueueItem {
   data?: unknown;
   createdAt: Date;
   retryCount: number;
+  nextRetryAt?: Date; // For exponential backoff
 }
 
 // Database class

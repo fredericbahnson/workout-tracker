@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell } from 'lucide-react';
@@ -6,36 +6,13 @@ import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRec
 import { calculateTargetReps } from '../services/scheduler';
 import { useAppStore } from '../stores/appStore';
 import { useSyncItem } from '../contexts/SyncContext';
-import { isToday } from '../utils';
+import { useWorkoutDisplay, useCycleCompletion, useAdHocWorkout } from '../hooks';
 import { PageHeader } from '../components/layout';
 import { Button, Modal, EmptyState, Card } from '../components/ui';
 import { QuickLogForm, RestTimer } from '../components/workouts';
 import { WorkoutCompletionBanner, ScheduledSetsList, WorkoutHeader, AdHocWorkoutControls, EditCompletedSetModal, ScheduledSetModal, TodayStats, AdHocCompletedSetsList, WorkoutActionButtons, CycleProgressHeader, SkipWorkoutConfirmModal, EndWorkoutConfirmModal, SkipSetConfirmModal, CancelAdHocConfirmModal, ExercisePickerModal, RenameWorkoutModal } from '../components/workouts/today';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
-import { EXERCISE_TYPES, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type Cycle } from '../types';
-
-// localStorage key for persisting dismissed workout ID across navigation
-const DISMISSED_WORKOUT_KEY = 'ascend_dismissed_workout_id';
-
-function getDismissedWorkoutId(): string | null {
-  try {
-    return localStorage.getItem(DISMISSED_WORKOUT_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setDismissedWorkoutId(workoutId: string | null): void {
-  try {
-    if (workoutId) {
-      localStorage.setItem(DISMISSED_WORKOUT_KEY, workoutId);
-    } else {
-      localStorage.removeItem(DISMISSED_WORKOUT_KEY);
-    }
-  } catch {
-    // Ignore localStorage errors
-  }
-}
+import { EXERCISE_TYPES, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet } from '../types';
 
 export function TodayPage() {
   const navigate = useNavigate();
@@ -56,12 +33,6 @@ export function TodayPage() {
   } | null>(null);
   const [isLogging, setIsLogging] = useState(false);
   
-  // Cycle completion state
-  const [showCycleCompletionModal, setShowCycleCompletionModal] = useState(false);
-  const [showMaxTestingWizard, setShowMaxTestingWizard] = useState(false);
-  const [showStandaloneMaxTesting, setShowStandaloneMaxTesting] = useState(false);
-  const [completedCycleForModal, setCompletedCycleForModal] = useState<Cycle | null>(null);
-  
   // Skip individual set confirmation
   const [setToSkip, setSetToSkip] = useState<{
     set: ScheduledSet;
@@ -75,16 +46,6 @@ export function TodayPage() {
     exercise: Exercise;
   } | null>(null);
   
-  // Track just-completed workout in this session
-  const [justCompletedWorkoutId, setJustCompletedWorkoutId] = useState<string | null>(null);
-  const [showCompletionView, setShowCompletionView] = useState(false);
-  const [completionDismissed, setCompletionDismissed] = useState(false);
-  
-  // Ad-hoc workout state
-  const [showRenameModal, setShowRenameModal] = useState(false);
-  const [showCancelAdHocConfirm, setShowCancelAdHocConfirm] = useState(false);
-  const [isCancellingAdHoc, setIsCancellingAdHoc] = useState(false);
-
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
   
@@ -109,42 +70,20 @@ export function TodayPage() {
     return ScheduledWorkoutRepo.getInProgressAdHoc(activeCycle.id);
   }, [activeCycle?.id]);
 
-  // Determine which workout to display
-  // Show completion view if:
-  // 1. User just completed a workout this session (showCompletionView is true), OR
-  // 2. Most recent completed workout was today and user hasn't dismissed it
-  const shouldShowCompletedWorkout = (): boolean => {
-    // If there's an in-progress ad-hoc workout, don't show completed view
-    if (inProgressAdHocWorkout) return false;
-    
-    // If user dismissed the completion view (in this session), don't show it
-    if (completionDismissed) return false;
-    
-    // If user just completed a workout this session
-    if (showCompletionView && justCompletedWorkoutId) return true;
-    
-    // If workout was completed today (on app reopen), check if it was dismissed
-    if (lastCompletedWorkout?.completedAt && isToday(new Date(lastCompletedWorkout.completedAt))) {
-      // Check if this specific workout was already dismissed (persisted across navigation)
-      const dismissedId = getDismissedWorkoutId();
-      if (dismissedId === lastCompletedWorkout.id) {
-        return false;
-      }
-      return true;
-    }
-    
-    return false;
-  };
-
-  // The workout to display in the UI
-  // Priority: in-progress ad-hoc > completed view > next pending
-  const displayWorkout = inProgressAdHocWorkout 
-    ? inProgressAdHocWorkout 
-    : shouldShowCompletedWorkout() 
-      ? lastCompletedWorkout 
-      : nextPendingWorkout;
-  const isShowingCompletedWorkout = !inProgressAdHocWorkout && shouldShowCompletedWorkout();
-  const isShowingAdHocWorkout = displayWorkout?.isAdHoc === true;
+  // Workout display logic (which workout to show, completion view state)
+  const {
+    displayWorkout,
+    isShowingCompletedWorkout,
+    isShowingAdHocWorkout,
+    markWorkoutCompleted,
+    handleProceedToNextWorkout,
+    dismissCompletionView,
+    resetCompletionState,
+  } = useWorkoutDisplay({
+    lastCompletedWorkout,
+    nextPendingWorkout,
+    inProgressAdHocWorkout,
+  });
 
   const cycleProgress = useLiveQuery(async () => {
     if (!activeCycle) return null;
@@ -154,13 +93,49 @@ export function TodayPage() {
   // Detect when entire cycle is complete (all workouts done)
   const isCycleComplete = cycleProgress && cycleProgress.completed === cycleProgress.total && cycleProgress.total > 0;
   
-  // Show cycle completion modal when cycle finishes
-  useEffect(() => {
-    if (isCycleComplete && activeCycle && !showCycleCompletionModal && !showMaxTestingWizard && !showCycleWizard) {
-      setCompletedCycleForModal(activeCycle);
-      setShowCycleCompletionModal(true);
-    }
-  }, [isCycleComplete, activeCycle?.id]);
+  // Cycle completion flow (modal, max testing wizard)
+  const {
+    showCycleCompletionModal,
+    showMaxTestingWizard,
+    showStandaloneMaxTesting,
+    completedCycleForModal,
+    handleStartMaxTesting,
+    handleCreateNewCycleFromCompletion,
+    handleDismissCycleCompletion,
+    handleMaxTestingComplete,
+    handleCancelMaxTesting,
+    openStandaloneMaxTesting,
+    closeStandaloneMaxTesting,
+  } = useCycleCompletion({
+    isCycleComplete: !!isCycleComplete,
+    activeCycle,
+    showCycleWizard,
+    onShowCycleWizard: () => setShowCycleWizard(true),
+  });
+
+  // Ad-hoc workout management
+  const {
+    showRenameModal,
+    showCancelAdHocConfirm,
+    isCancellingAdHoc,
+    openRenameModal,
+    closeRenameModal,
+    openCancelConfirm,
+    closeCancelConfirm,
+    handleStartAdHocWorkout,
+    handleCompleteAdHocWorkout,
+    handleRenameAdHocWorkout,
+    handleCancelAdHocWorkout,
+  } = useAdHocWorkout({
+    activeCycle,
+    cycleProgressPassed: cycleProgress?.passed || 0,
+    displayWorkout,
+    syncItem,
+    deleteItem,
+    markWorkoutCompleted,
+    dismissCompletionView,
+    resetCompletionState,
+  });
 
   const todaysSets = useLiveQuery(() => CompletedSetRepo.getForToday(), []);
   const exercises = useLiveQuery(() => ExerciseRepo.getAll(), []);
@@ -239,53 +214,6 @@ export function TodayPage() {
       })
   })).filter(group => group.sets.length > 0);
 
-  // Handler to proceed to next workout after viewing completion
-  const handleProceedToNextWorkout = () => {
-    // Save the dismissed workout ID to localStorage so it persists across navigation
-    const workoutIdToDismiss = justCompletedWorkoutId || lastCompletedWorkout?.id;
-    if (workoutIdToDismiss) {
-      setDismissedWorkoutId(workoutIdToDismiss);
-    }
-    setShowCompletionView(false);
-    setJustCompletedWorkoutId(null);
-    setCompletionDismissed(true);
-  };
-
-  // Handlers for cycle completion modal
-  const handleStartMaxTesting = async () => {
-    if (completedCycleForModal) {
-      // Mark the cycle as completed
-      await CycleRepo.update(completedCycleForModal.id, { status: 'completed' });
-      setShowCycleCompletionModal(false);
-      setShowMaxTestingWizard(true);
-    }
-  };
-
-  const handleCreateNewCycleFromCompletion = async () => {
-    if (completedCycleForModal) {
-      // Mark the cycle as completed
-      await CycleRepo.update(completedCycleForModal.id, { status: 'completed' });
-    }
-    setShowCycleCompletionModal(false);
-    setCompletedCycleForModal(null);
-    setShowCycleWizard(true);
-  };
-
-  const handleDismissCycleCompletion = async () => {
-    if (completedCycleForModal) {
-      // Mark the cycle as completed even if dismissed
-      await CycleRepo.update(completedCycleForModal.id, { status: 'completed' });
-    }
-    setShowCycleCompletionModal(false);
-    setCompletedCycleForModal(null);
-  };
-
-  const handleMaxTestingComplete = () => {
-    setShowMaxTestingWizard(false);
-    setCompletedCycleForModal(null);
-    // The max testing cycle is now active, user will see it
-  };
-
   // Handlers
   const handleSkipWorkout = async () => {
     if (!nextPendingWorkout) return;
@@ -299,10 +227,7 @@ export function TodayPage() {
     await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, status === 'partial' ? 'completed' : 'skipped');
     if (status === 'partial') {
       // Show completion view
-      setJustCompletedWorkoutId(displayWorkout.id);
-      setShowCompletionView(true);
-      setCompletionDismissed(false);
-      setDismissedWorkoutId(null); // Clear any previously dismissed workout
+      markWorkoutCompleted(displayWorkout.id);
     }
     setShowEndConfirm(false);
   };
@@ -353,10 +278,7 @@ export function TodayPage() {
     
     if (newCompletedCount >= totalSets) {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-      setJustCompletedWorkoutId(displayWorkout.id);
-      setShowCompletionView(true);
-      setCompletionDismissed(false);
-      setDismissedWorkoutId(null); // Clear any previously dismissed workout
+      markWorkoutCompleted(displayWorkout.id);
     } else {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
       // Show rest timer if enabled (regular sets only here, max test redirects above)
@@ -396,10 +318,7 @@ export function TodayPage() {
     
     if (newCompletedCount >= totalSets) {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-      setJustCompletedWorkoutId(displayWorkout.id);
-      setShowCompletionView(true);
-      setCompletionDismissed(false);
-      setDismissedWorkoutId(null); // Clear any previously dismissed workout
+      markWorkoutCompleted(displayWorkout.id);
     } else if (newCompletedCount > 0) {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
     }
@@ -489,10 +408,7 @@ export function TodayPage() {
         if (newCompletedCount >= totalSets && displayWorkout) {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
           // Show completion celebration
-          setJustCompletedWorkoutId(displayWorkout.id);
-          setShowCompletionView(true);
-          setCompletionDismissed(false); // Reset so completion view shows
-          setDismissedWorkoutId(null); // Clear any previously dismissed workout
+          markWorkoutCompleted(displayWorkout.id);
           // Don't show timer when workout is complete
         } else if (newCompletedCount > 0 && displayWorkout) {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
@@ -536,87 +452,6 @@ export function TodayPage() {
 
   const handleCycleCreated = () => {
     setShowCycleWizard(false);
-  };
-
-  // Ad-hoc workout handlers
-  const handleStartAdHocWorkout = async () => {
-    if (!activeCycle) return;
-    
-    // Count existing ad-hoc workouts in this cycle
-    const adHocCount = await ScheduledWorkoutRepo.countAdHocWorkouts(activeCycle.id);
-    const workoutName = `Ad Hoc Workout ${adHocCount + 1}`;
-    
-    // Get the max sequence number to place this workout in order
-    const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
-    const maxSequence = Math.max(...allWorkouts.map(w => w.sequenceNumber), 0);
-    
-    // Create ad-hoc workout
-    const adHocWorkout = await ScheduledWorkoutRepo.create({
-      cycleId: activeCycle.id,
-      sequenceNumber: maxSequence + 0.5, // Place between existing workouts (will sort after completed ones)
-      weekNumber: Math.ceil((cycleProgress?.passed || 0) / activeCycle.workoutDaysPerWeek) || 1,
-      dayInWeek: 1,
-      groupId: 'ad-hoc',
-      rfem: 0,
-      scheduledSets: [],
-      status: 'partial',
-      isAdHoc: true,
-      customName: workoutName
-    });
-    
-    // Sync the new workout
-    await syncItem('scheduled_workouts', adHocWorkout);
-    
-    // Reset completion view state so we show the ad-hoc workout
-    setCompletionDismissed(true);
-    setShowCompletionView(false);
-  };
-
-  const handleCompleteAdHocWorkout = async () => {
-    if (!displayWorkout?.isAdHoc) return;
-    
-    await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-    
-    // Show completion celebration
-    setJustCompletedWorkoutId(displayWorkout.id);
-    setShowCompletionView(true);
-    setCompletionDismissed(false);
-    setDismissedWorkoutId(null); // Clear any previously dismissed workout
-  };
-
-  const handleRenameAdHocWorkout = async (name: string) => {
-    if (!displayWorkout?.isAdHoc || !name.trim()) return;
-    
-    await ScheduledWorkoutRepo.updateName(displayWorkout.id, name.trim());
-  };
-
-  const handleCancelAdHocWorkout = async () => {
-    if (!displayWorkout?.isAdHoc) return;
-    
-    setIsCancellingAdHoc(true);
-    try {
-      // Delete all completed sets associated with this workout
-      const deletedSetIds = await CompletedSetRepo.deleteByScheduledWorkoutId(displayWorkout.id);
-      
-      // Sync deletions for completed sets
-      for (const setId of deletedSetIds) {
-        await deleteItem('completed_sets', setId);
-      }
-      
-      // Delete the ad-hoc workout
-      await ScheduledWorkoutRepo.delete(displayWorkout.id);
-      await deleteItem('scheduled_workouts', displayWorkout.id);
-      
-      // Reset state to show previous workout state
-      setShowCancelAdHocConfirm(false);
-      setCompletionDismissed(false);
-      setShowCompletionView(false);
-      setJustCompletedWorkoutId(null);
-    } catch (error) {
-      console.error('Failed to cancel ad-hoc workout:', error);
-    } finally {
-      setIsCancellingAdHoc(false);
-    }
   };
 
   // Stats
@@ -681,7 +516,7 @@ export function TodayPage() {
               }
               scheduledSetsCompletedCount={scheduledSetsCompleted.length}
               adHocSetsCount={adHocCompletedSets.length}
-              onRename={isShowingAdHocWorkout && !isShowingCompletedWorkout ? () => setShowRenameModal(true) : undefined}
+              onRename={isShowingAdHocWorkout && !isShowingCompletedWorkout ? openRenameModal : undefined}
             />
 
             {/* Scheduled sets - remaining and completed */}
@@ -716,7 +551,7 @@ export function TodayPage() {
                 hasCompletedSets={adHocCompletedSets.length > 0}
                 onLogSet={() => setShowExercisePicker(true)}
                 onComplete={handleCompleteAdHocWorkout}
-                onCancel={() => setShowCancelAdHocConfirm(true)}
+                onCancel={openCancelConfirm}
               />
             )}
 
@@ -875,10 +710,7 @@ export function TodayPage() {
         <MaxTestingWizard
           completedCycle={completedCycleForModal}
           onComplete={handleMaxTestingComplete}
-          onCancel={() => {
-            setShowMaxTestingWizard(false);
-            setCompletedCycleForModal(null);
-          }}
+          onCancel={handleCancelMaxTesting}
         />
       )}
 
@@ -895,7 +727,7 @@ export function TodayPage() {
           }}
           onSelectMaxTesting={() => {
             setShowCycleTypeSelector(false);
-            setShowStandaloneMaxTesting(true);
+            openStandaloneMaxTesting();
           }}
           onCancel={() => setShowCycleTypeSelector(false)}
         />
@@ -904,10 +736,8 @@ export function TodayPage() {
       {/* Standalone Max Testing Wizard (when selected from type selector) */}
       {showStandaloneMaxTesting && (
         <MaxTestingWizard
-          onComplete={() => {
-            setShowStandaloneMaxTesting(false);
-          }}
-          onCancel={() => setShowStandaloneMaxTesting(false)}
+          onComplete={closeStandaloneMaxTesting}
+          onCancel={closeStandaloneMaxTesting}
         />
       )}
 
@@ -915,7 +745,7 @@ export function TodayPage() {
       <RenameWorkoutModal
         isOpen={showRenameModal}
         initialName={displayWorkout?.customName || ''}
-        onClose={() => setShowRenameModal(false)}
+        onClose={closeRenameModal}
         onSave={handleRenameAdHocWorkout}
       />
 
@@ -924,7 +754,7 @@ export function TodayPage() {
         isOpen={showCancelAdHocConfirm}
         setCount={adHocCompletedSets.length}
         isDeleting={isCancellingAdHoc}
-        onClose={() => setShowCancelAdHocConfirm(false)}
+        onClose={closeCancelConfirm}
         onConfirm={handleCancelAdHocWorkout}
       />
     </>

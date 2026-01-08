@@ -436,16 +436,24 @@ export const SyncService = {
   },
 
   // Process queued operations (call when back online)
-  async processQueue(userId: string): Promise<{ processed: number; failed: number }> {
+  async processQueue(userId: string): Promise<{ processed: number; failed: number; skipped: number }> {
     if (!isSupabaseConfigured() || !this.isOnline()) {
-      return { processed: 0, failed: 0 };
+      return { processed: 0, failed: 0, skipped: 0 };
     }
 
     const queuedItems = await db.syncQueue.orderBy('createdAt').toArray();
     let processed = 0;
     let failed = 0;
+    let skipped = 0;
+    const currentTime = now();
 
     for (const queueItem of queuedItems) {
+      // Skip items that haven't reached their retry time yet (exponential backoff)
+      if (queueItem.nextRetryAt && queueItem.nextRetryAt > currentTime) {
+        skipped++;
+        continue;
+      }
+
       try {
         if (queueItem.operation === 'upsert' && queueItem.data) {
           let remoteItem;
@@ -481,21 +489,30 @@ export const SyncService = {
       } catch (error) {
         console.error(`Failed to process queue item ${queueItem.id}:`, error);
         
-        // Increment retry count
+        // Increment retry count and calculate exponential backoff
         const newRetryCount = queueItem.retryCount + 1;
         if (newRetryCount >= 5) {
           // Give up after 5 retries
           await db.syncQueue.delete(queueItem.id);
           console.error(`Giving up on queue item ${queueItem.id} after ${newRetryCount} retries`);
         } else {
-          await db.syncQueue.update(queueItem.id, { retryCount: newRetryCount });
+          // Exponential backoff: 1s, 2s, 4s, 8s (capped at 30s)
+          const delayMs = Math.min(1000 * Math.pow(2, newRetryCount - 1), 30000);
+          const nextRetryAt = new Date(currentTime.getTime() + delayMs);
+          await db.syncQueue.update(queueItem.id, { 
+            retryCount: newRetryCount,
+            nextRetryAt 
+          });
+          console.log(`Queue item ${queueItem.id} will retry in ${delayMs / 1000}s (attempt ${newRetryCount}/5)`);
         }
         failed++;
       }
     }
 
-    console.log(`Queue processed: ${processed} successful, ${failed} failed`);
-    return { processed, failed };
+    if (processed > 0 || failed > 0) {
+      console.log(`Queue processed: ${processed} successful, ${failed} failed, ${skipped} waiting for retry`);
+    }
+    return { processed, failed, skipped };
   },
 
   // Get queue count (for UI display)
