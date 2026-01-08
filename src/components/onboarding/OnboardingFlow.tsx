@@ -11,10 +11,10 @@ import {
   Home,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '../ui';
-import { ExerciseForm } from '../exercises';
-import { ExerciseRepo, MaxRecordRepo } from '../../data/repositories';
-import type { ExerciseFormData } from '../../types';
+import { Button } from '@/components/ui';
+import { ExerciseForm } from '@/components/exercises';
+import { ExerciseRepo, MaxRecordRepo } from '@/data/repositories';
+import type { ExerciseFormData } from '@/types';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -126,7 +126,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   // Success screen after exercise creation
   if (exerciseCreated) {
     return (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] flex flex-col items-center justify-center p-6 z-50">
+      <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col items-center justify-center p-6 z-50">
         <div className="text-center max-w-sm">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
             <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
@@ -164,9 +164,9 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   // Exercise creation screen
   if (showExerciseCreation) {
     return (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] flex flex-col z-50 safe-area-top safe-area-bottom">
+      <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col z-50 safe-area-top safe-area-bottom">
         {/* Header */}
-        <div className="px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-[#2D2D4A]">
+        <div className="px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-dark-border">
           <button
             onClick={handlePrev}
             className="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
@@ -220,7 +220,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   const Icon = slide.icon;
 
   return (
-    <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] flex flex-col z-50 safe-area-top safe-area-bottom">
+    <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col z-50 safe-area-top safe-area-bottom">
       {/* Progress dots */}
       <div className="px-6 pt-6 pb-4 flex items-center justify-between">
         <div className="flex gap-2">

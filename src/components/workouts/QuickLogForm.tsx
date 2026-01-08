@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { Button, Input, Select } from '../ui';
-import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from '../../types';
+import { Button, Input, Select } from '@/components/ui';
+import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from '@/types';
 
 interface QuickLogFormProps {
   exercise: Exercise;

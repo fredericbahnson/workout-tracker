@@ -1,5 +1,5 @@
 import { ChevronRight, SkipForward, StopCircle } from 'lucide-react';
-import { Button } from '../../ui';
+import { Button } from '@/components/ui';
 
 interface WorkoutActionButtonsProps {
   /** Whether viewing a completed workout */

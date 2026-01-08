@@ -1,5 +1,13 @@
-import { useState, useRef, useCallback, type ReactNode } from 'react';
+import { useState, useRef, useCallback, type ReactNode, type KeyboardEvent } from 'react';
 import { CheckCircle, X, ChevronRight } from 'lucide-react';
+import { 
+  SWIPE_THRESHOLD, 
+  VELOCITY_THRESHOLD, 
+  SWIPE_RESISTANCE, 
+  SWIPE_MAX_TRANSLATE,
+  SWIPE_ANIMATION_DURATION,
+  TAP_THRESHOLD 
+} from '@/constants';
 
 interface SwipeableSetCardProps {
   children: ReactNode;
@@ -7,23 +15,57 @@ interface SwipeableSetCardProps {
   onSwipeLeft: () => void;   // Skip (will trigger confirmation)
   onTap: () => void;         // Open details
   disabled?: boolean;
+  /** Accessible label describing the set (e.g., "Push-ups: 12 reps") */
+  ariaLabel?: string;
 }
-
-const SWIPE_THRESHOLD = 80;  // Pixels needed to trigger action
-const VELOCITY_THRESHOLD = 0.3;  // Pixels per ms for fast swipe
 
 export function SwipeableSetCard({ 
   children, 
   onSwipeRight, 
   onSwipeLeft, 
   onTap,
-  disabled = false 
+  disabled = false,
+  ariaLabel
 }: SwipeableSetCardProps) {
   const [translateX, setTranslateX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
   const startTimeRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard handler for accessibility
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return;
+
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+        // Enter or Space: open details (same as tap)
+        e.preventDefault();
+        onTap();
+        break;
+      case 'ArrowRight':
+        // Right arrow: complete set
+        e.preventDefault();
+        // Visual feedback
+        setTranslateX(window.innerWidth);
+        setTimeout(() => {
+          onSwipeRight();
+          setTranslateX(0);
+        }, SWIPE_ANIMATION_DURATION);
+        break;
+      case 'ArrowLeft':
+        // Left arrow: skip set
+        e.preventDefault();
+        // Visual feedback
+        setTranslateX(-window.innerWidth);
+        setTimeout(() => {
+          onSwipeLeft();
+          setTranslateX(0);
+        }, SWIPE_ANIMATION_DURATION);
+        break;
+    }
+  }, [disabled, onTap, onSwipeRight, onSwipeLeft]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (disabled) return;
@@ -38,8 +80,8 @@ export function SwipeableSetCard({
     const diff = currentX - startXRef.current;
     
     // Apply resistance at edges
-    const resistance = 0.4;
-    const maxTranslate = 120;
+    const resistance = SWIPE_RESISTANCE;
+    const maxTranslate = SWIPE_MAX_TRANSLATE;
     
     let newTranslate = diff;
     if (Math.abs(diff) > maxTranslate) {
@@ -59,7 +101,7 @@ export function SwipeableSetCard({
     const velocity = Math.abs(translateX) / duration;
     
     // Check if it was a tap (minimal movement and short duration)
-    if (Math.abs(translateX) < 10 && duration < 200) {
+    if (Math.abs(translateX) < TAP_THRESHOLD.movement && duration < TAP_THRESHOLD.duration) {
       setTranslateX(0);
       setIsDragging(false);
       onTap();
@@ -77,14 +119,14 @@ export function SwipeableSetCard({
         setTimeout(() => {
           onSwipeRight();
           setTranslateX(0);
-        }, 200);
+        }, SWIPE_ANIMATION_DURATION);
       } else {
         // Animate off screen to the left then trigger action
         setTranslateX(-window.innerWidth);
         setTimeout(() => {
           onSwipeLeft();
           setTranslateX(0);
-        }, 200);
+        }, SWIPE_ANIMATION_DURATION);
       }
     } else {
       // Snap back
@@ -106,8 +148,8 @@ export function SwipeableSetCard({
     if (!isDragging || disabled) return;
     const diff = e.clientX - startXRef.current;
     
-    const resistance = 0.4;
-    const maxTranslate = 120;
+    const resistance = SWIPE_RESISTANCE;
+    const maxTranslate = SWIPE_MAX_TRANSLATE;
     
     let newTranslate = diff;
     if (Math.abs(diff) > maxTranslate) {
@@ -127,7 +169,7 @@ export function SwipeableSetCard({
     const velocity = Math.abs(translateX) / duration;
     
     // Check if it was a click
-    if (Math.abs(translateX) < 10 && duration < 200) {
+    if (Math.abs(translateX) < TAP_THRESHOLD.movement && duration < TAP_THRESHOLD.duration) {
       setTranslateX(0);
       setIsDragging(false);
       onTap();
@@ -143,13 +185,13 @@ export function SwipeableSetCard({
         setTimeout(() => {
           onSwipeRight();
           setTranslateX(0);
-        }, 200);
+        }, SWIPE_ANIMATION_DURATION);
       } else {
         setTranslateX(-window.innerWidth);
         setTimeout(() => {
           onSwipeLeft();
           setTranslateX(0);
-        }, 200);
+        }, SWIPE_ANIMATION_DURATION);
       }
     } else {
       setTranslateX(0);
@@ -177,7 +219,7 @@ export function SwipeableSetCard({
       className="relative overflow-hidden rounded-lg"
     >
       {/* Background actions */}
-      <div className="absolute inset-0 flex">
+      <div className="absolute inset-0 flex" aria-hidden="true">
         {/* Right swipe background (Complete) */}
         <div 
           className={`flex-1 flex items-center justify-start pl-4 transition-colors ${
@@ -213,7 +255,11 @@ export function SwipeableSetCard({
 
       {/* Swipeable card content */}
       <div
-        className={`relative bg-gray-50 dark:bg-[#1A1A2E]/50 ${isDragging ? '' : 'transition-transform duration-200'}`}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={ariaLabel || 'Exercise set. Press Enter to view details, Right arrow to complete, Left arrow to skip.'}
+        aria-disabled={disabled}
+        className={`relative bg-gray-50 dark:bg-dark-surface/50 ${isDragging ? '' : 'transition-transform duration-200'} outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 rounded-lg`}
         style={{ transform: `translateX(${translateX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -222,13 +268,14 @@ export function SwipeableSetCard({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onKeyDown={handleKeyDown}
       >
         {children}
       </div>
 
       {/* Swipe hint indicator (subtle) */}
       {translateX === 0 && !isDragging && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 pointer-events-none">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 pointer-events-none" aria-hidden="true">
           <ChevronRight className="w-4 h-4" />
         </div>
       )}

@@ -1,5 +1,5 @@
 import { type HTMLAttributes, forwardRef } from 'react';
-import type { ExerciseType } from '../../types';
+import type { ExerciseType } from '@/types';
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: 'default' | 'outline' | ExerciseType;

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { BarChart3, ChevronUp, ChevronDown } from 'lucide-react';
-import { Card } from '../../ui';
-import { CompletedSetCard } from '../CompletedSetCard';
-import type { Exercise, CompletedSet } from '../../../types';
+import { Card } from '@/components/ui';
+import { CompletedSetCard } from '@/components/workouts/CompletedSetCard';
+import type { Exercise, CompletedSet } from '@/types';
 
 interface TodayStatsProps {
   /** Total sets completed today */
@@ -35,7 +35,7 @@ export function TodayStats({
   }
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+    <div className="border-t border-gray-200 dark:border-dark-border pt-4 mt-4">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"

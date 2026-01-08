@@ -1,6 +1,6 @@
 import { Calendar } from 'lucide-react';
-import { Card, Button } from '../../ui';
-import type { Cycle } from '../../../types';
+import { Card, Button } from '@/components/ui';
+import type { Cycle } from '@/types';
 
 interface CycleProgress {
   completed: number;

@@ -1,7 +1,7 @@
-import { supabase, isSupabaseConfigured } from '../data/supabase';
-import { db, generateId } from '../data/db';
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '../types';
-import { now, toDate, toDateRequired, toISOString, isAfter } from '../utils/dateUtils';
+import { supabase, isSupabaseConfigured } from '@/data/supabase';
+import { db, generateId } from '@/data/db';
+import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '@/types';
+import { now, toDate, toDateRequired, toISOString, isAfter } from '@/utils/dateUtils';
 
 // Remote data types (from Supabase)
 interface RemoteExercise {

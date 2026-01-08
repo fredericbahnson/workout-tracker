@@ -1,6 +1,6 @@
 import { Trophy, Target, Calendar, ArrowRight } from 'lucide-react';
-import { Button, Modal } from '../ui';
-import type { Cycle } from '../../types';
+import { Button, Modal } from '@/components/ui';
+import type { Cycle } from '@/types';
 
 interface CycleCompletionModalProps {
   isOpen: boolean;

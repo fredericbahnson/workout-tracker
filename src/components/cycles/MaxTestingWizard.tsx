@@ -10,11 +10,11 @@ import {
   Dumbbell,
   AlertCircle
 } from 'lucide-react';
-import { Button, Card, CardContent, Modal } from '../ui';
-import { CycleRepo, ExerciseRepo, MaxRecordRepo, ScheduledWorkoutRepo } from '../../data/repositories';
-import { useSyncItem } from '../../contexts/SyncContext';
-import { generateId } from '../../data/db';
-import type { Cycle, Exercise, Group, ScheduledSet, ScheduledWorkout, ExerciseType } from '../../types';
+import { Button, Card, CardContent, Modal } from '@/components/ui';
+import { CycleRepo, ExerciseRepo, MaxRecordRepo, ScheduledWorkoutRepo } from '@/data/repositories';
+import { useSyncItem } from '@/contexts/SyncContext';
+import { generateId } from '@/data/db';
+import type { Cycle, Exercise, Group, ScheduledSet, ScheduledWorkout, ExerciseType } from '@/types';
 
 interface MaxTestingWizardProps {
   completedCycle?: Cycle;  // Optional - if not provided, user selects all exercises
@@ -439,9 +439,9 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
   const numberOfDays = calculateNumberOfDays();
 
   return (
-    <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] z-50 flex flex-col safe-area-top safe-area-bottom">
+    <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg z-50 flex flex-col safe-area-top safe-area-bottom">
       {/* Header */}
-      <div className="px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-[#2D2D4A]">
+      <div className="px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-dark-border">
         <button onClick={onCancel} className="p-2 -ml-2">
           <X className="w-5 h-5 text-gray-500" />
         </button>
@@ -452,7 +452,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
       </div>
 
       {/* Progress indicator */}
-      <div className="px-4 py-3 bg-gray-100 dark:bg-[#1A1A2E]">
+      <div className="px-4 py-3 bg-gray-100 dark:bg-dark-surface">
         <div className="flex items-center gap-2 text-sm">
           <div className={`flex items-center gap-1 ${step === 'select_exercises' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}>
             <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">1</span>
@@ -516,7 +516,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                   className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
                     ex.included
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-[#2D2D4A] bg-white dark:bg-[#1A1A2E]'
+                      : 'border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -546,7 +546,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             </div>
 
             {additionalExercises.length > 0 && (
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
                 <Button
                   variant="secondary"
                   onClick={() => setShowAddExercise(true)}
@@ -593,7 +593,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                           type="number"
                           value={ex.newConditioningBaseReps ?? ''}
                           onChange={(e) => updateConditioningReps(ex.exerciseId, parseInt(e.target.value) || 1)}
-                          className="w-16 text-center py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1A1A2E] text-gray-900 dark:text-gray-100"
+                          className="w-16 text-center py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100"
                         />
                         <button
                           onClick={() => updateConditioningReps(ex.exerciseId, (ex.newConditioningBaseReps ?? 1) + 1)}
@@ -661,7 +661,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-4 border-t border-gray-200 dark:border-[#2D2D4A] flex gap-3">
+      <div className="px-4 py-4 border-t border-gray-200 dark:border-dark-border flex gap-3">
         {step !== 'select_exercises' && (
           <Button variant="secondary" onClick={handleBack} className="px-4">
             <ArrowLeft className="w-5 h-5" />
@@ -709,7 +709,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             <button
               key={ex.id}
               onClick={() => addExerciseToTest(ex)}
-              className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-[#2D2D4A] hover:bg-gray-50 dark:hover:bg-[#252542] transition-colors"
+              className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-elevated transition-colors"
             >
               <span className="font-medium text-gray-900 dark:text-gray-100">{ex.name}</span>
               <Plus className="w-4 h-4 text-gray-400" />

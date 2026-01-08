@@ -1,5 +1,5 @@
 import { Plus, CheckCircle, X } from 'lucide-react';
-import { Button } from '../../ui';
+import { Button } from '@/components/ui';
 
 interface AdHocWorkoutControlsProps {
   /** Whether any sets have been logged (enables Complete button) */

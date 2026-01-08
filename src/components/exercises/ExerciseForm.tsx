@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { Button, Input, NumberInput, Select } from '../ui';
-import { useAppStore } from '../../stores/appStore';
+import { Button, Input, NumberInput, Select } from '@/components/ui';
+import { useAppStore } from '@/stores/appStore';
 import { 
   EXERCISE_TYPES, 
   EXERCISE_TYPE_LABELS, 
@@ -11,7 +11,7 @@ import {
   type MeasurementType,
   parseTimeInput,
   formatTime
-} from '../../types';
+} from '@/types';
 
 interface ExerciseFormProps {
   initialData?: Exercise;
@@ -187,7 +187,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         </div>
         
         {weightEnabled && (
-          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-border">
             <Input
               label="Default Weight (lbs, optional)"
               type="number"
@@ -353,7 +353,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-dark-border">
         <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
           Cancel
         </Button>

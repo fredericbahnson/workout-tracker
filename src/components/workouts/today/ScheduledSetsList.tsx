@@ -1,6 +1,6 @@
 import { Circle, CheckCircle, Edit2 } from 'lucide-react';
-import { SwipeableSetCard } from '../SwipeableSetCard';
-import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledSet, type CompletedSet, type ExerciseType } from '../../../types';
+import { SwipeableSetCard } from '@/components/workouts/SwipeableSetCard';
+import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledSet, type CompletedSet, type ExerciseType } from '@/types';
 
 interface SetGroup {
   type: ExerciseType;
@@ -80,6 +80,13 @@ export function ScheduledSetsList({
                       onSwipeRight={() => onQuickComplete(set)}
                       onSwipeLeft={() => onSkipSet(set)}
                       onTap={() => onSelectSet(set)}
+                      ariaLabel={`${exercise.name}: ${
+                        isMaxTestSet 
+                          ? 'Max test, go all out' 
+                          : exercise.measurementType === 'time' 
+                            ? `${formatTime(targetReps)} hold` 
+                            : `${targetReps} reps`
+                      }${isWarmupSet ? ', warmup set' : ''}. Press Enter for details, Right arrow to complete, Left arrow to skip.`}
                     >
                       <div className="flex items-center gap-4 p-4 text-left">
                         <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600 flex-shrink-0" />
@@ -144,6 +151,13 @@ export function ScheduledSetsList({
                       <button
                         key={set.id}
                         onClick={() => onEditCompletedSet(completedSet)}
+                        aria-label={`Edit ${exercise.name}: ${
+                          wasSkipped 
+                            ? 'skipped' 
+                            : isTimeBased 
+                              ? formatTime(completedSet.actualReps) 
+                              : `${completedSet.actualReps} reps`
+                        }${hasWeight && !wasSkipped ? `, ${completedSet.weight} added weight` : ''}`}
                         className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left ${
                           wasSkipped 
                             ? 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30'
@@ -170,7 +184,7 @@ export function ScheduledSetsList({
                             </span>
                           )}
                         </div>
-                        <Edit2 className="w-3 h-3 text-gray-400" />
+                        <Edit2 className="w-3 h-3 text-gray-400" aria-hidden="true" />
                       </button>
                     );
                   })}

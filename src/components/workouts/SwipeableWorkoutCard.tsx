@@ -1,5 +1,13 @@
 import { useState, useRef, useCallback, type ReactNode } from 'react';
 import { Trash2, ChevronLeft } from 'lucide-react';
+import { 
+  SWIPE_THRESHOLD, 
+  VELOCITY_THRESHOLD, 
+  SWIPE_RESISTANCE, 
+  SWIPE_MAX_TRANSLATE,
+  SWIPE_ANIMATION_DURATION,
+  TAP_THRESHOLD 
+} from '@/constants';
 
 interface SwipeableWorkoutCardProps {
   children: ReactNode;
@@ -7,9 +15,6 @@ interface SwipeableWorkoutCardProps {
   onTap: () => void;         // Open preview
   disabled?: boolean;
 }
-
-const SWIPE_THRESHOLD = 80;  // Pixels needed to trigger action
-const VELOCITY_THRESHOLD = 0.3;  // Pixels per ms for fast swipe
 
 export function SwipeableWorkoutCard({ 
   children, 
@@ -42,8 +47,8 @@ export function SwipeableWorkoutCard({
     }
     
     // Apply resistance at edge
-    const resistance = 0.4;
-    const maxTranslate = 120;
+    const resistance = SWIPE_RESISTANCE;
+    const maxTranslate = SWIPE_MAX_TRANSLATE;
     
     let newTranslate = diff;
     if (Math.abs(diff) > maxTranslate) {
@@ -61,7 +66,7 @@ export function SwipeableWorkoutCard({
     const velocity = Math.abs(translateX) / duration;
     
     // Check if it was a tap (minimal movement and short duration)
-    if (Math.abs(translateX) < 10 && duration < 200) {
+    if (Math.abs(translateX) < TAP_THRESHOLD.movement && duration < TAP_THRESHOLD.duration) {
       setTranslateX(0);
       setIsDragging(false);
       onTap();
@@ -77,7 +82,7 @@ export function SwipeableWorkoutCard({
       setTimeout(() => {
         onSwipeLeft();
         setTranslateX(0);
-      }, 200);
+      }, SWIPE_ANIMATION_DURATION);
     } else {
       // Snap back
       setTranslateX(0);
@@ -104,8 +109,8 @@ export function SwipeableWorkoutCard({
       return;
     }
     
-    const resistance = 0.4;
-    const maxTranslate = 120;
+    const resistance = SWIPE_RESISTANCE;
+    const maxTranslate = SWIPE_MAX_TRANSLATE;
     
     let newTranslate = diff;
     if (Math.abs(diff) > maxTranslate) {
@@ -123,7 +128,7 @@ export function SwipeableWorkoutCard({
     const velocity = Math.abs(translateX) / duration;
     
     // Check if it was a click
-    if (Math.abs(translateX) < 10 && duration < 200) {
+    if (Math.abs(translateX) < TAP_THRESHOLD.movement && duration < TAP_THRESHOLD.duration) {
       setTranslateX(0);
       setIsDragging(false);
       onTap();
@@ -137,7 +142,7 @@ export function SwipeableWorkoutCard({
       setTimeout(() => {
         onSwipeLeft();
         setTranslateX(0);
-      }, 200);
+      }, SWIPE_ANIMATION_DURATION);
     } else {
       setTranslateX(0);
     }

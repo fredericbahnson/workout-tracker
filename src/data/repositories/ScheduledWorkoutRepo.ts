@@ -1,6 +1,6 @@
-import { db, generateId } from '../db';
-import type { ScheduledWorkout } from '../../types';
-import { now, normalizeDates, compareDates } from '../../utils/dateUtils';
+import { db, generateId } from '@/data/db';
+import type { ScheduledWorkout } from '@/types';
+import { now, normalizeDates, compareDates } from '@/utils/dateUtils';
 
 // ScheduledWorkout has optional completedAt
 const DATE_FIELDS: (keyof ScheduledWorkout)[] = ['completedAt'];

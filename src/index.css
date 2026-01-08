@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Custom Properties for consistent theming */
+:root {
+  --color-dark-bg: #121212;
+  --color-dark-surface: #1A1A2E;
+  --color-dark-elevated: #252538;
+  --color-dark-border: #2D2D4A;
+  --color-dark-border-hover: #3D3D5A;
+  --color-scrollbar: #3a3a4a;
+  --color-scrollbar-hover: #4a4a5a;
+}
+
 /* Font size scaling */
 html.font-small {
   font-size: 16px;
@@ -32,7 +43,7 @@ html.font-xl {
   
   /* Industry-standard dark mode: #121212 background */
   .dark body {
-    background-color: #121212;
+    background-color: var(--color-dark-bg);
     @apply text-gray-100;
   }
 
@@ -65,7 +76,7 @@ html.font-xl {
   }
   
   .dark ::-webkit-scrollbar-thumb {
-    background-color: #3a3a4a;
+    background-color: var(--color-scrollbar);
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -73,7 +84,7 @@ html.font-xl {
   }
   
   .dark ::-webkit-scrollbar-thumb:hover {
-    background-color: #4a4a5a;
+    background-color: var(--color-scrollbar-hover);
   }
 }
 
@@ -89,13 +100,13 @@ html.font-xl {
     display: none;
   }
   
-  /* Dark surface colors for cards/elevated elements */
+  /* Dark surface colors for cards/elevated elements - legacy support */
   .dark .dark-surface {
-    background-color: #1A1A2E;
+    background-color: var(--color-dark-surface);
   }
   
   .dark .dark-elevated {
-    background-color: #252538;
+    background-color: var(--color-dark-elevated);
   }
 }
 
@@ -113,12 +124,12 @@ html.font-xl {
   
   .dark html,
   html.dark {
-    background-color: #121212; /* Industry-standard dark */
+    background-color: var(--color-dark-bg);
   }
   
   @media (prefers-color-scheme: dark) {
     html:not(.light) {
-      background-color: #121212;
+      background-color: var(--color-dark-bg);
     }
   }
 }

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { CompletedSetRepo, ScheduledWorkoutRepo } from '../data/repositories';
-import type { ScheduledWorkout, Cycle } from '../types';
+import { CompletedSetRepo, ScheduledWorkoutRepo } from '@/data/repositories';
+import type { ScheduledWorkout, Cycle } from '@/types';
 
 type SyncTable = 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts';
 

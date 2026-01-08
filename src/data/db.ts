@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '../types';
+import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '@/types';
 
 // Sync queue item for offline operations
 export interface SyncQueueItem {

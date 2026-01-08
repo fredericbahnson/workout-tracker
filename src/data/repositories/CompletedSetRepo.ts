@@ -1,5 +1,5 @@
-import { db, generateId } from '../db';
-import type { CompletedSet, QuickLogData } from '../../types';
+import { db, generateId } from '@/data/db';
+import type { CompletedSet, QuickLogData } from '@/types';
 import { 
   now, 
   normalizeDates, 
@@ -9,7 +9,7 @@ import {
   toDateRequired,
   compareDates,
   type DateLike
-} from '../../utils/dateUtils';
+} from '@/utils/dateUtils';
 
 const DATE_FIELDS: (keyof CompletedSet)[] = ['completedAt'];
 

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { isToday } from '../utils';
-import type { ScheduledWorkout } from '../types';
+import { isToday } from '@/utils';
+import type { ScheduledWorkout } from '@/types';
 
 // localStorage key for persisting dismissed workout ID across navigation
 const DISMISSED_WORKOUT_KEY = 'ascend_dismissed_workout_id';

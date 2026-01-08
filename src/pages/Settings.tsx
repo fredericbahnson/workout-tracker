@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
 import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail, UserX, Key, Type } from 'lucide-react';
-import { exportData, importData, db } from '../data/db';
-import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '../stores/appStore';
-import { useAuth, useSync } from '../contexts';
-import { PageHeader } from '../components/layout';
-import { Card, CardContent, Button, Modal, NumberInput, Badge, Select, Input, TimeDurationInput } from '../components/ui';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '../types';
+import { exportData, importData, db } from '@/data/db';
+import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
+import { useAuth, useSync } from '@/contexts';
+import { PageHeader } from '@/components/layout';
+import { Card, CardContent, Button, Modal, NumberInput, Badge, Select, Input, TimeDurationInput } from '@/components/ui';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
 
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
@@ -293,7 +293,7 @@ export function SettingsPage() {
                   </p>
                 )}
                 
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-3 border-t border-gray-200 dark:border-dark-border">
                   <button
                     onClick={() => setShowDeleteAccountConfirm(true)}
                     className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
@@ -343,7 +343,7 @@ export function SettingsPage() {
                     flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors
                     ${theme === value
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
                     }
                   `}
                 >
@@ -375,7 +375,7 @@ export function SettingsPage() {
                     flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors
                     ${fontSize === value
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
                     }
                   `}
                 >
@@ -432,7 +432,7 @@ export function SettingsPage() {
               <div className="space-y-2">
                 {EXERCISE_TYPES.filter(t => t !== 'other').map(type => (
                   <div key={type} className="flex flex-wrap items-center gap-2">
-                    <Badge variant={type} className="w-20 justify-center text-[10px] flex-shrink-0">
+                    <Badge variant={type} className="w-20 justify-center text-2xs flex-shrink-0">
                       {EXERCISE_TYPE_LABELS[type]}
                     </Badge>
                     <div className="flex items-center gap-2">
@@ -511,7 +511,7 @@ export function SettingsPage() {
             </div>
 
             {restTimer.enabled && (
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="pt-2 border-t border-gray-200 dark:border-dark-border">
                 <TimeDurationInput
                   label="Default rest duration"
                   value={restTimer.defaultDurationSeconds}
@@ -523,7 +523,7 @@ export function SettingsPage() {
             )}
 
             {/* Max Testing Rest Timer */}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">Max testing rest timer</p>
@@ -599,7 +599,7 @@ export function SettingsPage() {
               className="hidden"
             />
 
-            <hr className="border-gray-200 dark:border-gray-700" />
+            <hr className="border-gray-200 dark:border-dark-border" />
 
             <Button 
               variant="ghost" 
@@ -619,7 +619,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v2.1.0
+              Ascend v2.2.0
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training

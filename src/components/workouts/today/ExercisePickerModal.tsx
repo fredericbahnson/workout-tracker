@@ -1,7 +1,7 @@
 import { Dumbbell } from 'lucide-react';
-import { Modal, Button, EmptyState } from '../../ui';
-import { ExerciseCard } from '../../exercises';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, type Exercise } from '../../../types';
+import { Modal, Button, EmptyState } from '@/components/ui';
+import { ExerciseCard } from '@/components/exercises';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, type Exercise } from '@/types';
 
 interface ExercisePickerModalProps {
   /** Whether the modal is open */

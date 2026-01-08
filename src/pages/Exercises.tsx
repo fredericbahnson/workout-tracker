@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Search, ListChecks, Filter } from 'lucide-react';
-import { ExerciseRepo, MaxRecordRepo } from '../data/repositories';
-import { PageHeader } from '../components/layout';
-import { Button, Input, Modal, EmptyState } from '../components/ui';
-import { ExerciseCard, ExerciseForm } from '../components/exercises';
+import { ExerciseRepo, MaxRecordRepo } from '@/data/repositories';
+import { PageHeader } from '@/components/layout';
+import { Button, Input, Modal, EmptyState } from '@/components/ui';
+import { ExerciseCard, ExerciseForm } from '@/components/exercises';
 import { 
   EXERCISE_TYPES, 
   EXERCISE_TYPE_LABELS, 
   type ExerciseType, 
   type ExerciseFormData 
-} from '../types';
+} from '@/types';
 
 export function ExercisesPage() {
   const [showForm, setShowForm] = useState(false);

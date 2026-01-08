@@ -148,16 +148,6 @@ export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   other: 'Other'
 };
 
-export const EXERCISE_TYPE_COLORS: Record<ExerciseType, string> = {
-  push: 'bg-red-500',
-  pull: 'bg-blue-500',
-  legs: 'bg-green-500',
-  core: 'bg-yellow-500',
-  balance: 'bg-purple-500',
-  mobility: 'bg-pink-500',
-  other: 'bg-gray-500'
-};
-
 // Helper function to format time in seconds to display string
 export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);

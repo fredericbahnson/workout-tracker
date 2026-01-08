@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Dumbbell, ListChecks, Calendar, BarChart3, Settings } from 'lucide-react';
-import { OfflineIndicator } from '../ui';
+import { OfflineIndicator } from '@/components/ui';
 
 interface LayoutProps {
   children: ReactNode;
@@ -49,7 +49,7 @@ export function Layout({ children }: LayoutProps) {
                 `}
               >
                 <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                <span className="mt-1 font-medium" style={{ fontSize: '10px' }}>{label}</span>
+                <span className="mt-1 font-medium text-2xs">{label}</span>
               </NavLink>
             );
           })}

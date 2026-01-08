@@ -1,6 +1,6 @@
-import { db, generateId } from '../db';
-import type { Cycle, Group, ExerciseAssignment } from '../../types';
-import { now, normalizeDates, normalizeDatesArray, compareDates } from '../../utils/dateUtils';
+import { db, generateId } from '@/data/db';
+import type { Cycle, Group, ExerciseAssignment } from '@/types';
+import { now, normalizeDates, normalizeDatesArray, compareDates } from '@/utils/dateUtils';
 
 export type CycleFormData = Omit<Cycle, 'id' | 'createdAt' | 'updatedAt'>;
 

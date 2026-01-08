@@ -24,12 +24,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           className={`
             w-full px-3 py-2 rounded-lg border transition-colors
-            bg-white dark:bg-[#1A1A2E]
+            bg-white dark:bg-dark-surface
             text-gray-900 dark:text-gray-100
-            border-gray-300 dark:border-[#2D2D4A]
+            border-gray-300 dark:border-dark-border
             focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
             placeholder:text-gray-400 dark:placeholder:text-gray-500
-            disabled:bg-gray-50 disabled:dark:bg-[#121212] disabled:cursor-not-allowed
+            disabled:bg-gray-50 disabled:dark:bg-dark-bg disabled:cursor-not-allowed
             ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}
             ${className}
           `}
@@ -116,9 +116,9 @@ export function NumberInput({
         placeholder={placeholder}
         className={`
           px-3 py-2 rounded-lg border transition-colors
-          bg-white dark:bg-[#1A1A2E]
+          bg-white dark:bg-dark-surface
           text-gray-900 dark:text-gray-100
-          border-gray-300 dark:border-[#2D2D4A]
+          border-gray-300 dark:border-dark-border
           focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
           placeholder:text-gray-400 dark:placeholder:text-gray-500
           ${className}
@@ -146,9 +146,9 @@ export function NumberInput({
         placeholder={placeholder}
         className={`
           w-full px-3 py-2 rounded-lg border transition-colors
-          bg-white dark:bg-[#1A1A2E]
+          bg-white dark:bg-dark-surface
           text-gray-900 dark:text-gray-100
-          border-gray-300 dark:border-[#2D2D4A]
+          border-gray-300 dark:border-dark-border
           focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
           placeholder:text-gray-400 dark:placeholder:text-gray-500
           ${className}
@@ -240,9 +240,9 @@ export function TimeDurationInput({
 
   const inputClass = `
     w-16 px-3 py-2 rounded-lg border transition-colors text-center
-    bg-white dark:bg-[#1A1A2E]
+    bg-white dark:bg-dark-surface
     text-gray-900 dark:text-gray-100
-    border-gray-300 dark:border-[#2D2D4A]
+    border-gray-300 dark:border-dark-border
     focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
   `;
 

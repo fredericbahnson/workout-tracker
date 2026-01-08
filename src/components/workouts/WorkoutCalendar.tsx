@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { ScheduledWorkout } from '../../types';
+import { isToday } from '@/utils';
+import type { ScheduledWorkout } from '@/types';
 
 interface WorkoutCalendarProps {
   workouts: ScheduledWorkout[];
@@ -69,13 +70,6 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
     setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
   };
 
-  const isToday = (date: Date) => {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
-  };
-
   const isCurrentMonth = (date: Date) => {
     return date.getMonth() === currentMonth.getMonth();
   };
@@ -100,9 +94,9 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-dark-border overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-dark-border">
         <button
           onClick={goToPreviousMonth}
           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
@@ -126,7 +120,7 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
       </div>
 
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-dark-border">
         {weekDays.map(day => (
           <div
             key={day}
@@ -157,7 +151,7 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
               disabled={!hasWorkout}
               className={`
                 relative aspect-square flex flex-col items-center justify-center
-                border-b border-r border-gray-100 dark:border-gray-700
+                border-b border-r border-gray-100 dark:border-dark-border
                 transition-colors
                 ${!inCurrentMonth ? 'text-gray-300 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}
                 ${hasWorkout ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50' : 'cursor-default'}
@@ -191,7 +185,7 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex items-center justify-center gap-4 px-4 py-2 border-t border-gray-200 dark:border-dark-border text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-green-500" />
           <span>Workout</span>

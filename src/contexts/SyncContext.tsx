@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import { SyncService, type SyncStatus } from '../services/syncService';
+import { SyncService, type SyncStatus } from '@/services/syncService';
 import { useAuth } from './AuthContext';
 
 interface SyncContextType {

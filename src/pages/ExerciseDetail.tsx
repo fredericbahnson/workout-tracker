@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Edit, Trash2, TrendingUp, History, AlertTriangle } from 'lucide-react';
-import { ExerciseRepo, MaxRecordRepo, CompletedSetRepo, CycleRepo } from '../data/repositories';
-import { useAppStore } from '../stores/appStore';
-import { PageHeader } from '../components/layout';
-import { Button, Card, CardContent, Badge, Modal, EmptyState } from '../components/ui';
-import { ExerciseForm, MaxRecordForm } from '../components/exercises';
-import { EXERCISE_TYPE_LABELS, formatTime, type ExerciseFormData } from '../types';
+import { ExerciseRepo, MaxRecordRepo, CompletedSetRepo, CycleRepo } from '@/data/repositories';
+import { useAppStore } from '@/stores/appStore';
+import { PageHeader } from '@/components/layout';
+import { Button, Card, CardContent, Badge, Modal, EmptyState } from '@/components/ui';
+import { ExerciseForm, MaxRecordForm } from '@/components/exercises';
+import { EXERCISE_TYPE_LABELS, formatTime, type ExerciseFormData } from '@/types';
 
 export function ExerciseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -276,7 +276,7 @@ export function ExerciseDetailPage() {
                         </span>
                       )}
                       {index === 0 && (
-                        <Badge className="ml-2 text-[10px]" variant="outline">Current</Badge>
+                        <Badge className="ml-2 text-2xs" variant="outline">Current</Badge>
                       )}
                       {record.notes && (
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">

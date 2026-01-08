@@ -1,5 +1,5 @@
-import { Card, Badge } from '../ui';
-import { EXERCISE_TYPE_LABELS, type CompletedSet, type Exercise } from '../../types';
+import { Card, Badge } from '@/components/ui';
+import { EXERCISE_TYPE_LABELS, type CompletedSet, type Exercise } from '@/types';
 
 interface CompletedSetCardProps {
   completedSet: CompletedSet;
@@ -23,7 +23,7 @@ export function CompletedSetCard({ completedSet, exercise }: CompletedSetCardPro
               {completedSet.actualReps} reps
             </span>
             {exercise && (
-              <Badge variant={exercise.type} className="text-[10px]">
+              <Badge variant={exercise.type} className="text-2xs">
                 {EXERCISE_TYPE_LABELS[exercise.type]}
               </Badge>
             )}

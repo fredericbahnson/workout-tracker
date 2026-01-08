@@ -1,6 +1,6 @@
-import { db, generateId } from '../db';
-import type { Exercise, ExerciseFormData, ExerciseType } from '../../types';
-import { now, normalizeDates, normalizeDatesArray } from '../../utils/dateUtils';
+import { db, generateId } from '@/data/db';
+import type { Exercise, ExerciseFormData, ExerciseType } from '@/types';
+import { now, normalizeDates, normalizeDatesArray } from '@/utils/dateUtils';
 
 const DATE_FIELDS: (keyof Exercise)[] = ['createdAt', 'updatedAt'];
 

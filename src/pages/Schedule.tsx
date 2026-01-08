@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Calendar, CalendarDays, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Trash2, Dumbbell, List } from 'lucide-react';
-import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo, CompletedSetRepo } from '../data/repositories';
-import { calculateTargetReps } from '../services/scheduler';
-import { useAppStore } from '../stores/appStore';
-import { useSyncItem } from '../contexts/SyncContext';
-import { PageHeader } from '../components/layout';
-import { Card, Badge, EmptyState, Button, Modal } from '../components/ui';
-import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '../components/cycles';
-import { SwipeableWorkoutCard, WorkoutCalendar } from '../components/workouts';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '../types';
+import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo, CompletedSetRepo } from '@/data/repositories';
+import { calculateTargetReps } from '@/services/scheduler';
+import { useAppStore } from '@/stores/appStore';
+import { useSyncItem } from '@/contexts/SyncContext';
+import { PageHeader } from '@/components/layout';
+import { Card, Badge, EmptyState, Button, Modal } from '@/components/ui';
+import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '@/components/cycles';
+import { SwipeableWorkoutCard, WorkoutCalendar } from '@/components/workouts';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '@/types';
 
 export function SchedulePage() {
   const navigate = useNavigate();
@@ -305,7 +305,7 @@ export function SchedulePage() {
         {/* View Toggle */}
         {(allCompletedWorkouts?.length || 0) > 0 && (
           <div className="flex justify-center">
-            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 bg-gray-100 dark:bg-gray-800">
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-dark-border p-0.5 bg-gray-100 dark:bg-gray-800">
               <button
                 onClick={() => setShowCalendarView(false)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -432,7 +432,7 @@ export function SchedulePage() {
                                 {group?.name || 'Workout'}
                               </span>
                               {isNext && (
-                                <Badge className="text-[10px] bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
+                                <Badge className="text-2xs bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
                                   NEXT
                                 </Badge>
                               )}
@@ -446,7 +446,7 @@ export function SchedulePage() {
                                 <Badge 
                                   key={type} 
                                   variant={type as any} 
-                                  className="text-[10px]"
+                                  className="text-2xs"
                                 >
                                   {count} {EXERCISE_TYPE_LABELS[type as keyof typeof EXERCISE_TYPE_LABELS]}
                                 </Badge>
@@ -514,12 +514,12 @@ export function SchedulePage() {
                             }
                           </span>
                           {isSkipped && (
-                            <Badge className="text-[10px] bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                            <Badge className="text-2xs bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                               Skipped
                             </Badge>
                           )}
                           {isAdHoc && !isSkipped && (
-                            <Badge className="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                            <Badge className="text-2xs bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                               Ad Hoc
                             </Badge>
                           )}
@@ -996,7 +996,7 @@ export function SchedulePage() {
                         }
                       </span>
                       {isAdHoc && (
-                        <Badge className="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                        <Badge className="text-2xs bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                           Ad Hoc
                         </Badge>
                       )}

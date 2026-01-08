@@ -1,7 +1,7 @@
 import { WifiOff, RefreshCw, CloudOff } from 'lucide-react';
-import { useOnlineStatus } from '../../hooks';
+import { useOnlineStatus } from '@/hooks';
 import { useEffect, useState } from 'react';
-import { useSync } from '../../contexts';
+import { useSync } from '@/contexts';
 
 export function OfflineIndicator() {
   const { isOnline, wasOffline, clearWasOffline } = useOnlineStatus();

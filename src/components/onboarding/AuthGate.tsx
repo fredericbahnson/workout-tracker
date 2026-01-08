@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, Loader2, RefreshCw, ArrowLeft } from 'lucide-react';
-import { useAuth } from '../../contexts';
-import { Button } from '../ui';
+import { useAuth } from '@/contexts';
+import { Button } from '@/components/ui';
 
 interface AuthGateProps {
   onAuthComplete: (isNewUser: boolean) => void;
@@ -95,7 +95,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
   // Password reset sent confirmation
   if (showResetSent) {
     return (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] flex items-center justify-center p-6 z-50">
+      <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex items-center justify-center p-6 z-50">
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
             <Mail className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -123,7 +123,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
 
   if (showVerificationMessage) {
     return (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] flex items-center justify-center p-6 z-50">
+      <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex items-center justify-center p-6 z-50">
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
             <Mail className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -184,7 +184,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-50 dark:bg-[#121212] flex flex-col z-50 safe-area-top safe-area-bottom">
+    <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col z-50 safe-area-top safe-area-bottom">
       {/* Header with branding */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Logo */}
@@ -229,7 +229,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email address"
                 required
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 dark:border-[#2D2D4A] bg-white dark:bg-[#1A1A2E] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-colors"
               />
             </div>
 
@@ -243,7 +243,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
                   placeholder={mode === 'signup' ? 'Create password (6+ characters)' : 'Password'}
                   required
                   minLength={mode === 'signup' ? 6 : undefined}
-                  className="w-full pl-11 pr-12 py-3 rounded-xl border border-gray-300 dark:border-[#2D2D4A] bg-white dark:bg-[#1A1A2E] text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-colors"
+                  className="w-full pl-11 pr-12 py-3 rounded-xl border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-colors"
                 />
                 <button
                   type="button"

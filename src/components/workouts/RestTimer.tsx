@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, X, Plus, Minus } from 'lucide-react';
-import { Button } from '../ui';
+import { Button } from '@/components/ui';
 
 interface RestTimerProps {
   initialSeconds: number;

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Modal } from '../../ui';
-import { QuickLogForm } from '../QuickLogForm';
-import { ExerciseTimer } from '../ExerciseTimer';
-import { ExerciseStopwatch } from '../ExerciseStopwatch';
-import type { Exercise, ScheduledSet } from '../../../types';
+import { Modal } from '@/components/ui';
+import { QuickLogForm } from '@/components/workouts/QuickLogForm';
+import { ExerciseTimer } from '@/components/workouts/ExerciseTimer';
+import { ExerciseStopwatch } from '@/components/workouts/ExerciseStopwatch';
+import type { Exercise, ScheduledSet } from '@/types';
 
 interface ScheduledSetData {
   set: ScheduledSet;

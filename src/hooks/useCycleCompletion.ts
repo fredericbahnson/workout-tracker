@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CycleRepo } from '../data/repositories';
-import type { Cycle } from '../types';
+import { CycleRepo } from '@/data/repositories';
+import type { Cycle } from '@/types';
 
 interface UseCycleCompletionParams {
   /** Whether the cycle is complete (all workouts done) */

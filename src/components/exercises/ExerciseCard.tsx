@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import { Card, Badge } from '../ui';
-import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type MaxRecord } from '../../types';
+import { Card, Badge } from '@/components/ui';
+import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type MaxRecord } from '@/types';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -63,7 +63,7 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
               {exercise.name}
             </h3>
             {exercise.mode === 'conditioning' && (
-              <Badge variant="outline" className="text-[10px]">COND</Badge>
+              <Badge variant="outline" className="text-2xs">COND</Badge>
             )}
           </div>
           <div className="flex items-center gap-2">

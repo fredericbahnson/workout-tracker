@@ -1,5 +1,5 @@
 import { Pencil } from 'lucide-react';
-import type { ScheduledWorkout } from '../../../types';
+import type { ScheduledWorkout } from '@/types';
 
 type WorkoutMode = 'active' | 'completed' | 'adHoc';
 
@@ -35,7 +35,7 @@ export function WorkoutHeader({
   
   // Background and border colors based on mode
   const containerClasses = isCompleted
-    ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+    ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-dark-border'
     : isAdHoc
       ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
       : 'bg-primary-50 dark:bg-primary-900/20 border-primary-100 dark:border-primary-800';

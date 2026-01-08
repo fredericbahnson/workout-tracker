@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, NumberInput } from '../../ui';
-import type { Exercise, CompletedSet } from '../../../types';
+import { Modal, Button, NumberInput } from '@/components/ui';
+import type { Exercise, CompletedSet } from '@/types';
 
 interface EditCompletedSetModalProps {
   /** The completed set being edited, or null if modal is closed */

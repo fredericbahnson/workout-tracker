@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { BarChart3, TrendingUp, Calendar, Dumbbell, ChevronDown } from 'lucide-react';
-import { CompletedSetRepo, ExerciseRepo, CycleRepo } from '../data/repositories';
-import { useAppStore, type RepDisplayMode } from '../stores/appStore';
-import { PageHeader } from '../components/layout';
-import { Card, CardContent, Badge, EmptyState, Button } from '../components/ui';
-import { EXERCISE_TYPE_LABELS, EXERCISE_TYPES, formatDuration, type ExerciseType, type CompletedSet, type Exercise } from '../types';
+import { CompletedSetRepo, ExerciseRepo, CycleRepo } from '@/data/repositories';
+import { useAppStore, type RepDisplayMode } from '@/stores/appStore';
+import { PageHeader } from '@/components/layout';
+import { Card, CardContent, Badge, EmptyState, Button } from '@/components/ui';
+import { EXERCISE_TYPE_LABELS, EXERCISE_TYPES, formatDuration, type ExerciseType, type CompletedSet, type Exercise } from '@/types';
 
 const TIME_PERIOD_LABELS: Record<RepDisplayMode, string> = {
   week: 'This Week',
@@ -149,7 +149,7 @@ export function ProgressPage() {
                   className="fixed inset-0 z-10" 
                   onClick={() => setShowPeriodPicker(false)} 
                 />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[140px]">
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-dark-border py-1 min-w-[140px]">
                   {(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => (
                     <button
                       key={mode}

@@ -1,6 +1,6 @@
-import { db, generateId } from '../db';
-import type { MaxRecord } from '../../types';
-import { now, normalizeDates, normalizeDatesArray, compareDates } from '../../utils/dateUtils';
+import { db, generateId } from '@/data/db';
+import type { MaxRecord } from '@/types';
+import { now, normalizeDates, normalizeDatesArray, compareDates } from '@/utils/dateUtils';
 
 const DATE_FIELDS: (keyof MaxRecord)[] = ['recordedAt'];
 

@@ -2,17 +2,17 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell } from 'lucide-react';
-import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRecordRepo } from '../data/repositories';
-import { calculateTargetReps } from '../services/scheduler';
-import { useAppStore } from '../stores/appStore';
-import { useSyncItem } from '../contexts/SyncContext';
-import { useWorkoutDisplay, useCycleCompletion, useAdHocWorkout } from '../hooks';
-import { PageHeader } from '../components/layout';
-import { Button, Modal, EmptyState, Card } from '../components/ui';
-import { QuickLogForm, RestTimer } from '../components/workouts';
-import { WorkoutCompletionBanner, ScheduledSetsList, WorkoutHeader, AdHocWorkoutControls, EditCompletedSetModal, ScheduledSetModal, TodayStats, AdHocCompletedSetsList, WorkoutActionButtons, CycleProgressHeader, SkipWorkoutConfirmModal, EndWorkoutConfirmModal, SkipSetConfirmModal, CancelAdHocConfirmModal, ExercisePickerModal, RenameWorkoutModal } from '../components/workouts/today';
-import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '../components/cycles';
-import { EXERCISE_TYPES, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet } from '../types';
+import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRecordRepo } from '@/data/repositories';
+import { calculateTargetReps } from '@/services/scheduler';
+import { useAppStore } from '@/stores/appStore';
+import { useSyncItem } from '@/contexts/SyncContext';
+import { useWorkoutDisplay, useCycleCompletion, useAdHocWorkout } from '@/hooks';
+import { PageHeader } from '@/components/layout';
+import { Button, Modal, EmptyState, Card } from '@/components/ui';
+import { QuickLogForm, RestTimer } from '@/components/workouts';
+import { WorkoutCompletionBanner, ScheduledSetsList, WorkoutHeader, AdHocWorkoutControls, EditCompletedSetModal, ScheduledSetModal, TodayStats, AdHocCompletedSetsList, WorkoutActionButtons, CycleProgressHeader, SkipWorkoutConfirmModal, EndWorkoutConfirmModal, SkipSetConfirmModal, CancelAdHocConfirmModal, ExercisePickerModal, RenameWorkoutModal } from '@/components/workouts/today';
+import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '@/components/cycles';
+import { EXERCISE_TYPES, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet } from '@/types';
 
 export function TodayPage() {
   const navigate = useNavigate();

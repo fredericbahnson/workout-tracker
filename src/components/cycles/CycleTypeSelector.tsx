@@ -1,5 +1,5 @@
 import { Calendar, Target, ArrowRight } from 'lucide-react';
-import { Button } from '../ui';
+import { Button } from '@/components/ui';
 
 interface CycleTypeSelectorProps {
   onSelectTraining: () => void;
@@ -27,7 +27,7 @@ export function CycleTypeSelector({
         {/* Training Cycle Option */}
         <button
           onClick={onSelectTraining}
-          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-[#2D2D4A] hover:border-primary-500 dark:hover:border-primary-500 bg-white dark:bg-[#1A1A2E] transition-colors text-left group"
+          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-primary-500 dark:hover:border-primary-500 bg-white dark:bg-dark-surface transition-colors text-left group"
         >
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0">
@@ -51,7 +51,7 @@ export function CycleTypeSelector({
         {/* Max Testing Option */}
         <button
           onClick={onSelectMaxTesting}
-          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-[#2D2D4A] hover:border-purple-500 dark:hover:border-purple-500 bg-white dark:bg-[#1A1A2E] transition-colors text-left group"
+          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-purple-500 dark:hover:border-purple-500 bg-white dark:bg-dark-surface transition-colors text-left group"
         >
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">

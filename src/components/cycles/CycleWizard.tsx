@@ -9,11 +9,11 @@ import {
   Check,
   Copy
 } from 'lucide-react';
-import { Button, Input, NumberInput, Select, Card, Badge, Modal } from '../ui';
-import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo } from '../../data/repositories';
-import { generateSchedule, validateCycle } from '../../services/scheduler';
-import { generateId } from '../../data/db';
-import { useAppStore } from '../../stores/appStore';
+import { Button, Input, NumberInput, Select, Card, Badge, Modal } from '@/components/ui';
+import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo } from '@/data/repositories';
+import { generateSchedule, validateCycle } from '@/services/scheduler';
+import { generateId } from '@/data/db';
+import { useAppStore } from '@/stores/appStore';
 import { 
   EXERCISE_TYPES, 
   EXERCISE_TYPE_LABELS, 
@@ -22,7 +22,7 @@ import {
   type ExerciseType,
   type Exercise,
   type ExerciseAssignment
-} from '../../types';
+} from '@/types';
 
 interface CycleWizardProps {
   onComplete: () => void;
@@ -440,7 +440,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
     <div className="flex flex-col h-full">
       {/* Progress indicator - hide on start step */}
       {currentStep !== 'start' && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-dark-border">
           {displaySteps.map((step, index) => {
             const isActive = step.key === currentStep;
             const currentDisplayIndex = displaySteps.findIndex(s => s.key === currentStep);
@@ -547,7 +547,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
 
       {/* Navigation - hide on start step (it has its own buttons) */}
       {currentStep !== 'start' && (
-        <div className="flex gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex gap-3 p-4 border-t border-gray-200 dark:border-dark-border">
           {currentStep === 'basics' ? (
             <Button variant="secondary" onClick={editCycle ? onCancel : () => setCurrentStep('start')} className="flex-1">
               {editCycle ? 'Cancel' : (
@@ -605,7 +605,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
                 setShowEditModeChoice(false);
                 handleCreate();
               }}
-              className="w-full p-4 text-left rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
+              className="w-full p-4 text-left rounded-lg border border-gray-200 dark:border-dark-border hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
             >
               <div className="font-medium text-gray-900 dark:text-gray-100">
                 Continue from current position
@@ -621,7 +621,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
                 setShowEditModeChoice(false);
                 handleCreate();
               }}
-              className="w-full p-4 text-left rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
+              className="w-full p-4 text-left rounded-lg border border-gray-200 dark:border-dark-border hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
             >
               <div className="font-medium text-gray-900 dark:text-gray-100">
                 Start fresh
@@ -673,7 +673,7 @@ function StartStep({
         {/* Start Fresh Option */}
         <button
           onClick={onStartFresh}
-          className="w-full p-4 text-left rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors bg-white dark:bg-gray-800"
+          className="w-full p-4 text-left rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-primary-500 dark:hover:border-primary-500 transition-colors bg-white dark:bg-gray-800"
         >
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
@@ -695,7 +695,7 @@ function StartStep({
           <>
             <div className="relative py-3">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+                <div className="w-full border-t border-gray-200 dark:border-dark-border" />
               </div>
               <div className="relative flex justify-center">
                 <span className="px-3 bg-gray-50 dark:bg-gray-900 text-sm text-gray-500 dark:text-gray-400">
@@ -709,7 +709,7 @@ function StartStep({
                 <button
                   key={cycle.id}
                   onClick={() => onCloneFromCycle(cycle)}
-                  className="w-full p-4 text-left rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors bg-white dark:bg-gray-800"
+                  className="w-full p-4 text-left rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-primary-500 dark:hover:border-primary-500 transition-colors bg-white dark:bg-gray-800"
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
@@ -888,7 +888,7 @@ function GroupsStep({
                       key={assignment.exerciseId}
                       className="flex items-start gap-2 py-1.5 px-2 bg-gray-50 dark:bg-gray-800/50 rounded"
                     >
-                      <Badge variant={exercise.type} className="text-[10px] flex-shrink-0 mt-0.5">
+                      <Badge variant={exercise.type} className="text-2xs flex-shrink-0 mt-0.5">
                         {EXERCISE_TYPE_LABELS[exercise.type]}
                       </Badge>
                       <span className="flex-1 text-sm min-w-0 break-words">{exercise.name}</span>

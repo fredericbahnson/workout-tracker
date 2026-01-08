@@ -1,5 +1,5 @@
 import { Plus, Edit2 } from 'lucide-react';
-import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type CompletedSet, type ExerciseType } from '../../../types';
+import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type CompletedSet, type ExerciseType } from '@/types';
 
 interface SetGroup {
   type: ExerciseType;

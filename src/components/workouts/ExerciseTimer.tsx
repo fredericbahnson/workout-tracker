@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Check, X } from 'lucide-react';
-import { Button } from '../ui';
-import { formatTime } from '../../types';
+import { Button } from '@/components/ui';
+import { formatTime } from '@/types';
 
 interface ExerciseTimerProps {
   targetSeconds: number;

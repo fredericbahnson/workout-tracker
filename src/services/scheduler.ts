@@ -1,4 +1,4 @@
-import { generateId } from '../data/db';
+import { generateId } from '@/data/db';
 import type { 
   Cycle, 
   ScheduledWorkout, 
@@ -7,7 +7,7 @@ import type {
   ExerciseType, 
   MaxRecord,
   Group 
-} from '../types';
+} from '@/types';
 
 interface SchedulerInput {
   cycle: Cycle;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, Input } from '../../ui';
+import { Modal, Button, Input } from '@/components/ui';
 
 interface RenameWorkoutModalProps {
   /** Whether the modal is open */

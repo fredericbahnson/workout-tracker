@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Button, Input } from '../ui';
+import { Button, Input } from '@/components/ui';
 
 interface MaxRecordFormProps {
   currentMax?: number;

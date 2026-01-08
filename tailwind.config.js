@@ -24,16 +24,20 @@ export default {
         },
         // Industry-standard dark mode colors
         dark: {
-          bg: '#121212',        // Primary background
-          surface: '#1A1A2E',   // Elevated surfaces (cards, modals)
-          elevated: '#252538',  // Higher elevation surfaces
+          bg: '#121212',           // Primary background
+          surface: '#1A1A2E',      // Elevated surfaces (cards, modals)
+          elevated: '#252538',     // Higher elevation surfaces
+          border: '#2D2D4A',       // Border color for dark mode
+          'border-hover': '#3D3D5A', // Border hover state
         }
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
-      // Gym-readable font sizes (24-32pt for active workout)
       fontSize: {
+        // Extra small text (10px) for badges and labels
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        // Gym-readable font sizes (24-32pt for active workout)
         'gym-xl': ['1.5rem', { lineHeight: '2rem', fontWeight: '600' }],      // 24px
         'gym-2xl': ['1.75rem', { lineHeight: '2.25rem', fontWeight: '700' }], // 28px
         'gym-3xl': ['2rem', { lineHeight: '2.5rem', fontWeight: '700' }],     // 32px

@@ -1,5 +1,5 @@
-import { Modal, Button } from '../../ui';
-import type { Exercise, ScheduledSet } from '../../../types';
+import { Modal, Button } from '@/components/ui';
+import type { Exercise, ScheduledSet } from '@/types';
 
 // ============================================
 // Skip Workout Confirmation Modal
