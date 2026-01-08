@@ -106,8 +106,8 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   }));
 
   const modeOptions = [
-    { value: 'standard', label: measurementType === 'time' ? 'Progressive (% of max time)' : 'Standard (uses RFEM)' },
-    { value: 'conditioning', label: measurementType === 'time' ? 'Fixed (set time + weekly increment)' : 'Conditioning (fixed reps)' }
+    { value: 'standard', label: measurementType === 'time' ? 'Progressive (% of max time)' : 'Standard (RFEM or simple progression)' },
+    { value: 'conditioning', label: measurementType === 'time' ? 'Fixed (set time + weekly increment)' : 'Conditioning (consistent reps)' }
   ];
 
   const measurementOptions = [
@@ -163,7 +163,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
               Track Added Weight
             </label>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Log weight added (e.g., weighted vest, dip belt)
+              Weighted vest, barbell, dumbbells, dip belt, etc.
             </p>
           </div>
           <button
