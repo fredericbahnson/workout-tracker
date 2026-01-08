@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '@/components/ui';
 import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '@/components/cycles';
 import { SwipeableWorkoutCard, WorkoutCalendar } from '@/components/workouts';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet } from '@/types';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type Exercise, type ScheduledSet, type CompletedSet, type ProgressionMode } from '@/types';
 
 export function SchedulePage() {
   const navigate = useNavigate();
@@ -20,6 +20,7 @@ export function SchedulePage() {
   const [isEditingCycle, setIsEditingCycle] = useState(false);  // true = edit existing, false = create new
   const [showCycleTypeSelector, setShowCycleTypeSelector] = useState(false);
   const [showMaxTestingWizard, setShowMaxTestingWizard] = useState(false);
+  const [wizardProgressionMode, setWizardProgressionMode] = useState<ProgressionMode>('rfem');
   const [previewWorkout, setPreviewWorkout] = useState<ScheduledWorkout | null>(null);
   const [historyWorkout, setHistoryWorkout] = useState<ScheduledWorkout | null>(null);
   const [historyCompletedSets, setHistoryCompletedSets] = useState<CompletedSet[]>([]);
@@ -219,9 +220,10 @@ export function SchedulePage() {
           title="Create New Cycle"
         >
           <CycleTypeSelector
-            onSelectTraining={() => {
+            onSelectTraining={(mode) => {
               setShowCycleTypeSelector(false);
               setIsEditingCycle(false);
+              setWizardProgressionMode(mode);
               setShowCycleWizard(true);
             }}
             onSelectMaxTesting={() => {
@@ -243,6 +245,7 @@ export function SchedulePage() {
             <CycleWizard
               onComplete={() => setShowCycleWizard(false)}
               onCancel={() => setShowCycleWizard(false)}
+              initialProgressionMode={wizardProgressionMode}
             />
           </div>
         </Modal>
@@ -869,6 +872,7 @@ export function SchedulePage() {
             editCycle={isEditingCycle ? activeCycle : undefined}
             onComplete={() => setShowCycleWizard(false)}
             onCancel={() => setShowCycleWizard(false)}
+            initialProgressionMode={isEditingCycle ? undefined : wizardProgressionMode}
           />
         </div>
       </Modal>
@@ -880,9 +884,10 @@ export function SchedulePage() {
         title="Create New Cycle"
       >
         <CycleTypeSelector
-          onSelectTraining={() => {
+          onSelectTraining={(mode) => {
             setShowCycleTypeSelector(false);
             setIsEditingCycle(false);
+            setWizardProgressionMode(mode);
             setShowCycleWizard(true);
           }}
           onSelectMaxTesting={() => {

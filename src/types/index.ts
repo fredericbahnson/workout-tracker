@@ -5,6 +5,12 @@ export type ExerciseMode = 'standard' | 'conditioning';
 export type MeasurementType = 'reps' | 'time';  // reps = count, time = seconds
 export type CycleType = 'training' | 'max_testing';
 
+// Progression mode for training cycles
+export type ProgressionMode = 'rfem' | 'simple';
+
+// Progression interval type (for simple mode per-exercise settings)
+export type ProgressionInterval = 'constant' | 'per_workout' | 'per_week';
+
 export interface CustomParameter {
   name: string;
   type: 'text' | 'number' | 'select';
@@ -42,8 +48,25 @@ export interface MaxRecord {
 
 export interface ExerciseAssignment {
   exerciseId: string;
+  
+  // RFEM/Conditioning mode settings
   conditioningBaseReps?: number;     // For rep-based conditioning
   conditioningBaseTime?: number;     // For time-based conditioning (seconds)
+  
+  // Simple mode - base values
+  simpleBaseReps?: number;           // Starting reps for simple mode
+  simpleBaseTime?: number;           // Starting time in seconds for time-based
+  simpleBaseWeight?: number;         // Starting weight in lbs (for weighted exercises)
+  
+  // Simple mode - rep/time progression
+  simpleRepProgressionType?: ProgressionInterval;   // How reps progress
+  simpleRepIncrement?: number;                       // Reps to add each interval
+  simpleTimeProgressionType?: ProgressionInterval;  // How time progresses
+  simpleTimeIncrement?: number;                      // Seconds to add each interval
+  
+  // Simple mode - weight progression (future-proofing)
+  simpleWeightProgressionType?: ProgressionInterval; // How weight progresses
+  simpleWeightIncrement?: number;                     // Weight (lbs) to add each interval
 }
 
 export interface Group {
@@ -56,6 +79,7 @@ export interface Cycle {
   id: string;
   name: string;
   cycleType: CycleType;                // 'training' or 'max_testing'
+  progressionMode?: ProgressionMode;   // 'rfem' (default) or 'simple' - only for training cycles
   previousCycleId?: string;            // Reference to the cycle this max testing follows
   startDate: Date;
   numberOfWeeks: number;
@@ -63,7 +87,7 @@ export interface Cycle {
   weeklySetGoals: Record<ExerciseType, number>;
   groups: Group[];
   groupRotation: string[];
-  rfemRotation: number[];
+  rfemRotation: number[];              // Used for RFEM mode
   conditioningWeeklyRepIncrement: number;
   conditioningWeeklyTimeIncrement?: number;  // Weekly increment in seconds for time-based conditioning
   status: 'planning' | 'active' | 'completed';
@@ -84,7 +108,22 @@ export interface ScheduledSet {
   previousMaxReps?: number;          // For reference during max testing (reps)
   previousMaxTime?: number;          // For reference during max testing (time in seconds)
   measurementType?: MeasurementType; // Cached from exercise for display
-  // Note: target is calculated dynamically based on current max and RFEM
+  
+  // Simple mode progression settings (denormalized from ExerciseAssignment)
+  // These are only populated when cycle.progressionMode === 'simple'
+  simpleBaseReps?: number;
+  simpleBaseTime?: number;
+  simpleBaseWeight?: number;
+  simpleRepProgressionType?: ProgressionInterval;
+  simpleRepIncrement?: number;
+  simpleTimeProgressionType?: ProgressionInterval;
+  simpleTimeIncrement?: number;
+  simpleWeightProgressionType?: ProgressionInterval;  // Future
+  simpleWeightIncrement?: number;                      // Future
+  
+  // Note: target is calculated dynamically based on mode:
+  // - RFEM mode: current max × RFEM percentage
+  // - Simple mode: base + (increment × progression interval count)
 }
 
 export interface ScheduledWorkout {
@@ -148,6 +187,19 @@ export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   other: 'Other'
 };
 
+// Progression mode labels
+export const PROGRESSION_MODE_LABELS: Record<ProgressionMode, string> = {
+  rfem: 'RFEM Training',
+  simple: 'Simple Progression'
+};
+
+// Progression interval labels
+export const PROGRESSION_INTERVAL_LABELS: Record<ProgressionInterval, string> = {
+  constant: 'Constant (no change)',
+  per_workout: 'Each workout',
+  per_week: 'Each week'
+};
+
 // Helper function to format time in seconds to display string
 export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -208,4 +260,19 @@ export function formatDuration(totalSeconds: number): string {
   if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
   
   return parts.join(' ');
+}
+
+/**
+ * Get the effective progression mode for a cycle.
+ * Defaults to 'rfem' for backwards compatibility with existing cycles.
+ */
+export function getProgressionMode(cycle: Cycle): ProgressionMode {
+  return cycle.progressionMode ?? 'rfem';
+}
+
+/**
+ * Check if a cycle uses simple progression mode.
+ */
+export function isSimpleProgressionCycle(cycle: Cycle): boolean {
+  return getProgressionMode(cycle) === 'simple';
 }

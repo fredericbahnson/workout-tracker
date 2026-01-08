@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell } from 'lucide-react';
 import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRecordRepo } from '@/data/repositories';
-import { calculateTargetReps } from '@/services/scheduler';
+import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/scheduler';
 import { useAppStore } from '@/stores/appStore';
 import { useSyncItem } from '@/contexts/SyncContext';
 import { useWorkoutDisplay, useCycleCompletion, useAdHocWorkout } from '@/hooks';
@@ -12,7 +12,7 @@ import { Button, Modal, EmptyState, Card } from '@/components/ui';
 import { QuickLogForm, RestTimer } from '@/components/workouts';
 import { WorkoutCompletionBanner, ScheduledSetsList, WorkoutHeader, AdHocWorkoutControls, EditCompletedSetModal, ScheduledSetModal, TodayStats, AdHocCompletedSetsList, WorkoutActionButtons, CycleProgressHeader, SkipWorkoutConfirmModal, EndWorkoutConfirmModal, SkipSetConfirmModal, CancelAdHocConfirmModal, ExercisePickerModal, RenameWorkoutModal } from '@/components/workouts/today';
 import { CycleWizard, MaxTestingWizard, CycleCompletionModal, CycleTypeSelector } from '@/components/cycles';
-import { EXERCISE_TYPES, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet } from '@/types';
+import { EXERCISE_TYPES, getProgressionMode, type Exercise, type ScheduledWorkout, type ScheduledSet, type CompletedSet, type ProgressionMode } from '@/types';
 
 export function TodayPage() {
   const navigate = useNavigate();
@@ -21,6 +21,7 @@ export function TodayPage() {
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [showCycleWizard, setShowCycleWizard] = useState(false);
   const [showCycleTypeSelector, setShowCycleTypeSelector] = useState(false);
+  const [wizardProgressionMode, setWizardProgressionMode] = useState<ProgressionMode>('rfem');
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showRestTimer, setShowRestTimer] = useState(false);
@@ -30,6 +31,7 @@ export function TodayPage() {
     set: ScheduledSet;
     workout: ScheduledWorkout;
     targetReps: number;
+    targetWeight?: number;
   } | null>(null);
   const [isLogging, setIsLogging] = useState(false);
   
@@ -199,6 +201,12 @@ export function TodayPage() {
     );
   };
 
+  // Helper to get target weight for a set (simple progression mode only)
+  const getTargetWeight = (set: ScheduledSet, workout: ScheduledWorkout): number | undefined => {
+    if (!activeCycle || getProgressionMode(activeCycle) !== 'simple') return undefined;
+    return calculateSimpleTargetWeight(set, workout, activeCycle);
+  };
+
   // Helper to group sets by exercise type, sorted alphabetically within each type
   const groupSetsByType = (sets: ScheduledSet[]) => {
     return EXERCISE_TYPES.map(type => ({
@@ -266,7 +274,8 @@ export function TodayPage() {
       const targetReps = set.isMaxTest 
         ? (set.previousMaxReps || 0)
         : getTargetReps(set, displayWorkout);
-      setSelectedScheduledSet({ set, workout: displayWorkout, targetReps });
+      const targetWeight = getTargetWeight(set, displayWorkout);
+      setSelectedScheduledSet({ set, workout: displayWorkout, targetReps, targetWeight });
       // Timer/stopwatch mode is now automatically selected by ScheduledSetModal
     }
   };
@@ -550,6 +559,7 @@ export function TodayPage() {
                 isShowingCompletedWorkout={isShowingCompletedWorkout}
                 showSwipeHint={scheduledSetsRemaining.length > 0 && scheduledSetsCompleted.length === 0}
                 getTargetReps={(set) => getTargetReps(set, displayWorkout)}
+                getTargetWeight={(set) => getTargetWeight(set, displayWorkout)}
                 onQuickComplete={handleQuickComplete}
                 onSkipSet={handleInitiateSkipSet}
                 onSelectSet={handleSelectScheduledSet}
@@ -648,7 +658,11 @@ export function TodayPage() {
 
       {/* Scheduled Set Log Modal */}
       <ScheduledSetModal
-        scheduledSet={selectedScheduledSet ? { set: selectedScheduledSet.set, targetReps: selectedScheduledSet.targetReps } : null}
+        scheduledSet={selectedScheduledSet ? { 
+          set: selectedScheduledSet.set, 
+          targetReps: selectedScheduledSet.targetReps,
+          targetWeight: selectedScheduledSet.targetWeight
+        } : null}
         exercise={selectedScheduledSet ? exerciseMap.get(selectedScheduledSet.set.exerciseId) || null : null}
         isLogging={isLogging}
         onLogSet={handleLogSet}
@@ -666,6 +680,7 @@ export function TodayPage() {
           <CycleWizard
             onComplete={handleCycleCreated}
             onCancel={() => setShowCycleWizard(false)}
+            initialProgressionMode={wizardProgressionMode}
           />
         </div>
       </Modal>
@@ -742,8 +757,9 @@ export function TodayPage() {
         title="Create New Cycle"
       >
         <CycleTypeSelector
-          onSelectTraining={() => {
+          onSelectTraining={(mode) => {
             setShowCycleTypeSelector(false);
+            setWizardProgressionMode(mode);
             setShowCycleWizard(true);
           }}
           onSelectMaxTesting={() => {

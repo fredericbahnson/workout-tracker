@@ -8,6 +8,7 @@ import type { Exercise, ScheduledSet } from '@/types';
 interface ScheduledSetData {
   set: ScheduledSet;
   targetReps: number;
+  targetWeight?: number;  // Target weight for simple progression mode
 }
 
 interface ScheduledSetModalProps {
@@ -117,6 +118,7 @@ export function ScheduledSetModal({
           <QuickLogForm
             exercise={exercise}
             suggestedReps={scheduledSet.targetReps}
+            suggestedWeight={scheduledSet.targetWeight}
             isMaxTest={isMaxTest}
             onSubmit={onLogSet}
             onCancel={handleClose}

@@ -5,6 +5,7 @@ import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from 
 interface QuickLogFormProps {
   exercise: Exercise;
   suggestedReps?: number;  // For time-based, this is seconds
+  suggestedWeight?: number;  // Target weight from simple progression
   isMaxTest?: boolean;
   onSubmit: (reps: number, notes: string, parameters: Record<string, string | number>, weight?: number) => void;
   onCancel: () => void;
@@ -13,7 +14,8 @@ interface QuickLogFormProps {
 
 export function QuickLogForm({ 
   exercise, 
-  suggestedReps, 
+  suggestedReps,
+  suggestedWeight,
   isMaxTest,
   onSubmit, 
   onCancel, 
@@ -29,7 +31,13 @@ export function QuickLogForm({
     return '';
   });
   const [notes, setNotes] = useState('');
-  const [weight, setWeight] = useState(exercise.defaultWeight?.toString() || '');
+  // Use suggested weight, then fall back to exercise default
+  const [weight, setWeight] = useState(() => {
+    if (suggestedWeight !== undefined && suggestedWeight > 0) {
+      return suggestedWeight.toString();
+    }
+    return exercise.defaultWeight?.toString() || '';
+  });
   const [parameters, setParameters] = useState<Record<string, string | number>>(() => {
     const initial: Record<string, string | number> = {};
     exercise.customParameters.forEach(p => {
@@ -78,7 +86,11 @@ export function QuickLogForm({
   // Format suggested value for display
   const formatSuggested = () => {
     if (suggestedReps === undefined) return null;
-    return isTimeBased ? formatTime(suggestedReps) : `${suggestedReps} reps`;
+    const repsText = isTimeBased ? formatTime(suggestedReps) : `${suggestedReps} reps`;
+    if (suggestedWeight !== undefined && suggestedWeight > 0) {
+      return `${repsText} @ ${suggestedWeight} lbs`;
+    }
+    return repsText;
   };
 
   return (

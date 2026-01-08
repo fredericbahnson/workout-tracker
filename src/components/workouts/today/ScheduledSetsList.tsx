@@ -22,6 +22,8 @@ interface ScheduledSetsListProps {
   showSwipeHint: boolean;
   /** Get target reps for a scheduled set */
   getTargetReps: (set: ScheduledSet) => number;
+  /** Get target weight for a scheduled set (simple progression mode) */
+  getTargetWeight: (set: ScheduledSet) => number | undefined;
   /** Called when user swipes right to quick-complete a set */
   onQuickComplete: (set: ScheduledSet) => void;
   /** Called when user swipes left to skip a set */
@@ -45,6 +47,7 @@ export function ScheduledSetsList({
   isShowingCompletedWorkout,
   showSwipeHint,
   getTargetReps,
+  getTargetWeight,
   onQuickComplete,
   onSkipSet,
   onSelectSet,
@@ -71,8 +74,10 @@ export function ScheduledSetsList({
                   const exercise = exerciseMap.get(set.exerciseId);
                   if (!exercise) return null;
                   const targetReps = getTargetReps(set);
+                  const targetWeight = getTargetWeight(set);
                   const isMaxTestSet = set.isMaxTest;
                   const isWarmupSet = set.isWarmup;
+                  const isTimeBased = exercise.measurementType === 'time';
 
                   return (
                     <SwipeableSetCard
@@ -83,10 +88,10 @@ export function ScheduledSetsList({
                       ariaLabel={`${exercise.name}: ${
                         isMaxTestSet 
                           ? 'Max test, go all out' 
-                          : exercise.measurementType === 'time' 
+                          : isTimeBased 
                             ? `${formatTime(targetReps)} hold` 
                             : `${targetReps} reps`
-                      }${isWarmupSet ? ', warmup set' : ''}. Press Enter for details, Right arrow to complete, Left arrow to skip.`}
+                      }${targetWeight ? ` at ${targetWeight} pounds` : ''}${isWarmupSet ? ', warmup set' : ''}. Press Enter for details, Right arrow to complete, Left arrow to skip.`}
                     >
                       <div className="flex items-center gap-4 p-4 text-left">
                         <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600 flex-shrink-0" />
@@ -108,11 +113,18 @@ export function ScheduledSetsList({
                           </div>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`}>
-                            {isMaxTestSet ? 'MAX' : exercise.measurementType === 'time' ? formatTime(targetReps) : targetReps}
-                          </span>
+                          <div className="flex items-baseline gap-1">
+                            <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`}>
+                              {isMaxTestSet ? 'MAX' : isTimeBased ? formatTime(targetReps) : targetReps}
+                            </span>
+                            {targetWeight !== undefined && targetWeight > 0 && (
+                              <span className="text-gym-lg text-purple-600 dark:text-purple-400">
+                                @{targetWeight}
+                              </span>
+                            )}
+                          </div>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : exercise.measurementType === 'time' ? 'hold' : 'reps'}
+                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : isTimeBased ? 'hold' : targetWeight ? 'reps @ lbs' : 'reps'}
                           </span>
                         </div>
                       </div>

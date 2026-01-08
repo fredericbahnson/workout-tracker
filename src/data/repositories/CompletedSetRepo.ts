@@ -177,5 +177,24 @@ export const CompletedSetRepo = {
     const totalReps = filteredSets.reduce((sum, s) => sum + s.actualReps, 0);
     
     return { totalSets, totalReps };
+  },
+
+  /**
+   * Get the most recent completed set for an exercise.
+   * Useful for defaulting to last used weight/reps.
+   */
+  async getLastForExercise(exerciseId: string): Promise<CompletedSet | null> {
+    const sets = await this.getForExercise(exerciseId);
+    return sets.length > 0 ? sets[0] : null; // Already sorted descending by completedAt
+  },
+
+  /**
+   * Get the most recent completed set with weight for an exercise.
+   * Returns null if no weighted sets exist.
+   */
+  async getLastWeightedForExercise(exerciseId: string): Promise<CompletedSet | null> {
+    const sets = await this.getForExercise(exerciseId);
+    const weightedSet = sets.find(s => s.weight !== undefined && s.weight > 0);
+    return weightedSet || null;
   }
 };

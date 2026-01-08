@@ -54,6 +54,7 @@ interface NumberInputProps {
   max?: number;
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export function NumberInput({ 
@@ -63,7 +64,8 @@ export function NumberInput({
   min = 0, 
   max,
   className = '',
-  placeholder
+  placeholder,
+  disabled = false
 }: NumberInputProps) {
   const [displayValue, setDisplayValue] = useState(value.toString());
 
@@ -114,6 +116,7 @@ export function NumberInput({
         onChange={handleChange}
         onBlur={handleBlur}
         placeholder={placeholder}
+        disabled={disabled}
         className={`
           px-3 py-2 rounded-lg border transition-colors
           bg-white dark:bg-dark-surface
@@ -121,6 +124,7 @@ export function NumberInput({
           border-gray-300 dark:border-dark-border
           focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
           placeholder:text-gray-400 dark:placeholder:text-gray-500
+          disabled:opacity-50 disabled:cursor-not-allowed
           ${className}
         `}
       />
@@ -144,6 +148,7 @@ export function NumberInput({
         onChange={handleChange}
         onBlur={handleBlur}
         placeholder={placeholder}
+        disabled={disabled}
         className={`
           w-full px-3 py-2 rounded-lg border transition-colors
           bg-white dark:bg-dark-surface
@@ -151,6 +156,7 @@ export function NumberInput({
           border-gray-300 dark:border-dark-border
           focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
           placeholder:text-gray-400 dark:placeholder:text-gray-500
+          disabled:opacity-50 disabled:cursor-not-allowed
           ${className}
         `}
       />

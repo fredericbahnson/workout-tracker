@@ -1,8 +1,9 @@
-import { Calendar, Target, ArrowRight } from 'lucide-react';
+import { Calendar, Target, ArrowRight, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui';
+import type { ProgressionMode } from '@/types';
 
 interface CycleTypeSelectorProps {
-  onSelectTraining: () => void;
+  onSelectTraining: (mode: ProgressionMode) => void;
   onSelectMaxTesting: () => void;
   onCancel: () => void;
 }
@@ -24,9 +25,9 @@ export function CycleTypeSelector({
       </div>
 
       <div className="space-y-3">
-        {/* Training Cycle Option */}
+        {/* RFEM Training Cycle Option */}
         <button
-          onClick={onSelectTraining}
+          onClick={() => onSelectTraining('rfem')}
           className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-primary-500 dark:hover:border-primary-500 bg-white dark:bg-dark-surface transition-colors text-left group"
         >
           <div className="flex items-start gap-4">
@@ -36,13 +37,37 @@ export function CycleTypeSelector({
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Training Cycle
+                  RFEM Training Cycle
                 </h3>
                 <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Plan a multi-week training program with RFEM-based progression, 
-                exercise groups, and automatic scheduling.
+                Periodized progression based on your max reps. 
+                Targets calculated automatically using RFEM percentages.
+              </p>
+            </div>
+          </div>
+        </button>
+
+        {/* Simple Progression Cycle Option */}
+        <button
+          onClick={() => onSelectTraining('simple')}
+          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-emerald-500 dark:hover:border-emerald-500 bg-white dark:bg-dark-surface transition-colors text-left group"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  Simple Progression Cycle
+                </h3>
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Set your own rep targets for each exercise. 
+                Optionally add reps each workout or week.
               </p>
             </div>
           </div>

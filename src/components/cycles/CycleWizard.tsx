@@ -10,29 +10,35 @@ import {
   Copy
 } from 'lucide-react';
 import { Button, Input, NumberInput, Select, Card, Badge, Modal } from '@/components/ui';
-import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo } from '@/data/repositories';
+import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, CompletedSetRepo } from '@/data/repositories';
 import { generateSchedule, validateCycle } from '@/services/scheduler';
 import { generateId } from '@/data/db';
 import { useAppStore } from '@/stores/appStore';
 import { 
   EXERCISE_TYPES, 
-  EXERCISE_TYPE_LABELS, 
+  EXERCISE_TYPE_LABELS,
+  PROGRESSION_INTERVAL_LABELS,
+  getProgressionMode,
   type Cycle, 
   type Group, 
   type ExerciseType,
   type Exercise,
-  type ExerciseAssignment
+  type ExerciseAssignment,
+  type ProgressionMode,
+  type ProgressionInterval,
+  type CompletedSet
 } from '@/types';
 
 interface CycleWizardProps {
   onComplete: () => void;
   onCancel: () => void;
   editCycle?: Cycle;  // If provided, we're editing an existing cycle
+  initialProgressionMode?: ProgressionMode;  // Mode selected from CycleTypeSelector
 }
 
-type WizardStep = 'start' | 'basics' | 'groups' | 'goals' | 'review';
+type WizardStep = 'start' | 'basics' | 'groups' | 'progression' | 'goals' | 'review';
 
-const STEPS: { key: WizardStep; label: string }[] = [
+const RFEM_STEPS: { key: WizardStep; label: string }[] = [
   { key: 'start', label: 'Start' },
   { key: 'basics', label: 'Basics' },
   { key: 'groups', label: 'Groups' },
@@ -40,10 +46,30 @@ const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'review', label: 'Review' }
 ];
 
-export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProps) {
+const SIMPLE_STEPS: { key: WizardStep; label: string }[] = [
+  { key: 'start', label: 'Start' },
+  { key: 'basics', label: 'Basics' },
+  { key: 'groups', label: 'Groups' },
+  { key: 'progression', label: 'Targets' },
+  { key: 'goals', label: 'Goals' },
+  { key: 'review', label: 'Review' }
+];
+
+export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressionMode }: CycleWizardProps) {
   const { defaults } = useAppStore();
-  // Skip 'start' step if editing an existing cycle
-  const [currentStep, setCurrentStep] = useState<WizardStep>(editCycle ? 'basics' : 'start');
+  
+  // Progression mode - from props, edit cycle, or default to 'rfem'
+  const [progressionMode] = useState<ProgressionMode>(
+    () => editCycle ? getProgressionMode(editCycle) : (initialProgressionMode || 'rfem')
+  );
+  
+  // Get the appropriate steps for the current mode
+  const STEPS = progressionMode === 'simple' ? SIMPLE_STEPS : RFEM_STEPS;
+  
+  // Skip 'start' step if editing an existing cycle or if mode was pre-selected
+  const [currentStep, setCurrentStep] = useState<WizardStep>(
+    editCycle || initialProgressionMode ? 'basics' : 'start'
+  );
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -211,6 +237,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
     {
       name,
       cycleType: 'training',
+      progressionMode,
       startDate: new Date(startDate),
       numberOfWeeks,
       workoutDaysPerWeek,
@@ -230,7 +257,24 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
         return name.trim() && numberOfWeeks >= 1 && workoutDaysPerWeek >= 1;
       case 'groups':
         return groups.length > 0 && groups.some(g => g.exerciseAssignments.length > 0);
+      case 'progression':
+        // For simple mode, check that all exercises have base values
+        return groups.every(g => 
+          g.exerciseAssignments.every(a => {
+            const exercise = exerciseMap.get(a.exerciseId);
+            if (!exercise) return true;
+            const isTimeBased = exercise.measurementType === 'time';
+            return isTimeBased 
+              ? (a.simpleBaseTime !== undefined && a.simpleBaseTime > 0)
+              : (a.simpleBaseReps !== undefined && a.simpleBaseReps > 0);
+          })
+        );
       case 'goals':
+        // For simple mode, only need groupRotation
+        // For RFEM mode, need both groupRotation and rfemRotation
+        if (progressionMode === 'simple') {
+          return groupRotation.length > 0;
+        }
         return groupRotation.length > 0 && rfemRotation.length > 0;
       case 'review':
         return validation.valid;
@@ -273,6 +317,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
         const updatedCycle = {
           ...editCycle,
           name,
+          progressionMode,
           startDate: new Date(startDate),
           numberOfWeeks,
           workoutDaysPerWeek,
@@ -331,6 +376,7 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
         cycle = await CycleRepo.create({
           name,
           cycleType: 'training',
+          progressionMode,
           startDate: new Date(startDate),
           numberOfWeeks,
           workoutDaysPerWeek,
@@ -415,6 +461,23 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
         ...g,
         exerciseAssignments: g.exerciseAssignments.map(a => 
           a.exerciseId === exerciseId ? { ...a, conditioningBaseReps: reps } : a
+        )
+      };
+    }));
+  };
+
+  // Update simple progression settings for an exercise assignment
+  const updateSimpleProgression = (
+    groupId: string, 
+    exerciseId: string, 
+    updates: Partial<ExerciseAssignment>
+  ) => {
+    setGroups(groups.map(g => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        exerciseAssignments: g.exerciseAssignments.map(a => 
+          a.exerciseId === exerciseId ? { ...a, ...updates } : a
         )
       };
     }));
@@ -515,8 +578,17 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
           />
         )}
 
+        {currentStep === 'progression' && progressionMode === 'simple' && (
+          <ProgressionStep
+            groups={groups}
+            exerciseMap={exerciseMap}
+            onUpdateProgression={updateSimpleProgression}
+          />
+        )}
+
         {currentStep === 'goals' && (
           <GoalsStep
+            progressionMode={progressionMode}
             weeklySetGoals={weeklySetGoals}
             setWeeklySetGoals={setWeeklySetGoals}
             groups={groups}
@@ -532,11 +604,13 @@ export function CycleWizard({ onComplete, onCancel, editCycle }: CycleWizardProp
 
         {currentStep === 'review' && (
           <ReviewStep
+            progressionMode={progressionMode}
             name={name}
             startDate={startDate}
             numberOfWeeks={numberOfWeeks}
             workoutDaysPerWeek={workoutDaysPerWeek}
             groups={groups}
+            exerciseMap={exerciseMap}
             weeklySetGoals={weeklySetGoals}
             groupRotation={groupRotation}
             rfemRotation={rfemRotation}
@@ -997,6 +1071,7 @@ function GroupsStep({
 }
 
 function GoalsStep({
+  progressionMode,
   weeklySetGoals,
   setWeeklySetGoals,
   groups,
@@ -1008,6 +1083,7 @@ function GoalsStep({
   setConditioningWeeklyRepIncrement,
   workoutDaysPerWeek
 }: {
+  progressionMode: ProgressionMode;
   weeklySetGoals: Record<ExerciseType, number>;
   setWeeklySetGoals: (v: Record<ExerciseType, number>) => void;
   groups: Group[];
@@ -1019,6 +1095,8 @@ function GoalsStep({
   setConditioningWeeklyRepIncrement: (v: number) => void;
   workoutDaysPerWeek: number;
 }) {
+  const isSimpleMode = progressionMode === 'simple';
+  
   const updateGoal = (type: ExerciseType, value: number) => {
     setWeeklySetGoals({ ...weeklySetGoals, [type]: value });
   };
@@ -1097,84 +1175,395 @@ function GoalsStep({
         </div>
       </div>
 
-      {/* RFEM Rotation */}
+      {/* RFEM Rotation - only for RFEM mode */}
+      {!isSimpleMode && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            RFEM Rotation
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            Reps From Established Max: subtracted from your max for target reps
+          </p>
+          
+          <div className="flex flex-wrap gap-2">
+            {rfemRotation.map((value, index) => (
+              <div key={index} className="flex items-center gap-1">
+                <NumberInput
+                  value={value}
+                  onChange={v => updateRfem(index, v)}
+                  min={0}
+                  max={20}
+                  className="w-16"
+                />
+                {rfemRotation.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeRfemValue(index)}
+                    className="p-1 text-gray-400"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button variant="ghost" size="sm" onClick={addRfemValue}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Conditioning Increment - only for RFEM mode */}
+      {!isSimpleMode && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Conditioning Weekly Increment
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            How many reps to add each week for conditioning exercises
+          </p>
+          
+          <NumberInput
+            value={conditioningWeeklyRepIncrement}
+            onChange={setConditioningWeeklyRepIncrement}
+            min={0}
+            className="w-24"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProgressionStep({
+  groups,
+  exerciseMap,
+  onUpdateProgression
+}: {
+  groups: Group[];
+  exerciseMap: Map<string, Exercise>;
+  onUpdateProgression: (groupId: string, exerciseId: string, updates: Partial<ExerciseAssignment>) => void;
+}) {
+  // Get all unique exercise IDs from groups
+  const exerciseIds = Array.from(new Set(
+    groups.flatMap(g => g.exerciseAssignments.map(a => a.exerciseId))
+  ));
+
+  // Load last completed sets for all exercises
+  const lastCompletedSets = useLiveQuery(async () => {
+    const results = new Map<string, CompletedSet | null>();
+    for (const exerciseId of exerciseIds) {
+      const lastSet = await CompletedSetRepo.getLastForExercise(exerciseId);
+      results.set(exerciseId, lastSet);
+    }
+    return results;
+  }, [exerciseIds.join(',')]);
+
+  return (
+    <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          RFEM Rotation
+          Set Exercise Targets
         </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          Reps From Established Max: subtracted from your max for target reps
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Set base reps/time and optional progression for each exercise
         </p>
-        
-        <div className="flex flex-wrap gap-2">
-          {rfemRotation.map((value, index) => (
-            <div key={index} className="flex items-center gap-1">
-              <NumberInput
-                value={value}
-                onChange={v => updateRfem(index, v)}
-                min={0}
-                max={20}
-                className="w-16"
-              />
-              {rfemRotation.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeRfemValue(index)}
-                  className="p-1 text-gray-400"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              )}
-            </div>
-          ))}
-          <Button variant="ghost" size="sm" onClick={addRfemValue}>
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
       </div>
 
-      {/* Conditioning Increment */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Conditioning Weekly Increment
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          How many reps to add each week for conditioning exercises
-        </p>
-        
-        <NumberInput
-          value={conditioningWeeklyRepIncrement}
-          onChange={setConditioningWeeklyRepIncrement}
-          min={0}
-          className="w-24"
-        />
+      {groups.map(group => (
+        <Card key={group.id} className="p-4">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">{group.name}</h3>
+          
+          {group.exerciseAssignments.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+              No exercises in this group
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {group.exerciseAssignments.map(assignment => {
+                const exercise = exerciseMap.get(assignment.exerciseId);
+                if (!exercise) return null;
+                
+                const isTimeBased = exercise.measurementType === 'time';
+                const lastSet = lastCompletedSets?.get(assignment.exerciseId) || null;
+                
+                return (
+                  <ExerciseProgressionEditor
+                    key={assignment.exerciseId}
+                    exercise={exercise}
+                    assignment={assignment}
+                    isTimeBased={isTimeBased}
+                    lastCompletedSet={lastSet}
+                    onUpdate={(updates) => onUpdateProgression(group.id, assignment.exerciseId, updates)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ExerciseProgressionEditor({
+  exercise,
+  assignment,
+  isTimeBased,
+  lastCompletedSet,
+  onUpdate
+}: {
+  exercise: Exercise;
+  assignment: ExerciseAssignment;
+  isTimeBased: boolean;
+  lastCompletedSet: CompletedSet | null;
+  onUpdate: (updates: Partial<ExerciseAssignment>) => void;
+}) {
+  const isWeighted = exercise.weightEnabled === true;
+  
+  // Calculate default values
+  const getDefaultReps = () => {
+    if (lastCompletedSet?.actualReps) return lastCompletedSet.actualReps;
+    if (exercise.defaultConditioningReps) return exercise.defaultConditioningReps;
+    return 10;
+  };
+  
+  const getDefaultTime = () => {
+    if (lastCompletedSet?.actualReps) return lastCompletedSet.actualReps; // actualReps holds time for time-based
+    if (exercise.defaultConditioningTime) return exercise.defaultConditioningTime;
+    return 30;
+  };
+  
+  const getDefaultWeight = () => {
+    if (lastCompletedSet?.weight) return lastCompletedSet.weight;
+    if (exercise.defaultWeight) return exercise.defaultWeight;
+    return 0;
+  };
+
+  // Current values (from assignment or defaults)
+  const baseValue = isTimeBased 
+    ? (assignment.simpleBaseTime ?? getDefaultTime())
+    : (assignment.simpleBaseReps ?? getDefaultReps());
+  const baseWeight = assignment.simpleBaseWeight ?? getDefaultWeight();
+  
+  const progressionType = isTimeBased 
+    ? (assignment.simpleTimeProgressionType || 'constant')
+    : (assignment.simpleRepProgressionType || 'constant');
+  const increment = isTimeBased ? assignment.simpleTimeIncrement : assignment.simpleRepIncrement;
+  
+  const weightProgressionType = assignment.simpleWeightProgressionType || 'constant';
+  const weightIncrement = assignment.simpleWeightIncrement;
+
+  // Initialize defaults on first render if not set
+  useEffect(() => {
+    const updates: Partial<ExerciseAssignment> = {};
+    
+    if (isTimeBased && assignment.simpleBaseTime === undefined) {
+      updates.simpleBaseTime = getDefaultTime();
+    } else if (!isTimeBased && assignment.simpleBaseReps === undefined) {
+      updates.simpleBaseReps = getDefaultReps();
+    }
+    
+    if (isWeighted && assignment.simpleBaseWeight === undefined && getDefaultWeight() > 0) {
+      updates.simpleBaseWeight = getDefaultWeight();
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      onUpdate(updates);
+    }
+  }, []); // Run once on mount
+
+  const handleBaseChange = (value: number) => {
+    if (isTimeBased) {
+      onUpdate({ simpleBaseTime: value });
+    } else {
+      onUpdate({ simpleBaseReps: value });
+    }
+  };
+
+  const handleProgressionTypeChange = (type: ProgressionInterval) => {
+    if (isTimeBased) {
+      onUpdate({ simpleTimeProgressionType: type });
+    } else {
+      onUpdate({ simpleRepProgressionType: type });
+    }
+  };
+
+  const handleIncrementChange = (value: number) => {
+    if (isTimeBased) {
+      onUpdate({ simpleTimeIncrement: value });
+    } else {
+      onUpdate({ simpleRepIncrement: value });
+    }
+  };
+
+  const handleWeightChange = (value: number) => {
+    onUpdate({ simpleBaseWeight: value });
+  };
+
+  const handleWeightProgressionTypeChange = (type: ProgressionInterval) => {
+    onUpdate({ simpleWeightProgressionType: type });
+  };
+
+  const handleWeightIncrementChange = (value: number) => {
+    onUpdate({ simpleWeightIncrement: value });
+  };
+
+  return (
+    <div className="border border-dark-border rounded-lg p-3">
+      <div className="flex items-center gap-2 mb-3">
+        <Badge variant={exercise.type} className="text-2xs">
+          {EXERCISE_TYPE_LABELS[exercise.type]}
+        </Badge>
+        <span className="font-medium text-gray-900 dark:text-gray-100">{exercise.name}</span>
+        {isWeighted && (
+          <Badge variant="other" className="text-2xs">Weighted</Badge>
+        )}
       </div>
+      
+      {/* Reps/Time Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Base Value */}
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Base {isTimeBased ? 'Time (sec)' : 'Reps'}
+          </label>
+          <NumberInput
+            value={baseValue}
+            onChange={handleBaseChange}
+            min={1}
+            className="w-full"
+          />
+        </div>
+        
+        {/* Progression Type */}
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            {isTimeBased ? 'Time' : 'Rep'} Progression
+          </label>
+          <Select
+            value={progressionType}
+            onChange={(e) => handleProgressionTypeChange(e.target.value as ProgressionInterval)}
+            options={[
+              { value: 'constant', label: 'Constant' },
+              { value: 'per_workout', label: 'Each workout' },
+              { value: 'per_week', label: 'Each week' }
+            ]}
+            className="w-full"
+          />
+        </div>
+        
+        {/* Increment */}
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Add {isTimeBased ? 'sec' : 'reps'}
+          </label>
+          <NumberInput
+            value={increment || 0}
+            onChange={handleIncrementChange}
+            min={0}
+            disabled={progressionType === 'constant'}
+            className="w-full"
+          />
+        </div>
+      </div>
+      
+      {/* Weight Row (only for weighted exercises) */}
+      {isWeighted && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-dark-border">
+          {/* Base Weight */}
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Base Weight (lbs)
+            </label>
+            <NumberInput
+              value={baseWeight}
+              onChange={handleWeightChange}
+              min={0}
+              className="w-full"
+            />
+          </div>
+          
+          {/* Weight Progression Type */}
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Weight Progression
+            </label>
+            <Select
+              value={weightProgressionType}
+              onChange={(e) => handleWeightProgressionTypeChange(e.target.value as ProgressionInterval)}
+              options={[
+                { value: 'constant', label: 'Constant' },
+                { value: 'per_workout', label: 'Each workout' },
+                { value: 'per_week', label: 'Each week' }
+              ]}
+              className="w-full"
+            />
+          </div>
+          
+          {/* Weight Increment */}
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Add lbs
+            </label>
+            <NumberInput
+              value={weightIncrement || 0}
+              onChange={handleWeightIncrementChange}
+              min={0}
+              disabled={weightProgressionType === 'constant'}
+              className="w-full"
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Preview */}
+      {(progressionType !== 'constant' && increment && increment > 0) || 
+       (isWeighted && weightProgressionType !== 'constant' && weightIncrement && weightIncrement > 0) ? (
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          Week 1: {baseValue}{isTimeBased ? ' sec' : ' reps'}
+          {isWeighted && baseWeight > 0 && ` @ ${baseWeight} lbs`}
+          {' → '}
+          Week 4: {progressionType !== 'constant' && increment 
+            ? baseValue + (progressionType === 'per_week' ? 3 : 11) * increment 
+            : baseValue}
+          {isTimeBased ? ' sec' : ' reps'}
+          {isWeighted && baseWeight > 0 && weightProgressionType !== 'constant' && weightIncrement
+            ? ` @ ${baseWeight + (weightProgressionType === 'per_week' ? 3 : 11) * weightIncrement} lbs`
+            : isWeighted && baseWeight > 0 ? ` @ ${baseWeight} lbs` : ''}
+        </div>
+      ) : null}
     </div>
   );
 }
 
 function ReviewStep({
+  progressionMode,
   name,
   startDate,
   numberOfWeeks,
   workoutDaysPerWeek,
   groups,
+  exerciseMap,
   weeklySetGoals,
   groupRotation,
   rfemRotation,
   validation
 }: {
+  progressionMode: ProgressionMode;
   name: string;
   startDate: string;
   numberOfWeeks: number;
   workoutDaysPerWeek: number;
   groups: Group[];
+  exerciseMap: Map<string, Exercise>;
   weeklySetGoals: Record<ExerciseType, number>;
   groupRotation: string[];
   rfemRotation: number[];
   validation: { valid: boolean; errors: string[]; warnings: string[] };
 }) {
+  const isSimpleMode = progressionMode === 'simple';
   const totalExercises = new Set(
     groups.flatMap(g => g.exerciseAssignments.map(a => a.exerciseId))
   ).size;
@@ -1218,7 +1607,12 @@ function ReviewStep({
 
       {/* Summary */}
       <Card className="p-4">
-        <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{name}</h3>
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100">{name}</h3>
+          <Badge variant={isSimpleMode ? 'other' : 'push'} className="text-2xs">
+            {isSimpleMode ? 'Simple' : 'RFEM'}
+          </Badge>
+        </div>
         
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -1262,6 +1656,56 @@ function ReviewStep({
         </div>
       </Card>
 
+      {/* Simple Mode: Exercise Targets Summary */}
+      {isSimpleMode && (
+        <Card className="p-4">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
+            Exercise Targets
+          </h3>
+          <div className="space-y-3">
+            {groups.map(group => (
+              <div key={group.id}>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{group.name}</p>
+                <div className="space-y-1">
+                  {group.exerciseAssignments.map(a => {
+                    const exercise = exerciseMap.get(a.exerciseId);
+                    if (!exercise) return null;
+                    const isTimeBased = exercise.measurementType === 'time';
+                    const isWeighted = exercise.weightEnabled === true;
+                    const baseValue = isTimeBased ? a.simpleBaseTime : a.simpleBaseReps;
+                    const progressionType = isTimeBased ? a.simpleTimeProgressionType : a.simpleRepProgressionType;
+                    const increment = isTimeBased ? a.simpleTimeIncrement : a.simpleRepIncrement;
+                    const baseWeight = a.simpleBaseWeight;
+                    const weightProgressionType = a.simpleWeightProgressionType;
+                    const weightIncrement = a.simpleWeightIncrement;
+                    
+                    return (
+                      <div key={a.exerciseId} className="flex flex-wrap items-center gap-x-2 gap-y-0 text-sm pl-2">
+                        <span className="text-gray-600 dark:text-gray-400">{exercise.name}:</span>
+                        <span className="font-medium">
+                          {baseValue || '?'} {isTimeBased ? 'sec' : 'reps'}
+                          {isWeighted && baseWeight ? ` @ ${baseWeight} lbs` : ''}
+                        </span>
+                        {progressionType && progressionType !== 'constant' && increment && (
+                          <span className="text-gray-500 dark:text-gray-400">
+                            (+{increment} {isTimeBased ? 'sec' : 'reps'} {PROGRESSION_INTERVAL_LABELS[progressionType].toLowerCase()})
+                          </span>
+                        )}
+                        {isWeighted && weightProgressionType && weightProgressionType !== 'constant' && weightIncrement && (
+                          <span className="text-gray-500 dark:text-gray-400">
+                            (+{weightIncrement} lbs {PROGRESSION_INTERVAL_LABELS[weightProgressionType].toLowerCase()})
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Rotation Preview */}
       <Card className="p-4">
         <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
@@ -1277,8 +1721,12 @@ function ReviewStep({
               <div key={i} className="flex items-center gap-2 text-sm">
                 <span className="text-gray-500 dark:text-gray-400 w-12">Day {i + 1}</span>
                 <span className="font-medium">{group?.name || 'Unknown'}</span>
-                <span className="text-gray-400">•</span>
-                <span className="text-gray-500 dark:text-gray-400">RFEM -{rfem}</span>
+                {!isSimpleMode && (
+                  <>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-500 dark:text-gray-400">RFEM -{rfem}</span>
+                  </>
+                )}
               </div>
             );
           })}
