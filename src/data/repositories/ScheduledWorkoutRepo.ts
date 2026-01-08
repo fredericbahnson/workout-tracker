@@ -41,7 +41,11 @@ export const ScheduledWorkoutRepo = {
     const workouts = await this.getByCycleId(cycleId);
     // Return first workout that's pending OR partial (in progress)
     // Exclude ad-hoc workouts from "next pending" - they're user-initiated
-    return workouts.find(w => (w.status === 'pending' || w.status === 'partial') && !w.isAdHoc);
+    const pending = workouts.find(w => 
+      (w.status === 'pending' || w.status === 'partial') && 
+      !w.isAdHoc
+    );
+    return pending;
   },
 
   async getInProgressAdHoc(cycleId: string): Promise<ScheduledWorkout | undefined> {

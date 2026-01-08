@@ -59,10 +59,21 @@ export function TodayPage() {
     return completed[0] || null;
   }, [activeCycle?.id]);
   
+  // Track dismissed workout to force query refresh
+  const [dismissedWorkoutId, setDismissedWorkoutId] = useState<string | null>(null);
+  
   const nextPendingWorkout = useLiveQuery(async () => {
     if (!activeCycle) return null;
-    return ScheduledWorkoutRepo.getNextPending(activeCycle.id);
-  }, [activeCycle?.id]);
+    const workouts = await ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
+    // Find first pending workout, skipping the one we just dismissed
+    // This handles the case where the database hasn't fully updated yet
+    const pending = workouts.find(w => 
+      (w.status === 'pending' || w.status === 'partial') && 
+      !w.isAdHoc &&
+      w.id !== dismissedWorkoutId  // Skip the just-completed workout
+    );
+    return pending || null;
+  }, [activeCycle?.id, dismissedWorkoutId]);
 
   // Get any in-progress ad-hoc workout
   const inProgressAdHocWorkout = useLiveQuery(async () => {
@@ -76,7 +87,7 @@ export function TodayPage() {
     isShowingCompletedWorkout,
     isShowingAdHocWorkout,
     markWorkoutCompleted,
-    handleProceedToNextWorkout,
+    handleProceedToNextWorkout: proceedToNextWorkout,
     dismissCompletionView,
     resetCompletionState,
   } = useWorkoutDisplay({
@@ -84,6 +95,16 @@ export function TodayPage() {
     nextPendingWorkout,
     inProgressAdHocWorkout,
   });
+
+  // Wrapper to handle proceeding to next workout with query refresh
+  const handleProceedToNextWorkout = () => {
+    // Set the dismissed workout ID to force the nextPendingWorkout query to refresh
+    // This prevents showing a stale/just-completed workout
+    if (displayWorkout) {
+      setDismissedWorkoutId(displayWorkout.id);
+    }
+    proceedToNextWorkout();
+  };
 
   const cycleProgress = useLiveQuery(async () => {
     if (!activeCycle) return null;
