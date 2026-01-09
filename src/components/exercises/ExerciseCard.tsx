@@ -20,30 +20,38 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
     }
   };
 
+  // Format weight string
+  const formatWeight = (weight?: number) => {
+    if (weight === undefined || weight <= 0) return null;
+    return `@ ${weight} lbs`;
+  };
+
   // Determine the value to display
   const getDisplayValue = () => {
     if (exercise.mode === 'conditioning') {
       // Conditioning: show base reps/time
       if (exercise.measurementType === 'time') {
-        return exercise.defaultConditioningTime 
-          ? `Base: ${formatTime(exercise.defaultConditioningTime)}`
-          : null;
+        const baseTime = exercise.defaultConditioningTime;
+        if (!baseTime) return null;
+        const weightStr = exercise.weightEnabled ? formatWeight(exercise.defaultWeight) : null;
+        return weightStr ? `Base: ${formatTime(baseTime)} ${weightStr}` : `Base: ${formatTime(baseTime)}`;
       } else {
-        return exercise.defaultConditioningReps 
-          ? `Base: ${exercise.defaultConditioningReps}`
-          : null;
+        const baseReps = exercise.defaultConditioningReps;
+        if (!baseReps) return null;
+        const weightStr = exercise.weightEnabled ? formatWeight(exercise.defaultWeight) : null;
+        return weightStr ? `Base: ${baseReps} ${weightStr}` : `Base: ${baseReps}`;
       }
     } else {
       // Standard: show max reps/time
       if (!latestMax) return null;
       if (exercise.measurementType === 'time') {
-        return latestMax.maxTime 
-          ? `Max: ${formatTime(latestMax.maxTime)}`
-          : null;
+        if (!latestMax.maxTime) return null;
+        const weightStr = exercise.weightEnabled ? formatWeight(latestMax.weight) : null;
+        return weightStr ? `Max: ${formatTime(latestMax.maxTime)} ${weightStr}` : `Max: ${formatTime(latestMax.maxTime)}`;
       } else {
-        return latestMax.maxReps 
-          ? `Max: ${latestMax.maxReps}`
-          : null;
+        if (!latestMax.maxReps) return null;
+        const weightStr = exercise.weightEnabled ? formatWeight(latestMax.weight) : null;
+        return weightStr ? `Max: ${latestMax.maxReps} ${weightStr}` : `Max: ${latestMax.maxReps}`;
       }
     }
   };
