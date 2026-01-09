@@ -55,6 +55,15 @@ const SIMPLE_STEPS: { key: WizardStep; label: string }[] = [
   { key: 'review', label: 'Review' }
 ];
 
+// Mixed mode: per-exercise config happens inline in Groups step
+const MIXED_STEPS: { key: WizardStep; label: string }[] = [
+  { key: 'start', label: 'Start' },
+  { key: 'basics', label: 'Basics' },
+  { key: 'groups', label: 'Exercises' },  // Renamed to reflect per-exercise config
+  { key: 'goals', label: 'Goals' },
+  { key: 'review', label: 'Review' }
+];
+
 export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressionMode }: CycleWizardProps) {
   const { defaults } = useAppStore();
   
@@ -64,7 +73,11 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
   );
   
   // Get the appropriate steps for the current mode
-  const STEPS = progressionMode === 'simple' ? SIMPLE_STEPS : RFEM_STEPS;
+  const STEPS = progressionMode === 'simple' 
+    ? SIMPLE_STEPS 
+    : progressionMode === 'mixed' 
+      ? MIXED_STEPS 
+      : RFEM_STEPS;
   
   // Skip 'start' step if editing an existing cycle or if mode was pre-selected
   const [currentStep, setCurrentStep] = useState<WizardStep>(
@@ -297,6 +310,55 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
     }
   };
 
+  /**
+   * Save last cycle settings for each exercise to provide smart defaults in future cycles.
+   */
+  const saveLastCycleSettings = async (
+    cycleGroups: Group[],
+    cycleProgressionMode: ProgressionMode,
+    exerciseMapRef: Map<string, Exercise>
+  ) => {
+    const isMixed = cycleProgressionMode === 'mixed';
+    const isSimple = cycleProgressionMode === 'simple';
+    
+    for (const group of cycleGroups) {
+      for (const assignment of group.exerciseAssignments) {
+        const exercise = exerciseMapRef.get(assignment.exerciseId);
+        if (!exercise) continue;
+        
+        // Determine effective mode for this exercise
+        let effectiveMode: 'rfem' | 'simple';
+        if (isMixed) {
+          effectiveMode = assignment.progressionMode || 'rfem';
+        } else if (isSimple) {
+          effectiveMode = 'simple';
+        } else {
+          effectiveMode = 'rfem';
+        }
+        
+        // Build settings object
+        const settings: import('@/types').ExerciseCycleDefaults = {
+          progressionMode: effectiveMode,
+          // Conditioning increments
+          conditioningRepIncrement: assignment.conditioningRepIncrement,
+          conditioningTimeIncrement: assignment.conditioningTimeIncrement,
+          // Simple progression settings
+          simpleBaseReps: assignment.simpleBaseReps,
+          simpleBaseTime: assignment.simpleBaseTime,
+          simpleBaseWeight: assignment.simpleBaseWeight,
+          simpleRepProgressionType: assignment.simpleRepProgressionType,
+          simpleRepIncrement: assignment.simpleRepIncrement,
+          simpleTimeProgressionType: assignment.simpleTimeProgressionType,
+          simpleTimeIncrement: assignment.simpleTimeIncrement,
+          simpleWeightProgressionType: assignment.simpleWeightProgressionType,
+          simpleWeightIncrement: assignment.simpleWeightIncrement,
+        };
+        
+        await ExerciseRepo.updateLastCycleSettings(assignment.exerciseId, settings);
+      }
+    }
+  };
+
   const handleCreate = async () => {
     if (!exercises) return;
     
@@ -397,6 +459,9 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
         const workouts = generateSchedule(scheduleInput);
         await ScheduledWorkoutRepo.bulkCreate(workouts);
       }
+
+      // Save last cycle settings for each exercise (for smart defaults in future cycles)
+      await saveLastCycleSettings(groups, progressionMode, exerciseMap);
 
       onComplete();
     } catch (err) {
@@ -569,12 +634,14 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
             exercises={exercises || []}
             exerciseMap={exerciseMap}
             defaults={defaults}
+            progressionMode={progressionMode}
             onAddGroup={addGroup}
             onRemoveGroup={removeGroup}
             onUpdateGroupName={updateGroupName}
             onAddExercise={addExerciseToGroup}
             onRemoveExercise={removeExerciseFromGroup}
             onUpdateConditioningReps={updateConditioningReps}
+            onUpdateAssignment={updateSimpleProgression}
           />
         )}
 
@@ -879,32 +946,37 @@ function GroupsStep({
   exercises,
   exerciseMap,
   defaults,
+  progressionMode,
   onAddGroup,
   onRemoveGroup,
   onUpdateGroupName,
   onAddExercise,
   onRemoveExercise,
-  onUpdateConditioningReps
+  onUpdateConditioningReps,
+  onUpdateAssignment
 }: {
   groups: Group[];
   exercises: Exercise[];
   exerciseMap: Map<string, Exercise>;
   defaults: { defaultConditioningReps: number };
+  progressionMode: ProgressionMode;
   onAddGroup: () => void;
   onRemoveGroup: (id: string) => void;
   onUpdateGroupName: (id: string, name: string) => void;
   onAddExercise: (groupId: string, exerciseId: string) => void;
   onRemoveExercise: (groupId: string, exerciseId: string) => void;
   onUpdateConditioningReps: (groupId: string, exerciseId: string, reps: number) => void;
+  onUpdateAssignment: (groupId: string, exerciseId: string, updates: Partial<ExerciseAssignment>) => void;
 }) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const isMixedMode = progressionMode === 'mixed';
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Workout Groups
+          {isMixedMode ? 'Exercises & Progression' : 'Workout Groups'}
         </h2>
         <Button variant="secondary" size="sm" onClick={onAddGroup}>
           <Plus className="w-4 h-4 mr-1" />
@@ -913,7 +985,10 @@ function GroupsStep({
       </div>
 
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Create groups of exercises that will be performed together on the same day.
+        {isMixedMode 
+          ? 'Create groups and configure RFEM or simple progression for each exercise.'
+          : 'Create groups of exercises that will be performed together on the same day.'
+        }
       </p>
 
       <div className="space-y-3">
@@ -952,11 +1027,26 @@ function GroupsStep({
                 No exercises yet. Tap + to add exercises.
               </p>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {group.exerciseAssignments.map(assignment => {
                   const exercise = exerciseMap.get(assignment.exerciseId);
                   if (!exercise) return null;
                   
+                  // In mixed mode, show inline configuration
+                  if (isMixedMode) {
+                    return (
+                      <MixedExerciseConfig
+                        key={assignment.exerciseId}
+                        exercise={exercise}
+                        assignment={assignment}
+                        defaults={defaults}
+                        onUpdate={(updates) => onUpdateAssignment(group.id, assignment.exerciseId, updates)}
+                        onRemove={() => onRemoveExercise(group.id, assignment.exerciseId)}
+                      />
+                    );
+                  }
+                  
+                  // Standard display for RFEM/Simple modes
                   return (
                     <div 
                       key={assignment.exerciseId}
@@ -1070,6 +1160,367 @@ function GroupsStep({
   );
 }
 
+/**
+ * Inline configuration component for exercises in mixed mode.
+ * Allows selecting RFEM or Simple progression mode for each exercise.
+ */
+function MixedExerciseConfig({
+  exercise,
+  assignment,
+  defaults,
+  onUpdate,
+  onRemove
+}: {
+  exercise: Exercise;
+  assignment: ExerciseAssignment;
+  defaults: { defaultConditioningReps: number };
+  onUpdate: (updates: Partial<ExerciseAssignment>) => void;
+  onRemove: () => void;
+}) {
+  const isConditioning = exercise.mode === 'conditioning';
+  const isTimeBased = exercise.measurementType === 'time';
+  const isWeighted = exercise.weightEnabled === true;
+  
+  // For non-conditioning exercises, track which mode is selected
+  const exerciseMode = assignment.progressionMode || 'rfem';
+  
+  // Initialize with smart defaults from lastCycleSettings or exercise defaults
+  useEffect(() => {
+    if (isConditioning) {
+      // For conditioning, ensure base value and increment are set
+      const updates: Partial<ExerciseAssignment> = {};
+      
+      if (isTimeBased) {
+        if (assignment.conditioningBaseTime === undefined) {
+          updates.conditioningBaseTime = exercise.lastCycleSettings?.simpleBaseTime 
+            || exercise.defaultConditioningTime || 30;
+        }
+        if (assignment.conditioningTimeIncrement === undefined) {
+          updates.conditioningTimeIncrement = exercise.lastCycleSettings?.conditioningTimeIncrement || 5;
+        }
+      } else {
+        if (assignment.conditioningBaseReps === undefined) {
+          updates.conditioningBaseReps = exercise.lastCycleSettings?.simpleBaseReps
+            || exercise.defaultConditioningReps || defaults.defaultConditioningReps;
+        }
+        if (assignment.conditioningRepIncrement === undefined) {
+          updates.conditioningRepIncrement = exercise.lastCycleSettings?.conditioningRepIncrement || 1;
+        }
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        onUpdate(updates);
+      }
+    } else {
+      // For standard exercises, initialize from lastCycleSettings if available
+      const lastSettings = exercise.lastCycleSettings;
+      if (lastSettings && assignment.progressionMode === undefined) {
+        const updates: Partial<ExerciseAssignment> = {
+          progressionMode: lastSettings.progressionMode
+        };
+        
+        // If last mode was simple, copy the simple settings
+        if (lastSettings.progressionMode === 'simple') {
+          if (isTimeBased) {
+            updates.simpleBaseTime = lastSettings.simpleBaseTime;
+            updates.simpleTimeProgressionType = lastSettings.simpleTimeProgressionType;
+            updates.simpleTimeIncrement = lastSettings.simpleTimeIncrement;
+          } else {
+            updates.simpleBaseReps = lastSettings.simpleBaseReps;
+            updates.simpleRepProgressionType = lastSettings.simpleRepProgressionType;
+            updates.simpleRepIncrement = lastSettings.simpleRepIncrement;
+          }
+          if (isWeighted) {
+            updates.simpleBaseWeight = lastSettings.simpleBaseWeight;
+            updates.simpleWeightProgressionType = lastSettings.simpleWeightProgressionType;
+            updates.simpleWeightIncrement = lastSettings.simpleWeightIncrement;
+          }
+        }
+        
+        onUpdate(updates);
+      }
+    }
+  }, []); // Run once on mount
+
+  // Conditioning exercise UI
+  if (isConditioning) {
+    return (
+      <div className="border border-gray-200 dark:border-dark-border rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Badge variant={exercise.type} className="text-2xs">
+              {EXERCISE_TYPE_LABELS[exercise.type]}
+            </Badge>
+            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{exercise.name}</span>
+            <Badge variant="other" className="text-2xs">Conditioning</Badge>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            className="p-1 text-gray-400 hover:text-red-500"
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Base {isTimeBased ? 'Time (sec)' : 'Reps'}
+            </label>
+            <NumberInput
+              value={isTimeBased 
+                ? (assignment.conditioningBaseTime || 30) 
+                : (assignment.conditioningBaseReps || defaults.defaultConditioningReps)}
+              onChange={v => onUpdate(isTimeBased 
+                ? { conditioningBaseTime: v } 
+                : { conditioningBaseReps: v })}
+              min={1}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Add {isTimeBased ? 'sec' : 'reps'}/week
+            </label>
+            <NumberInput
+              value={isTimeBased 
+                ? (assignment.conditioningTimeIncrement ?? 5) 
+                : (assignment.conditioningRepIncrement ?? 1)}
+              onChange={v => onUpdate(isTimeBased 
+                ? { conditioningTimeIncrement: v } 
+                : { conditioningRepIncrement: v })}
+              min={0}
+              className="w-full"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard exercise UI with RFEM/Simple toggle
+  return (
+    <div className="border border-gray-200 dark:border-dark-border rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Badge variant={exercise.type} className="text-2xs">
+            {EXERCISE_TYPE_LABELS[exercise.type]}
+          </Badge>
+          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{exercise.name}</span>
+          {isWeighted && <Badge variant="other" className="text-2xs">Weighted</Badge>}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="p-1 text-gray-400 hover:text-red-500"
+        >
+          <Trash2 className="w-3 h-3" />
+        </Button>
+      </div>
+      
+      {/* Mode Toggle */}
+      <div className="flex gap-2 mb-3">
+        <button
+          onClick={() => onUpdate({ progressionMode: 'rfem' })}
+          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+            exerciseMode === 'rfem'
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          RFEM
+        </button>
+        <button
+          onClick={() => onUpdate({ progressionMode: 'simple' })}
+          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+            exerciseMode === 'simple'
+              ? 'bg-emerald-500 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          Simple
+        </button>
+      </div>
+      
+      {exerciseMode === 'rfem' ? (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Uses cycle's RFEM rotation for target {isTimeBased ? 'time' : 'reps'}
+        </p>
+      ) : (
+        <SimpleProgressionFields
+          exercise={exercise}
+          assignment={assignment}
+          isTimeBased={isTimeBased}
+          isWeighted={isWeighted}
+          onUpdate={onUpdate}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Reusable simple progression input fields.
+ * Used by both MixedExerciseConfig and ExerciseProgressionEditor.
+ */
+function SimpleProgressionFields({
+  exercise,
+  assignment,
+  isTimeBased,
+  isWeighted,
+  onUpdate
+}: {
+  exercise: Exercise;
+  assignment: ExerciseAssignment;
+  isTimeBased: boolean;
+  isWeighted: boolean;
+  onUpdate: (updates: Partial<ExerciseAssignment>) => void;
+}) {
+  // Get default values
+  const getDefaultValue = () => {
+    if (isTimeBased) {
+      return exercise.lastCycleSettings?.simpleBaseTime 
+        || exercise.defaultConditioningTime || 30;
+    }
+    return exercise.lastCycleSettings?.simpleBaseReps 
+      || exercise.defaultConditioningReps || 10;
+  };
+
+  const baseValue = isTimeBased 
+    ? (assignment.simpleBaseTime ?? getDefaultValue())
+    : (assignment.simpleBaseReps ?? getDefaultValue());
+  
+  const progressionType = isTimeBased 
+    ? (assignment.simpleTimeProgressionType || 'constant')
+    : (assignment.simpleRepProgressionType || 'constant');
+  
+  const increment = isTimeBased 
+    ? (assignment.simpleTimeIncrement ?? 0)
+    : (assignment.simpleRepIncrement ?? 0);
+
+  const baseWeight = assignment.simpleBaseWeight ?? exercise.defaultWeight ?? 0;
+  const weightProgressionType = assignment.simpleWeightProgressionType || 'constant';
+  const weightIncrement = assignment.simpleWeightIncrement ?? 0;
+
+  // Initialize defaults on mount if not set
+  useEffect(() => {
+    const updates: Partial<ExerciseAssignment> = {};
+    
+    if (isTimeBased && assignment.simpleBaseTime === undefined) {
+      updates.simpleBaseTime = getDefaultValue();
+    } else if (!isTimeBased && assignment.simpleBaseReps === undefined) {
+      updates.simpleBaseReps = getDefaultValue();
+    }
+    
+    if (isWeighted && assignment.simpleBaseWeight === undefined && exercise.defaultWeight) {
+      updates.simpleBaseWeight = exercise.defaultWeight;
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      onUpdate(updates);
+    }
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      {/* Reps/Time Row */}
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Base {isTimeBased ? '(sec)' : 'Reps'}
+          </label>
+          <NumberInput
+            value={baseValue}
+            onChange={v => onUpdate(isTimeBased 
+              ? { simpleBaseTime: v } 
+              : { simpleBaseReps: v })}
+            min={1}
+            className="w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Progress
+          </label>
+          <Select
+            value={progressionType}
+            onChange={e => onUpdate(isTimeBased 
+              ? { simpleTimeProgressionType: e.target.value as ProgressionInterval }
+              : { simpleRepProgressionType: e.target.value as ProgressionInterval })}
+            options={[
+              { value: 'constant', label: 'None' },
+              { value: 'per_workout', label: '/workout' },
+              { value: 'per_week', label: '/week' }
+            ]}
+            className="w-full text-xs"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            +{isTimeBased ? 'sec' : 'reps'}
+          </label>
+          <NumberInput
+            value={increment}
+            onChange={v => onUpdate(isTimeBased 
+              ? { simpleTimeIncrement: v } 
+              : { simpleRepIncrement: v })}
+            min={0}
+            disabled={progressionType === 'constant'}
+            className="w-full"
+          />
+        </div>
+      </div>
+      
+      {/* Weight Row (only for weighted exercises) */}
+      {isWeighted && (
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-200 dark:border-dark-border">
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Weight (lbs)
+            </label>
+            <NumberInput
+              value={baseWeight}
+              onChange={v => onUpdate({ simpleBaseWeight: v })}
+              min={0}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Progress
+            </label>
+            <Select
+              value={weightProgressionType}
+              onChange={e => onUpdate({ simpleWeightProgressionType: e.target.value as ProgressionInterval })}
+              options={[
+                { value: 'constant', label: 'None' },
+                { value: 'per_workout', label: '/workout' },
+                { value: 'per_week', label: '/week' }
+              ]}
+              className="w-full text-xs"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              +lbs
+            </label>
+            <NumberInput
+              value={weightIncrement}
+              onChange={v => onUpdate({ simpleWeightIncrement: v })}
+              min={0}
+              disabled={weightProgressionType === 'constant'}
+              className="w-full"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GoalsStep({
   progressionMode,
   weeklySetGoals,
@@ -1096,6 +1547,7 @@ function GoalsStep({
   workoutDaysPerWeek: number;
 }) {
   const isSimpleMode = progressionMode === 'simple';
+  const isMixedMode = progressionMode === 'mixed';
   
   const updateGoal = (type: ExerciseType, value: number) => {
     setWeeklySetGoals({ ...weeklySetGoals, [type]: value });
@@ -1175,14 +1627,17 @@ function GoalsStep({
         </div>
       </div>
 
-      {/* RFEM Rotation - only for RFEM mode */}
+      {/* RFEM Rotation - for RFEM and mixed modes */}
       {!isSimpleMode && (
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             RFEM Rotation
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            Reps From Established Max: subtracted from your max for target reps
+            {isMixedMode 
+              ? 'Reps From Established Max: applies to all RFEM-mode exercises'
+              : 'Reps From Established Max: subtracted from your max for target reps'
+            }
           </p>
           
           <div className="flex flex-wrap gap-2">
@@ -1214,8 +1669,8 @@ function GoalsStep({
         </div>
       )}
 
-      {/* Conditioning Increment - only for RFEM mode */}
-      {!isSimpleMode && (
+      {/* Conditioning Increment - only for RFEM mode (mixed mode has per-exercise increments) */}
+      {!isSimpleMode && !isMixedMode && (
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Conditioning Weekly Increment
@@ -1564,11 +2019,49 @@ function ReviewStep({
   validation: { valid: boolean; errors: string[]; warnings: string[] };
 }) {
   const isSimpleMode = progressionMode === 'simple';
+  const isMixedMode = progressionMode === 'mixed';
   const totalExercises = new Set(
     groups.flatMap(g => g.exerciseAssignments.map(a => a.exerciseId))
   ).size;
   
   const totalWeeklySets = Object.values(weeklySetGoals).reduce((a, b) => a + b, 0);
+
+  // For mixed mode, categorize exercises
+  const categorizedExercises = isMixedMode ? (() => {
+    const rfemExercises: { exercise: Exercise; group: Group }[] = [];
+    const simpleExercises: { exercise: Exercise; assignment: ExerciseAssignment; group: Group }[] = [];
+    const conditioningExercises: { exercise: Exercise; assignment: ExerciseAssignment; group: Group }[] = [];
+    
+    groups.forEach(group => {
+      group.exerciseAssignments.forEach(assignment => {
+        const exercise = exerciseMap.get(assignment.exerciseId);
+        if (!exercise) return;
+        
+        if (exercise.mode === 'conditioning') {
+          conditioningExercises.push({ exercise, assignment, group });
+        } else if (assignment.progressionMode === 'simple') {
+          simpleExercises.push({ exercise, assignment, group });
+        } else {
+          rfemExercises.push({ exercise, group });
+        }
+      });
+    });
+    
+    return { rfemExercises, simpleExercises, conditioningExercises };
+  })() : null;
+
+  // Get badge for mode
+  const getModeLabel = () => {
+    if (isSimpleMode) return 'Simple';
+    if (isMixedMode) return 'Mixed';
+    return 'RFEM';
+  };
+  
+  const getModeBadgeVariant = () => {
+    if (isSimpleMode) return 'other';
+    if (isMixedMode) return 'balance';
+    return 'push';
+  };
 
   return (
     <div className="space-y-4">
@@ -1609,8 +2102,8 @@ function ReviewStep({
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <h3 className="font-medium text-gray-900 dark:text-gray-100">{name}</h3>
-          <Badge variant={isSimpleMode ? 'other' : 'push'} className="text-2xs">
-            {isSimpleMode ? 'Simple' : 'RFEM'}
+          <Badge variant={getModeBadgeVariant()} className="text-2xs">
+            {getModeLabel()}
           </Badge>
         </div>
         
@@ -1702,6 +2195,102 @@ function ReviewStep({
                 </div>
               </div>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Mixed Mode: Exercise Summary by Mode */}
+      {isMixedMode && categorizedExercises && (
+        <Card className="p-4">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
+            Exercise Configuration
+          </h3>
+          <div className="space-y-4">
+            {/* RFEM Exercises */}
+            {categorizedExercises.rfemExercises.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="push" className="text-2xs">RFEM</Badge>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Rotation: {rfemRotation.map(r => `-${r}`).join(', ')}
+                  </span>
+                </div>
+                <div className="pl-2 space-y-0.5">
+                  {categorizedExercises.rfemExercises.map(({ exercise, group }) => (
+                    <p key={exercise.id} className="text-sm text-gray-600 dark:text-gray-400">
+                      {exercise.name} <span className="text-gray-400">({group.name})</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Simple Progression Exercises */}
+            {categorizedExercises.simpleExercises.length > 0 && (
+              <div>
+                <Badge variant="other" className="text-2xs mb-2">Simple Progression</Badge>
+                <div className="pl-2 space-y-1">
+                  {categorizedExercises.simpleExercises.map(({ exercise, assignment }) => {
+                    const isTimeBased = exercise.measurementType === 'time';
+                    const isWeighted = exercise.weightEnabled === true;
+                    const baseValue = isTimeBased ? assignment.simpleBaseTime : assignment.simpleBaseReps;
+                    const progressionType = isTimeBased ? assignment.simpleTimeProgressionType : assignment.simpleRepProgressionType;
+                    const increment = isTimeBased ? assignment.simpleTimeIncrement : assignment.simpleRepIncrement;
+                    const baseWeight = assignment.simpleBaseWeight;
+                    const weightProgressionType = assignment.simpleWeightProgressionType;
+                    const weightIncrement = assignment.simpleWeightIncrement;
+                    
+                    return (
+                      <div key={exercise.id} className="flex flex-wrap items-center gap-x-2 gap-y-0 text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">{exercise.name}:</span>
+                        <span className="font-medium">
+                          {baseValue || '?'} {isTimeBased ? 'sec' : 'reps'}
+                          {isWeighted && baseWeight ? ` @ ${baseWeight} lbs` : ''}
+                        </span>
+                        {progressionType && progressionType !== 'constant' && increment && (
+                          <span className="text-gray-500 dark:text-gray-400">
+                            (+{increment}/{progressionType === 'per_workout' ? 'workout' : 'week'})
+                          </span>
+                        )}
+                        {isWeighted && weightProgressionType && weightProgressionType !== 'constant' && weightIncrement && (
+                          <span className="text-gray-500 dark:text-gray-400">
+                            (+{weightIncrement} lbs/{weightProgressionType === 'per_workout' ? 'workout' : 'week'})
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Conditioning Exercises */}
+            {categorizedExercises.conditioningExercises.length > 0 && (
+              <div>
+                <Badge variant="core" className="text-2xs mb-2">Conditioning</Badge>
+                <div className="pl-2 space-y-1">
+                  {categorizedExercises.conditioningExercises.map(({ exercise, assignment }) => {
+                    const isTimeBased = exercise.measurementType === 'time';
+                    const baseValue = isTimeBased ? assignment.conditioningBaseTime : assignment.conditioningBaseReps;
+                    const increment = isTimeBased ? assignment.conditioningTimeIncrement : assignment.conditioningRepIncrement;
+                    
+                    return (
+                      <div key={exercise.id} className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">{exercise.name}:</span>
+                        <span className="font-medium">
+                          {baseValue || '?'} {isTimeBased ? 'sec' : 'reps'}
+                        </span>
+                        {increment !== undefined && increment > 0 && (
+                          <span className="text-gray-500 dark:text-gray-400">
+                            (+{increment} {isTimeBased ? 'sec' : 'reps'}/week)
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       )}

@@ -1276,3 +1276,321 @@ describe('validateCycle simple mode', () => {
     expect(result.warnings).toContain('"Plank" in group "Group A" has no base time set');
   });
 });
+
+// ============================================================================
+// Mixed Mode Tests
+// ============================================================================
+
+describe('Mixed Mode', () => {
+  describe('generateSchedule with mixed mode', () => {
+    it('denormalizes progressionMode for each exercise in mixed mode', () => {
+      const exercises = new Map<string, Exercise>([
+        ['rfem-ex', createMockExercise({ id: 'rfem-ex', name: 'Pull-ups', type: 'pull' })],
+        ['simple-ex', createMockExercise({ id: 'simple-ex', name: 'Goblet Squats', type: 'legs' })],
+      ]);
+
+      const cycle = createMockCycle({
+        progressionMode: 'mixed',
+        groups: [createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [
+            { exerciseId: 'rfem-ex', progressionMode: 'rfem' },
+            { 
+              exerciseId: 'simple-ex', 
+              progressionMode: 'simple',
+              simpleBaseReps: 12,
+              simpleRepProgressionType: 'per_week',
+              simpleRepIncrement: 2,
+            },
+          ],
+        })],
+        groupRotation: ['group-a'],
+        weeklySetGoals: { push: 0, pull: 5, legs: 5, core: 0, balance: 0, mobility: 0, other: 0 },
+      });
+
+      const schedule = generateSchedule({ cycle, exercises });
+      const firstWorkout = schedule[0];
+
+      // Find RFEM and simple sets
+      const rfemSet = firstWorkout.scheduledSets.find(s => s.exerciseId === 'rfem-ex');
+      const simpleSet = firstWorkout.scheduledSets.find(s => s.exerciseId === 'simple-ex');
+
+      expect(rfemSet?.progressionMode).toBe('rfem');
+      expect(simpleSet?.progressionMode).toBe('simple');
+      expect(simpleSet?.simpleBaseReps).toBe(12);
+      expect(simpleSet?.simpleRepProgressionType).toBe('per_week');
+      expect(simpleSet?.simpleRepIncrement).toBe(2);
+    });
+
+    it('denormalizes per-exercise conditioning increments in mixed mode', () => {
+      const exercises = new Map<string, Exercise>([
+        ['cond-ex', createMockExercise({ 
+          id: 'cond-ex', 
+          name: 'Hollow Body', 
+          type: 'core',
+          mode: 'conditioning',
+        })],
+      ]);
+
+      const cycle = createMockCycle({
+        progressionMode: 'mixed',
+        groups: [createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [
+            { 
+              exerciseId: 'cond-ex',
+              conditioningBaseReps: 20,
+              conditioningRepIncrement: 3, // Per-exercise increment
+            },
+          ],
+        })],
+        groupRotation: ['group-a'],
+        weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
+        conditioningWeeklyRepIncrement: 5, // Cycle-level default
+      });
+
+      const schedule = generateSchedule({ cycle, exercises });
+      const condSet = schedule[0].scheduledSets.find(s => s.exerciseId === 'cond-ex');
+
+      expect(condSet?.conditioningBaseReps).toBe(20);
+      expect(condSet?.conditioningRepIncrement).toBe(3);
+    });
+  });
+
+  describe('calculateTargetReps with mixed mode', () => {
+    it('uses RFEM calculation for RFEM exercises in mixed mode', () => {
+      const maxRecord: MaxRecord = {
+        id: 'max-1',
+        exerciseId: 'rfem-ex',
+        maxReps: 20,
+        recordedAt: new Date(),
+        notes: '',
+      };
+
+      const set = createMockScheduledSet({
+        exerciseId: 'rfem-ex',
+        isConditioning: false,
+        progressionMode: 'rfem',
+      });
+
+      const workout = createMockScheduledWorkout({ rfem: 4 });
+      const cycle = createMockCycle({ progressionMode: 'mixed' });
+
+      const target = calculateTargetReps(set, workout, maxRecord, 5, 5, 10, cycle);
+
+      // RFEM calculation: 20 - 4 = 16
+      expect(target).toBe(16);
+    });
+
+    it('uses simple calculation for simple exercises in mixed mode', () => {
+      const set = createMockScheduledSet({
+        exerciseId: 'simple-ex',
+        isConditioning: false,
+        progressionMode: 'simple',
+        simpleBaseReps: 10,
+        simpleRepProgressionType: 'per_week',
+        simpleRepIncrement: 2,
+      });
+
+      const workout = createMockScheduledWorkout({ weekNumber: 3 });
+      const cycle = createMockCycle({ progressionMode: 'mixed' });
+
+      const target = calculateTargetReps(set, workout, undefined, 5, 5, 10, cycle);
+
+      // Simple calculation: 10 + (3-1) * 2 = 14
+      expect(target).toBe(14);
+    });
+
+    it('uses per-exercise conditioning increment in mixed mode', () => {
+      const set = createMockScheduledSet({
+        exerciseId: 'cond-ex',
+        isConditioning: true,
+        conditioningBaseReps: 15,
+        conditioningRepIncrement: 3, // Per-exercise
+      });
+
+      const workout = createMockScheduledWorkout({ weekNumber: 3 });
+      const cycle = createMockCycle({ 
+        progressionMode: 'mixed',
+        conditioningWeeklyRepIncrement: 5, // Cycle-level (should be ignored)
+      });
+
+      const target = calculateTargetReps(set, workout, undefined, 5, 5, 10, cycle);
+
+      // Conditioning: 15 + (3-1) * 3 = 21
+      expect(target).toBe(21);
+    });
+
+    it('falls back to cycle increment when per-exercise increment not set', () => {
+      const set = createMockScheduledSet({
+        exerciseId: 'cond-ex',
+        isConditioning: true,
+        conditioningBaseReps: 15,
+        // No conditioningRepIncrement set
+      });
+
+      const workout = createMockScheduledWorkout({ weekNumber: 3 });
+      const cycle = createMockCycle({ 
+        progressionMode: 'mixed',
+        conditioningWeeklyRepIncrement: 5,
+      });
+
+      const target = calculateTargetReps(set, workout, undefined, 5, 5, 10, cycle);
+
+      // Falls back to cycle's 5: 15 + (3-1) * 5 = 25
+      expect(target).toBe(25);
+    });
+
+    it('handles time-based exercises with per-exercise conditioning increment', () => {
+      const set = createMockScheduledSet({
+        exerciseId: 'time-cond-ex',
+        isConditioning: true,
+        measurementType: 'time',
+        conditioningBaseTime: 30,
+        conditioningTimeIncrement: 10,
+      });
+
+      const workout = createMockScheduledWorkout({ weekNumber: 2 });
+      const cycle = createMockCycle({ 
+        progressionMode: 'mixed',
+        conditioningWeeklyTimeIncrement: 5,
+      });
+
+      const target = calculateTargetReps(set, workout, undefined, 5, 5, 10, cycle);
+
+      // Time conditioning: 30 + (2-1) * 10 = 40
+      expect(target).toBe(40);
+    });
+  });
+
+  describe('validateCycle with mixed mode', () => {
+    it('requires RFEM rotation for mixed mode', () => {
+      const exercises = new Map<string, Exercise>([
+        ['push-1', createMockExercise({ id: 'push-1', type: 'push' })],
+      ]);
+
+      const cycle = {
+        name: 'Mixed Cycle',
+        cycleType: 'training' as const,
+        progressionMode: 'mixed' as const,
+        startDate: new Date(),
+        numberOfWeeks: 4,
+        workoutDaysPerWeek: 3,
+        weeklySetGoals: { push: 10, pull: 0, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
+        groups: [createMockGroup({ 
+          id: 'group-a',
+          exerciseAssignments: [{ exerciseId: 'push-1', progressionMode: 'rfem' }]
+        })],
+        groupRotation: ['group-a'],
+        rfemRotation: [], // Empty - should fail
+        conditioningWeeklyRepIncrement: 5,
+        status: 'planning' as const,
+      };
+
+      const result = validateCycle(cycle, exercises);
+
+      expect(result.errors).toContain('RFEM rotation is required');
+    });
+
+    it('warns when simple exercises in mixed mode are missing base values', () => {
+      const exercises = new Map<string, Exercise>([
+        ['simple-ex', createMockExercise({ id: 'simple-ex', name: 'Squats', type: 'legs' })],
+      ]);
+
+      const cycle = {
+        name: 'Mixed Cycle',
+        cycleType: 'training' as const,
+        progressionMode: 'mixed' as const,
+        startDate: new Date(),
+        numberOfWeeks: 4,
+        workoutDaysPerWeek: 3,
+        weeklySetGoals: { push: 0, pull: 0, legs: 10, core: 0, balance: 0, mobility: 0, other: 0 },
+        groups: [createMockGroup({ 
+          id: 'group-a',
+          exerciseAssignments: [
+            { exerciseId: 'simple-ex', progressionMode: 'simple' }, // Missing simpleBaseReps
+          ]
+        })],
+        groupRotation: ['group-a'],
+        rfemRotation: [5, 4, 3],
+        conditioningWeeklyRepIncrement: 5,
+        status: 'planning' as const,
+      };
+
+      const result = validateCycle(cycle, exercises);
+
+      expect(result.valid).toBe(true);
+      expect(result.warnings).toContain('"Squats" in group "Group A" has no base reps set');
+    });
+
+    it('does not warn for RFEM exercises missing simple base values in mixed mode', () => {
+      const exercises = new Map<string, Exercise>([
+        ['rfem-ex', createMockExercise({ id: 'rfem-ex', name: 'Pull-ups', type: 'pull' })],
+      ]);
+
+      const cycle = {
+        name: 'Mixed Cycle',
+        cycleType: 'training' as const,
+        progressionMode: 'mixed' as const,
+        startDate: new Date(),
+        numberOfWeeks: 4,
+        workoutDaysPerWeek: 3,
+        weeklySetGoals: { push: 0, pull: 10, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
+        groups: [createMockGroup({ 
+          id: 'group-a',
+          exerciseAssignments: [
+            { exerciseId: 'rfem-ex', progressionMode: 'rfem' }, // No simpleBaseReps needed
+          ]
+        })],
+        groupRotation: ['group-a'],
+        rfemRotation: [5, 4, 3],
+        conditioningWeeklyRepIncrement: 5,
+        status: 'planning' as const,
+      };
+
+      const result = validateCycle(cycle, exercises);
+
+      expect(result.valid).toBe(true);
+      expect(result.warnings.filter(w => w.includes('base reps'))).toHaveLength(0);
+    });
+
+    it('validates mixed cycle with combination of RFEM and simple exercises', () => {
+      const exercises = new Map<string, Exercise>([
+        ['rfem-ex', createMockExercise({ id: 'rfem-ex', name: 'Pull-ups', type: 'pull' })],
+        ['simple-ex', createMockExercise({ id: 'simple-ex', name: 'Goblet Squats', type: 'legs' })],
+      ]);
+
+      const cycle = {
+        name: 'Mixed Cycle',
+        cycleType: 'training' as const,
+        progressionMode: 'mixed' as const,
+        startDate: new Date(),
+        numberOfWeeks: 4,
+        workoutDaysPerWeek: 3,
+        weeklySetGoals: { push: 0, pull: 10, legs: 10, core: 0, balance: 0, mobility: 0, other: 0 },
+        groups: [createMockGroup({ 
+          id: 'group-a',
+          exerciseAssignments: [
+            { exerciseId: 'rfem-ex', progressionMode: 'rfem' },
+            { 
+              exerciseId: 'simple-ex', 
+              progressionMode: 'simple',
+              simpleBaseReps: 12,
+              simpleRepProgressionType: 'per_week',
+              simpleRepIncrement: 2,
+            },
+          ]
+        })],
+        groupRotation: ['group-a'],
+        rfemRotation: [5, 4, 3],
+        conditioningWeeklyRepIncrement: 5,
+        status: 'planning' as const,
+      };
+
+      const result = validateCycle(cycle, exercises);
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+});

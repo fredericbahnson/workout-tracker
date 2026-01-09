@@ -1,4 +1,4 @@
-import { Calendar, Target, ArrowRight, TrendingUp } from 'lucide-react';
+import { Calendar, Target, ArrowRight, TrendingUp, Layers } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { ProgressionMode } from '@/types';
 
@@ -68,6 +68,30 @@ export function CycleTypeSelector({
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Set your own rep targets for each exercise. 
                 Optionally add reps each workout or week.
+              </p>
+            </div>
+          </div>
+        </button>
+
+        {/* Mixed Cycle Option */}
+        <button
+          onClick={() => onSelectTraining('mixed')}
+          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-indigo-500 dark:hover:border-indigo-500 bg-white dark:bg-dark-surface transition-colors text-left group"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <Layers className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  Mixed Cycle
+                </h3>
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Configure RFEM or simple progression individually for each exercise. 
+                Best for combining different training approaches.
               </p>
             </div>
           </div>

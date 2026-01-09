@@ -6,7 +6,11 @@ export type MeasurementType = 'reps' | 'time';  // reps = count, time = seconds
 export type CycleType = 'training' | 'max_testing';
 
 // Progression mode for training cycles
-export type ProgressionMode = 'rfem' | 'simple';
+export type ProgressionMode = 'rfem' | 'simple' | 'mixed';
+
+// Per-exercise progression mode (for mixed cycles)
+// In mixed mode, each exercise can independently use RFEM or simple progression
+export type ExerciseProgressionMode = 'rfem' | 'simple';
 
 // Progression interval type (for simple mode per-exercise settings)
 export type ProgressionInterval = 'constant' | 'per_workout' | 'per_week';
@@ -16,6 +20,30 @@ export interface CustomParameter {
   type: 'text' | 'number' | 'select';
   options?: string[];
   defaultValue?: string | number;
+}
+
+/**
+ * Stores the last-used cycle settings for an exercise.
+ * Used to provide smart defaults when adding exercises to new cycles (especially mixed mode).
+ */
+export interface ExerciseCycleDefaults {
+  // Which mode was last used for this exercise
+  progressionMode: ExerciseProgressionMode;
+  
+  // Conditioning increments (for conditioning exercises in mixed mode)
+  conditioningRepIncrement?: number;   // Reps to add per week
+  conditioningTimeIncrement?: number;  // Seconds to add per week
+  
+  // Simple progression settings
+  simpleBaseReps?: number;
+  simpleBaseTime?: number;
+  simpleBaseWeight?: number;
+  simpleRepProgressionType?: ProgressionInterval;
+  simpleRepIncrement?: number;
+  simpleTimeProgressionType?: ProgressionInterval;
+  simpleTimeIncrement?: number;
+  simpleWeightProgressionType?: ProgressionInterval;
+  simpleWeightIncrement?: number;
 }
 
 export interface Exercise {
@@ -30,6 +58,7 @@ export interface Exercise {
   defaultConditioningTime?: number;           // Default starting time in seconds for time-based conditioning
   weightEnabled?: boolean;                    // Whether this exercise tracks added weight
   defaultWeight?: number;                     // Default weight in lbs (optional convenience)
+  lastCycleSettings?: ExerciseCycleDefaults;  // Last used cycle settings for smart defaults
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,9 +78,18 @@ export interface MaxRecord {
 export interface ExerciseAssignment {
   exerciseId: string;
   
-  // RFEM/Conditioning mode settings
+  // Per-exercise progression mode (for mixed cycles only)
+  // undefined = defaults to 'rfem' in mixed mode, or follows cycle mode otherwise
+  progressionMode?: ExerciseProgressionMode;
+  
+  // Conditioning settings (used in all modes)
   conditioningBaseReps?: number;     // For rep-based conditioning
   conditioningBaseTime?: number;     // For time-based conditioning (seconds)
+  
+  // Per-exercise conditioning increments (for mixed mode)
+  // In pure RFEM/simple modes, global cycle values are used
+  conditioningRepIncrement?: number;   // Reps to add per week
+  conditioningTimeIncrement?: number;  // Seconds to add per week
   
   // Simple mode - base values
   simpleBaseReps?: number;           // Starting reps for simple mode
@@ -64,7 +102,7 @@ export interface ExerciseAssignment {
   simpleTimeProgressionType?: ProgressionInterval;  // How time progresses
   simpleTimeIncrement?: number;                      // Seconds to add each interval
   
-  // Simple mode - weight progression (future-proofing)
+  // Simple mode - weight progression
   simpleWeightProgressionType?: ProgressionInterval; // How weight progresses
   simpleWeightIncrement?: number;                     // Weight (lbs) to add each interval
 }
@@ -79,7 +117,7 @@ export interface Cycle {
   id: string;
   name: string;
   cycleType: CycleType;                // 'training' or 'max_testing'
-  progressionMode?: ProgressionMode;   // 'rfem' (default) or 'simple' - only for training cycles
+  progressionMode?: ProgressionMode;   // 'rfem' (default), 'simple', or 'mixed' - only for training cycles
   previousCycleId?: string;            // Reference to the cycle this max testing follows
   startDate: Date;
   numberOfWeeks: number;
@@ -87,9 +125,9 @@ export interface Cycle {
   weeklySetGoals: Record<ExerciseType, number>;
   groups: Group[];
   groupRotation: string[];
-  rfemRotation: number[];              // Used for RFEM mode
-  conditioningWeeklyRepIncrement: number;
-  conditioningWeeklyTimeIncrement?: number;  // Weekly increment in seconds for time-based conditioning
+  rfemRotation: number[];              // Used for RFEM and mixed modes (applies to all RFEM exercises)
+  conditioningWeeklyRepIncrement: number;   // Global fallback; mixed mode uses per-exercise increments
+  conditioningWeeklyTimeIncrement?: number; // Global fallback; mixed mode uses per-exercise increments
   status: 'planning' | 'active' | 'completed';
   createdAt: Date;
   updatedAt: Date;
@@ -109,8 +147,17 @@ export interface ScheduledSet {
   previousMaxTime?: number;          // For reference during max testing (time in seconds)
   measurementType?: MeasurementType; // Cached from exercise for display
   
+  // Per-exercise mode (denormalized for mixed cycles)
+  // For pure RFEM/simple cycles, this is undefined and cycle's mode is used
+  progressionMode?: ExerciseProgressionMode;
+  
+  // Per-exercise conditioning increments (for mixed mode conditioning exercises)
+  // Falls back to cycle-level values if undefined
+  conditioningRepIncrement?: number;
+  conditioningTimeIncrement?: number;
+  
   // Simple mode progression settings (denormalized from ExerciseAssignment)
-  // These are only populated when cycle.progressionMode === 'simple'
+  // Populated when cycle.progressionMode === 'simple' OR (cycle is 'mixed' AND exercise uses 'simple')
   simpleBaseReps?: number;
   simpleBaseTime?: number;
   simpleBaseWeight?: number;
@@ -118,11 +165,11 @@ export interface ScheduledSet {
   simpleRepIncrement?: number;
   simpleTimeProgressionType?: ProgressionInterval;
   simpleTimeIncrement?: number;
-  simpleWeightProgressionType?: ProgressionInterval;  // Future
-  simpleWeightIncrement?: number;                      // Future
+  simpleWeightProgressionType?: ProgressionInterval;
+  simpleWeightIncrement?: number;
   
   // Note: target is calculated dynamically based on mode:
-  // - RFEM mode: current max × RFEM percentage
+  // - RFEM mode: current max × RFEM percentage (using workout's rfemValue from cycle rotation)
   // - Simple mode: base + (increment × progression interval count)
 }
 
@@ -190,7 +237,8 @@ export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
 // Progression mode labels
 export const PROGRESSION_MODE_LABELS: Record<ProgressionMode, string> = {
   rfem: 'RFEM Training',
-  simple: 'Simple Progression'
+  simple: 'Simple Progression',
+  mixed: 'Mixed (Per-Exercise)'
 };
 
 // Progression interval labels
@@ -275,4 +323,41 @@ export function getProgressionMode(cycle: Cycle): ProgressionMode {
  */
 export function isSimpleProgressionCycle(cycle: Cycle): boolean {
   return getProgressionMode(cycle) === 'simple';
+}
+
+/**
+ * Check if a cycle uses mixed progression mode.
+ */
+export function isMixedProgressionCycle(cycle: Cycle): boolean {
+  return getProgressionMode(cycle) === 'mixed';
+}
+
+/**
+ * Get the effective progression mode for a specific exercise within a cycle.
+ * - For 'rfem' cycles: always returns 'rfem'
+ * - For 'simple' cycles: always returns 'simple'
+ * - For 'mixed' cycles: returns the exercise's assigned mode, defaulting to 'rfem'
+ */
+export function getExerciseProgressionMode(
+  cycleMode: ProgressionMode,
+  assignment: ExerciseAssignment
+): ExerciseProgressionMode {
+  if (cycleMode === 'mixed') {
+    return assignment.progressionMode ?? 'rfem';
+  }
+  return cycleMode === 'simple' ? 'simple' : 'rfem';
+}
+
+/**
+ * Get the effective progression mode for a scheduled set within a workout.
+ * Uses the denormalized progressionMode on the set for mixed cycles.
+ */
+export function getSetProgressionMode(
+  cycleMode: ProgressionMode,
+  set: ScheduledSet
+): ExerciseProgressionMode {
+  if (cycleMode === 'mixed') {
+    return set.progressionMode ?? 'rfem';
+  }
+  return cycleMode === 'simple' ? 'simple' : 'rfem';
 }

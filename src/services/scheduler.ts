@@ -10,7 +10,7 @@ import type {
   ExerciseAssignment,
   ProgressionInterval
 } from '@/types';
-import { getProgressionMode } from '@/types';
+import { getProgressionMode, getExerciseProgressionMode, getSetProgressionMode } from '@/types';
 
 interface SchedulerInput {
   cycle: Cycle;
@@ -153,7 +153,8 @@ function createScheduledWorkout(
   exercises: Map<string, Exercise>
 ): Omit<ScheduledWorkout, 'id'> {
   const scheduledSets: ScheduledSet[] = [];
-  const isSimpleMode = getProgressionMode(cycle) === 'simple';
+  const cycleMode = getProgressionMode(cycle);
+  const isMixedMode = cycleMode === 'mixed';
   
   // Group exercises by type for this day's group
   const exercisesByType = new Map<ExerciseType, { 
@@ -188,6 +189,10 @@ function createScheduledWorkout(
       const exercise = exercises.get(exerciseId)!;
       const isConditioning = exercise.mode === 'conditioning';
       const isTimeBased = exercise.measurementType === 'time';
+      
+      // Determine the effective mode for this specific exercise
+      const exerciseMode = getExerciseProgressionMode(cycleMode, assignment);
+      const usesSimple = exerciseMode === 'simple';
 
       const scheduledSet: ScheduledSet = {
         id: generateId(),
@@ -198,9 +203,20 @@ function createScheduledWorkout(
         setNumber: Math.floor(setNum / availableExercises.length) + 1
       };
 
+      // For mixed mode, denormalize the per-exercise progression mode
+      if (isMixedMode) {
+        scheduledSet.progressionMode = exerciseMode;
+        
+        // Denormalize per-exercise conditioning increments
+        if (isConditioning) {
+          scheduledSet.conditioningRepIncrement = assignment.conditioningRepIncrement;
+          scheduledSet.conditioningTimeIncrement = assignment.conditioningTimeIncrement;
+        }
+      }
+
       // Add mode-specific fields
-      if (isSimpleMode) {
-        // Simple mode: copy progression settings from assignment
+      if (usesSimple && !isConditioning) {
+        // Simple mode (non-conditioning): copy progression settings from assignment
         if (isTimeBased) {
           scheduledSet.simpleBaseTime = assignment.simpleBaseTime;
           scheduledSet.simpleTimeProgressionType = assignment.simpleTimeProgressionType;
@@ -210,18 +226,18 @@ function createScheduledWorkout(
           scheduledSet.simpleRepProgressionType = assignment.simpleRepProgressionType;
           scheduledSet.simpleRepIncrement = assignment.simpleRepIncrement;
         }
-        // Weight progression (future-proofing)
+        // Weight progression
         scheduledSet.simpleBaseWeight = assignment.simpleBaseWeight;
         scheduledSet.simpleWeightProgressionType = assignment.simpleWeightProgressionType;
         scheduledSet.simpleWeightIncrement = assignment.simpleWeightIncrement;
-      } else {
-        // RFEM mode: conditioning fields
-        if (isConditioning) {
-          if (isTimeBased) {
-            scheduledSet.conditioningBaseTime = assignment.conditioningBaseTime || 30;
-          } else {
-            scheduledSet.conditioningBaseReps = assignment.conditioningBaseReps || 10;
-          }
+      }
+      
+      // Conditioning base values (used in all modes)
+      if (isConditioning) {
+        if (isTimeBased) {
+          scheduledSet.conditioningBaseTime = assignment.conditioningBaseTime || 30;
+        } else {
+          scheduledSet.conditioningBaseReps = assignment.conditioningBaseReps || 10;
         }
       }
 
@@ -320,6 +336,7 @@ function calculateProgressedValue(
  * 
  * For RFEM mode: Uses max records and RFEM percentage
  * For Simple mode: Uses base value + progression increments
+ * For Mixed mode: Uses the per-exercise mode (RFEM or Simple) stored on the set
  */
 export function calculateTargetReps(
   set: ScheduledSet,
@@ -330,12 +347,17 @@ export function calculateTargetReps(
   defaultMax: number = 10,
   cycle?: Cycle
 ): number {
-  // If cycle is provided and it's simple mode, use simple calculation
-  if (cycle && getProgressionMode(cycle) === 'simple') {
-    return calculateSimpleTargetReps(set, workout, cycle);
+  const cycleMode = cycle ? getProgressionMode(cycle) : 'rfem';
+  
+  // Determine the effective mode for this set
+  const effectiveMode = getSetProgressionMode(cycleMode, set);
+  
+  // For non-conditioning exercises, check if this set uses simple progression
+  if (!set.isConditioning && effectiveMode === 'simple') {
+    return calculateSimpleTargetReps(set, workout, cycle!);
   }
 
-  // RFEM mode calculation (original logic)
+  // RFEM mode calculation (or conditioning exercises in any mode)
   const isTimeBased = set.measurementType === 'time';
   const defaultTimeMax = 30; // 30 seconds default for time-based
   
@@ -358,15 +380,18 @@ export function calculateTargetReps(
   
   if (set.isConditioning) {
     // Conditioning: base + weekly increment
+    // For mixed mode, use per-exercise increment if available, otherwise use cycle defaults
     if (isTimeBased) {
       const baseTime = set.conditioningBaseTime || defaultTimeMax;
-      return baseTime + (workout.weekNumber - 1) * conditioningWeeklyTimeIncrement;
+      const increment = set.conditioningTimeIncrement ?? conditioningWeeklyTimeIncrement;
+      return baseTime + (workout.weekNumber - 1) * increment;
     } else {
       const baseReps = set.conditioningBaseReps || defaultMax;
-      return baseReps + (workout.weekNumber - 1) * conditioningWeeklyIncrement;
+      const increment = set.conditioningRepIncrement ?? conditioningWeeklyIncrement;
+      return baseReps + (workout.weekNumber - 1) * increment;
     }
   } else {
-    // Standard/Progressive: max - RFEM (same percentage logic applies to time)
+    // Standard/Progressive RFEM: max - RFEM (same percentage logic applies to time)
     if (isTimeBased) {
       const max = maxRecord?.maxTime || defaultTimeMax;
       return Math.max(5, max - workout.rfem * 3); // Scale RFEM for time (each RFEM = ~3 seconds)
@@ -386,7 +411,9 @@ export function validateCycle(
 ): { valid: boolean; errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const isSimpleMode = getProgressionMode(cycle as Cycle) === 'simple';
+  const cycleMode = getProgressionMode(cycle as Cycle);
+  const isSimpleMode = cycleMode === 'simple';
+  const isMixedMode = cycleMode === 'mixed';
 
   // Check basics
   if (!cycle.name.trim()) {
@@ -405,7 +432,7 @@ export function validateCycle(
     errors.push('Group rotation is required');
   }
   
-  // RFEM rotation is only required for RFEM mode
+  // RFEM rotation is required for RFEM and mixed modes (used by RFEM exercises)
   if (!isSimpleMode && cycle.rfemRotation.length === 0) {
     errors.push('RFEM rotation is required');
   }
@@ -417,23 +444,38 @@ export function validateCycle(
     }
   }
 
-  // Check that each group has exercises
+  // Check that each group has exercises and validate per-exercise settings
   for (const group of cycle.groups) {
     if (group.exerciseAssignments.length === 0) {
       warnings.push(`Group "${group.name}" has no exercises`);
     }
     
-    // For simple mode, check that exercises have base values set
-    if (isSimpleMode) {
-      for (const assignment of group.exerciseAssignments) {
-        const exercise = exercises.get(assignment.exerciseId);
-        if (!exercise) continue;
-        
-        const isTimeBased = exercise.measurementType === 'time';
+    for (const assignment of group.exerciseAssignments) {
+      const exercise = exercises.get(assignment.exerciseId);
+      if (!exercise) continue;
+      
+      const isTimeBased = exercise.measurementType === 'time';
+      const isConditioning = exercise.mode === 'conditioning';
+      
+      // Determine effective mode for this exercise
+      const exerciseMode = getExerciseProgressionMode(cycleMode, assignment);
+      
+      // For simple mode exercises (in simple or mixed cycles), check base values
+      if (exerciseMode === 'simple' && !isConditioning) {
         if (isTimeBased && assignment.simpleBaseTime === undefined) {
           warnings.push(`"${exercise.name}" in group "${group.name}" has no base time set`);
         } else if (!isTimeBased && assignment.simpleBaseReps === undefined) {
           warnings.push(`"${exercise.name}" in group "${group.name}" has no base reps set`);
+        }
+      }
+      
+      // For conditioning exercises in mixed mode, check increments are set
+      // (This is just a warning since we fall back to defaults)
+      if (isMixedMode && isConditioning) {
+        if (isTimeBased && assignment.conditioningTimeIncrement === undefined) {
+          // Not a warning - we fall back to cycle defaults gracefully
+        } else if (!isTimeBased && assignment.conditioningRepIncrement === undefined) {
+          // Not a warning - we fall back to cycle defaults gracefully
         }
       }
     }

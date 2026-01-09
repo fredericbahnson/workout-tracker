@@ -1,5 +1,5 @@
 import { db, generateId } from '@/data/db';
-import type { Exercise, ExerciseFormData, ExerciseType } from '@/types';
+import type { Exercise, ExerciseFormData, ExerciseType, ExerciseCycleDefaults } from '@/types';
 import { now, normalizeDates, normalizeDatesArray } from '@/utils/dateUtils';
 
 const DATE_FIELDS: (keyof Exercise)[] = ['createdAt', 'updatedAt'];
@@ -59,5 +59,23 @@ export const ExerciseRepo = {
       .filter(ex => ex.name.toLowerCase().includes(lowerQuery))
       .toArray();
     return normalizeDatesArray(records, DATE_FIELDS);
+  },
+
+  /**
+   * Update the last cycle settings for an exercise.
+   * These settings are used as smart defaults when adding the exercise to new cycles.
+   */
+  async updateLastCycleSettings(
+    exerciseId: string, 
+    settings: ExerciseCycleDefaults
+  ): Promise<void> {
+    const existing = await this.getById(exerciseId);
+    if (!existing) return;
+
+    await db.exercises.put({
+      ...existing,
+      lastCycleSettings: settings,
+      updatedAt: now()
+    });
   }
 };
