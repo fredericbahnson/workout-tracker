@@ -17,6 +17,7 @@ interface RemoteExercise {
   default_conditioning_time: number | null;
   weight_enabled: boolean;
   default_weight: number | null;
+  last_cycle_settings: unknown | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -54,6 +55,7 @@ interface RemoteCycle {
   user_id: string;
   name: string;
   cycle_type: string;
+  progression_mode: string | null;
   previous_cycle_id: string | null;
   start_date: string;
   number_of_weeks: number;
@@ -63,6 +65,7 @@ interface RemoteCycle {
   group_rotation: unknown;
   rfem_rotation: unknown;
   conditioning_weekly_rep_increment: number;
+  conditioning_weekly_time_increment: number | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -534,6 +537,7 @@ export const SyncService = {
       defaultConditioningTime: remote.default_conditioning_time ?? undefined,
       weightEnabled: remote.weight_enabled ?? undefined,
       defaultWeight: remote.default_weight ?? undefined,
+      lastCycleSettings: (remote.last_cycle_settings as Exercise['lastCycleSettings']) ?? undefined,
       createdAt: toDateRequired(remote.created_at),
       updatedAt: toDateRequired(remote.updated_at),
     };
@@ -571,6 +575,7 @@ export const SyncService = {
       id: remote.id,
       name: remote.name,
       cycleType: (remote.cycle_type as Cycle['cycleType']) || 'training',
+      progressionMode: (remote.progression_mode as Cycle['progressionMode']) || 'rfem',
       previousCycleId: remote.previous_cycle_id || undefined,
       startDate: toDateRequired(remote.start_date),
       numberOfWeeks: remote.number_of_weeks,
@@ -580,6 +585,7 @@ export const SyncService = {
       groupRotation: remote.group_rotation as string[],
       rfemRotation: remote.rfem_rotation as number[],
       conditioningWeeklyRepIncrement: remote.conditioning_weekly_rep_increment,
+      conditioningWeeklyTimeIncrement: remote.conditioning_weekly_time_increment ?? undefined,
       status: remote.status as Cycle['status'],
       createdAt: toDateRequired(remote.created_at),
       updatedAt: toDateRequired(remote.updated_at),
@@ -616,6 +622,7 @@ export const SyncService = {
       default_conditioning_time: local.defaultConditioningTime || null,
       weight_enabled: local.weightEnabled || false,
       default_weight: local.defaultWeight || null,
+      last_cycle_settings: local.lastCycleSettings || null,
       created_at: toISOString(local.createdAt),
       updated_at: toISOString(local.updatedAt),
     };
@@ -656,6 +663,7 @@ export const SyncService = {
       user_id: userId,
       name: local.name,
       cycle_type: local.cycleType,
+      progression_mode: local.progressionMode || 'rfem',
       previous_cycle_id: local.previousCycleId || null,
       start_date: toISOString(local.startDate),
       number_of_weeks: local.numberOfWeeks,
@@ -665,6 +673,7 @@ export const SyncService = {
       group_rotation: local.groupRotation,
       rfem_rotation: local.rfemRotation,
       conditioning_weekly_rep_increment: local.conditioningWeeklyRepIncrement,
+      conditioning_weekly_time_increment: local.conditioningWeeklyTimeIncrement || null,
       status: local.status,
       created_at: toISOString(local.createdAt),
       updated_at: toISOString(local.updatedAt),
