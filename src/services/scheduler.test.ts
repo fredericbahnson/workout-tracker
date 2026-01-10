@@ -1593,4 +1593,360 @@ describe('Mixed Mode', () => {
       expect(result.errors).toHaveLength(0);
     });
   });
+
+  // ============================================================================
+  // Warmup Sets Tests
+  // ============================================================================
+  
+  describe('Warmup Sets', () => {
+    describe('RFEM mode warmups', () => {
+      it('generates 2 warmup sets when includeWarmupSets is enabled', () => {
+        const exercises = new Map([
+          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
+        ]);
+
+        const cycle = createMockCycle({
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          includeWarmupSets: true,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ exerciseId: 'ex-1' }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const workout = workouts[0];
+        
+        const warmupSets = workout.scheduledSets.filter(s => s.isWarmup);
+        const workingSets = workout.scheduledSets.filter(s => !s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(2);
+        expect(warmupSets[0].warmupPercentage).toBe(20);
+        expect(warmupSets[1].warmupPercentage).toBe(40);
+        expect(workingSets.length).toBeGreaterThan(0);
+      });
+
+      it('warmup sets are numbered 1 and 2, working sets start from 3', () => {
+        const exercises = new Map([
+          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
+        ]);
+
+        const cycle = createMockCycle({
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          includeWarmupSets: true,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ exerciseId: 'ex-1' }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const sets = workouts[0].scheduledSets.filter(s => s.exerciseId === 'ex-1');
+        
+        const warmupSets = sets.filter(s => s.isWarmup);
+        const workingSets = sets.filter(s => !s.isWarmup);
+        
+        expect(warmupSets[0].setNumber).toBe(1);
+        expect(warmupSets[1].setNumber).toBe(2);
+        expect(workingSets[0].setNumber).toBe(3);
+      });
+
+      it('does not generate warmups when includeWarmupSets is false', () => {
+        const exercises = new Map([
+          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
+        ]);
+
+        const cycle = createMockCycle({
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          includeWarmupSets: false,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ exerciseId: 'ex-1' }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(0);
+      });
+
+      it('does not generate warmups for conditioning exercises', () => {
+        const exercises = new Map([
+          ['cond-ex', createMockExercise({ 
+            id: 'cond-ex', 
+            type: 'core', 
+            mode: 'conditioning',
+            defaultConditioningReps: 30
+          })],
+        ]);
+
+        const cycle = createMockCycle({
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
+          includeWarmupSets: true,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ exerciseId: 'cond-ex', conditioningBaseReps: 30 }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(0);
+      });
+
+      it('skips time-based exercise warmups when includeTimedWarmups is false', () => {
+        const exercises = new Map([
+          ['time-ex', createMockExercise({ 
+            id: 'time-ex', 
+            type: 'balance',
+            measurementType: 'time'
+          })],
+        ]);
+
+        const cycle = createMockCycle({
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 0, balance: 5, mobility: 0, other: 0 },
+          includeWarmupSets: true,
+          includeTimedWarmups: false,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ exerciseId: 'time-ex' }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(0);
+      });
+
+      it('generates time-based warmups when includeTimedWarmups is true', () => {
+        const exercises = new Map([
+          ['time-ex', createMockExercise({ 
+            id: 'time-ex', 
+            type: 'balance',
+            measurementType: 'time'
+          })],
+        ]);
+
+        const cycle = createMockCycle({
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 0, balance: 5, mobility: 0, other: 0 },
+          includeWarmupSets: true,
+          includeTimedWarmups: true,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ exerciseId: 'time-ex' }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(2);
+        expect(warmupSets[0].measurementType).toBe('time');
+      });
+    });
+
+    describe('Simple mode warmups', () => {
+      it('generates warmup sets for simple progression exercises', () => {
+        const exercises = new Map([
+          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
+        ]);
+
+        const cycle = createMockCycle({
+          progressionMode: 'simple',
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          includeWarmupSets: true,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ 
+              exerciseId: 'ex-1',
+              simpleBaseReps: 10,
+              simpleRepProgressionType: 'per_week',
+              simpleRepIncrement: 2,
+            }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(2);
+        expect(warmupSets[0].warmupPercentage).toBe(20);
+        expect(warmupSets[1].warmupPercentage).toBe(40);
+      });
+
+      it('stores simple mode values in warmup sets for rep progression', () => {
+        const exercises = new Map([
+          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
+        ]);
+
+        const cycle = createMockCycle({
+          progressionMode: 'simple',
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          includeWarmupSets: true,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ 
+              exerciseId: 'ex-1',
+              simpleBaseReps: 10,
+              simpleRepProgressionType: 'per_week',
+              simpleRepIncrement: 2,
+            }],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        // 20% of 10 = 2 (ceil), 40% of 10 = 4 (ceil)
+        expect(warmupSets[0].simpleBaseReps).toBe(2);
+        expect(warmupSets[1].simpleBaseReps).toBe(4);
+      });
+    });
+
+    describe('Mixed mode warmups', () => {
+      it('respects per-exercise warmup toggle in mixed mode', () => {
+        const exercises = new Map([
+          ['warmup-ex', createMockExercise({ id: 'warmup-ex', type: 'push' })],
+          ['no-warmup-ex', createMockExercise({ id: 'no-warmup-ex', type: 'pull' })],
+        ]);
+
+        const cycle = createMockCycle({
+          progressionMode: 'mixed',
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          weeklySetGoals: { push: 5, pull: 5, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { exerciseId: 'warmup-ex', progressionMode: 'rfem', includeWarmup: true },
+              { exerciseId: 'no-warmup-ex', progressionMode: 'rfem', includeWarmup: false },
+            ],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        const warmupExerciseIds = warmupSets.map(s => s.exerciseId);
+        
+        expect(warmupSets).toHaveLength(2); // Only 2 warmups for warmup-ex
+        expect(warmupExerciseIds.every(id => id === 'warmup-ex')).toBe(true);
+      });
+
+      it('generates warmups for RFEM exercises in mixed mode when per-exercise enabled', () => {
+        const exercises = new Map([
+          ['rfem-ex', createMockExercise({ id: 'rfem-ex', type: 'push' })],
+        ]);
+
+        const cycle = createMockCycle({
+          progressionMode: 'mixed',
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { exerciseId: 'rfem-ex', progressionMode: 'rfem', includeWarmup: true },
+            ],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(2);
+        expect(warmupSets[0].progressionMode).toBe('rfem');
+      });
+
+      it('generates warmups for simple exercises in mixed mode when per-exercise enabled', () => {
+        const exercises = new Map([
+          ['simple-ex', createMockExercise({ id: 'simple-ex', type: 'legs' })],
+        ]);
+
+        const cycle = createMockCycle({
+          progressionMode: 'mixed',
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          weeklySetGoals: { push: 0, pull: 0, legs: 5, core: 0, balance: 0, mobility: 0, other: 0 },
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { 
+                exerciseId: 'simple-ex', 
+                progressionMode: 'simple', 
+                includeWarmup: true,
+                simpleBaseReps: 15,
+                simpleRepProgressionType: 'per_week',
+                simpleRepIncrement: 2,
+              },
+            ],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        expect(warmupSets).toHaveLength(2);
+        expect(warmupSets[0].progressionMode).toBe('simple');
+      });
+    });
+
+    describe('Multiple exercises with warmups', () => {
+      it('generates warmups for each unique exercise', () => {
+        const exercises = new Map([
+          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push', name: 'Push-ups' })],
+          ['ex-2', createMockExercise({ id: 'ex-2', type: 'push', name: 'Dips' })],
+        ]);
+
+        const cycle = createMockCycle({
+          numberOfWeeks: 1,
+          workoutDaysPerWeek: 1,
+          includeWarmupSets: true,
+          groups: [createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { exerciseId: 'ex-1' },
+              { exerciseId: 'ex-2' },
+            ],
+          })],
+          groupRotation: ['group-a'],
+        });
+
+        const workouts = generateSchedule({ cycle, exercises });
+        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
+        
+        // 2 warmup sets per exercise = 4 total
+        expect(warmupSets).toHaveLength(4);
+        
+        const ex1Warmups = warmupSets.filter(s => s.exerciseId === 'ex-1');
+        const ex2Warmups = warmupSets.filter(s => s.exerciseId === 'ex-2');
+        
+        expect(ex1Warmups).toHaveLength(2);
+        expect(ex2Warmups).toHaveLength(2);
+      });
+    });
+  });
 });

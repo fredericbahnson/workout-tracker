@@ -82,6 +82,10 @@ export interface ExerciseAssignment {
   // undefined = defaults to 'rfem' in mixed mode, or follows cycle mode otherwise
   progressionMode?: ExerciseProgressionMode;
   
+  // Per-exercise warmup toggle (for mixed cycles only)
+  // In pure RFEM/simple modes, global cycle value is used
+  includeWarmup?: boolean;
+  
   // Conditioning settings (used in all modes)
   conditioningBaseReps?: number;     // For rep-based conditioning
   conditioningBaseTime?: number;     // For time-based conditioning (seconds)
@@ -128,6 +132,8 @@ export interface Cycle {
   rfemRotation: number[];              // Used for RFEM and mixed modes (applies to all RFEM exercises)
   conditioningWeeklyRepIncrement: number;   // Global fallback; mixed mode uses per-exercise increments
   conditioningWeeklyTimeIncrement?: number; // Global fallback; mixed mode uses per-exercise increments
+  includeWarmupSets?: boolean;         // Whether to generate warmup sets for exercises
+  includeTimedWarmups?: boolean;       // Include warmups for time-based exercises (when warmups enabled)
   status: 'planning' | 'active' | 'completed';
   createdAt: Date;
   updatedAt: Date;
@@ -141,7 +147,8 @@ export interface ScheduledSet {
   conditioningBaseReps?: number;     // Only for conditioning exercises (reps)
   conditioningBaseTime?: number;     // Only for conditioning exercises (time in seconds)
   setNumber: number;
-  isWarmup?: boolean;                // For max testing: warmup set at 20% of previous max
+  isWarmup?: boolean;                // For warmup sets and max testing warmups
+  warmupPercentage?: number;         // 20 or 40 - intensity percentage for warmup sets
   isMaxTest?: boolean;               // For max testing: the actual max attempt
   previousMaxReps?: number;          // For reference during max testing (reps)
   previousMaxTime?: number;          // For reference during max testing (time in seconds)

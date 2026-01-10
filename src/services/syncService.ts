@@ -66,6 +66,8 @@ interface RemoteCycle {
   rfem_rotation: unknown;
   conditioning_weekly_rep_increment: number;
   conditioning_weekly_time_increment: number | null;
+  include_warmup_sets: boolean | null;
+  include_timed_warmups: boolean | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -586,6 +588,8 @@ export const SyncService = {
       rfemRotation: remote.rfem_rotation as number[],
       conditioningWeeklyRepIncrement: remote.conditioning_weekly_rep_increment,
       conditioningWeeklyTimeIncrement: remote.conditioning_weekly_time_increment ?? undefined,
+      includeWarmupSets: remote.include_warmup_sets ?? undefined,
+      includeTimedWarmups: remote.include_timed_warmups ?? undefined,
       status: remote.status as Cycle['status'],
       createdAt: toDateRequired(remote.created_at),
       updatedAt: toDateRequired(remote.updated_at),
@@ -674,6 +678,8 @@ export const SyncService = {
       rfem_rotation: local.rfemRotation,
       conditioning_weekly_rep_increment: local.conditioningWeeklyRepIncrement,
       conditioning_weekly_time_increment: local.conditioningWeeklyTimeIncrement || null,
+      include_warmup_sets: local.includeWarmupSets ?? false,
+      include_timed_warmups: local.includeTimedWarmups ?? false,
       status: local.status,
       created_at: toISOString(local.createdAt),
       updated_at: toISOString(local.updatedAt),

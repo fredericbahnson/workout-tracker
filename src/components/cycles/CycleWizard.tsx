@@ -111,6 +111,16 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
     editCycle?.conditioningWeeklyRepIncrement || defaults.conditioningWeeklyIncrement
   );
 
+  // Warmup settings - default from edit cycle, most recent cycle, or off
+  const [includeWarmupSets, setIncludeWarmupSets] = useState<boolean>(() => {
+    if (editCycle) return editCycle.includeWarmupSets ?? false;
+    return false; // Will be updated when allCycles loads
+  });
+  const [includeTimedWarmups, setIncludeTimedWarmups] = useState<boolean>(() => {
+    if (editCycle) return editCycle.includeTimedWarmups ?? false;
+    return false;
+  });
+
   // Data queries
   const exercises = useLiveQuery(() => ExerciseRepo.getAll(), []);
   
@@ -122,6 +132,21 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
     if (!editCycle) return null;
     return ScheduledWorkoutRepo.getCycleProgress(editCycle.id);
   }, [editCycle?.id]);
+
+  // Smart defaults from most recent completed cycle (for new cycles only)
+  useEffect(() => {
+    if (editCycle || !allCycles || !initialProgressionMode) return;
+    
+    // Find most recent completed training cycle
+    const recentCycle = allCycles
+      .filter(c => c.cycleType === 'training' && c.status === 'completed')
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+    
+    if (recentCycle) {
+      setIncludeWarmupSets(recentCycle.includeWarmupSets ?? false);
+      setIncludeTimedWarmups(recentCycle.includeTimedWarmups ?? false);
+    }
+  }, [allCycles, editCycle, initialProgressionMode]);
 
   // Clone from a previous cycle
   const handleCloneFromCycle = (sourceCycle: Cycle) => {
@@ -151,6 +176,8 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
     setNumberOfWeeks(sourceCycle.numberOfWeeks);
     setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
     setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
+    setIncludeWarmupSets(sourceCycle.includeWarmupSets ?? false);
+    setIncludeTimedWarmups(sourceCycle.includeTimedWarmups ?? false);
     
     // Use default naming convention
     setName(getDefaultCycleName());
@@ -388,6 +415,8 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
           groupRotation,
           rfemRotation,
           conditioningWeeklyRepIncrement,
+          includeWarmupSets,
+          includeTimedWarmups,
           updatedAt: new Date()
         };
         await CycleRepo.update(editCycle.id, updatedCycle);
@@ -447,6 +476,8 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
           groupRotation,
           rfemRotation,
           conditioningWeeklyRepIncrement,
+          includeWarmupSets,
+          includeTimedWarmups,
           status: 'active'
         });
 
@@ -666,6 +697,10 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
             conditioningWeeklyRepIncrement={conditioningWeeklyRepIncrement}
             setConditioningWeeklyRepIncrement={setConditioningWeeklyRepIncrement}
             workoutDaysPerWeek={workoutDaysPerWeek}
+            includeWarmupSets={includeWarmupSets}
+            setIncludeWarmupSets={setIncludeWarmupSets}
+            includeTimedWarmups={includeTimedWarmups}
+            setIncludeTimedWarmups={setIncludeTimedWarmups}
           />
         )}
 
@@ -681,6 +716,8 @@ export function CycleWizard({ onComplete, onCancel, editCycle, initialProgressio
             weeklySetGoals={weeklySetGoals}
             groupRotation={groupRotation}
             rfemRotation={rfemRotation}
+            includeWarmupSets={includeWarmupSets}
+            includeTimedWarmups={includeTimedWarmups}
             validation={validation}
           />
         )}
@@ -1346,7 +1383,7 @@ function MixedExerciseConfig({
       </div>
       
       {exerciseMode === 'rfem' ? (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           Uses cycle's RFEM rotation for target {isTimeBased ? 'time' : 'reps'}
         </p>
       ) : (
@@ -1358,6 +1395,17 @@ function MixedExerciseConfig({
           onUpdate={onUpdate}
         />
       )}
+      
+      {/* Warmup Toggle */}
+      <label className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-dark-border cursor-pointer">
+        <input
+          type="checkbox"
+          checked={assignment.includeWarmup ?? false}
+          onChange={(e) => onUpdate({ includeWarmup: e.target.checked })}
+          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+        />
+        <span className="text-xs text-gray-600 dark:text-gray-400">Include warmup sets</span>
+      </label>
     </div>
   );
 }
@@ -1532,7 +1580,11 @@ function GoalsStep({
   setRfemRotation,
   conditioningWeeklyRepIncrement,
   setConditioningWeeklyRepIncrement,
-  workoutDaysPerWeek
+  workoutDaysPerWeek,
+  includeWarmupSets,
+  setIncludeWarmupSets,
+  includeTimedWarmups,
+  setIncludeTimedWarmups
 }: {
   progressionMode: ProgressionMode;
   weeklySetGoals: Record<ExerciseType, number>;
@@ -1545,6 +1597,10 @@ function GoalsStep({
   conditioningWeeklyRepIncrement: number;
   setConditioningWeeklyRepIncrement: (v: number) => void;
   workoutDaysPerWeek: number;
+  includeWarmupSets: boolean;
+  setIncludeWarmupSets: (v: boolean) => void;
+  includeTimedWarmups: boolean;
+  setIncludeTimedWarmups: (v: boolean) => void;
 }) {
   const isSimpleMode = progressionMode === 'simple';
   const isMixedMode = progressionMode === 'mixed';
@@ -1685,6 +1741,57 @@ function GoalsStep({
             min={0}
             className="w-24"
           />
+        </div>
+      )}
+
+      {/* Warmup Sets - for RFEM and Simple modes (mixed mode handles per-exercise) */}
+      {!isMixedMode && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Warmup Sets
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            Add warmup sets before working sets for each exercise
+          </p>
+          
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeWarmupSets}
+                onChange={(e) => {
+                  setIncludeWarmupSets(e.target.checked);
+                  if (!e.target.checked) {
+                    setIncludeTimedWarmups(false);
+                  }
+                }}
+                className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+              />
+              <div>
+                <span className="font-medium text-gray-900 dark:text-gray-100">Include warmup sets</span>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  2 warmup sets at 20% and 40% intensity before working sets
+                </p>
+              </div>
+            </label>
+            
+            {includeWarmupSets && (
+              <label className="flex items-center gap-3 cursor-pointer ml-8">
+                <input
+                  type="checkbox"
+                  checked={includeTimedWarmups}
+                  onChange={(e) => setIncludeTimedWarmups(e.target.checked)}
+                  className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                />
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">Include time-based warmups</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Generate warmups for time-based exercises as well
+                  </p>
+                </div>
+              </label>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -2004,6 +2111,8 @@ function ReviewStep({
   weeklySetGoals,
   groupRotation,
   rfemRotation,
+  includeWarmupSets,
+  includeTimedWarmups,
   validation
 }: {
   progressionMode: ProgressionMode;
@@ -2016,6 +2125,8 @@ function ReviewStep({
   weeklySetGoals: Record<ExerciseType, number>;
   groupRotation: string[];
   rfemRotation: number[];
+  includeWarmupSets: boolean;
+  includeTimedWarmups: boolean;
   validation: { valid: boolean; errors: string[]; warnings: string[] };
 }) {
   const isSimpleMode = progressionMode === 'simple';
@@ -2148,6 +2259,24 @@ function ReviewStep({
           ))}
         </div>
       </Card>
+
+      {/* Warmup Configuration (for non-mixed modes) */}
+      {!isMixedMode && (
+        <Card className="p-4">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+            Warmup Sets
+          </h3>
+          {includeWarmupSets ? (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              <p>✓ Warmup sets enabled (20% and 40% intensity)</p>
+              {includeTimedWarmups && <p>✓ Including time-based exercise warmups</p>}
+              {!includeTimedWarmups && <p className="text-gray-500">• Time-based warmups disabled</p>}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No warmup sets</p>
+          )}
+        </Card>
+      )}
 
       {/* Simple Mode: Exercise Targets Summary */}
       {isSimpleMode && (

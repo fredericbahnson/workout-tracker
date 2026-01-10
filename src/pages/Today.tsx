@@ -313,7 +313,11 @@ export function TodayPage() {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
       // Show rest timer if enabled (regular sets only here, max test redirects above)
       if (restTimer.enabled) {
-        setRestTimerDuration(restTimer.defaultDurationSeconds);
+        // Use 50% duration for warmup sets
+        const duration = set.isWarmup 
+          ? Math.round(restTimer.defaultDurationSeconds * 0.5)
+          : restTimer.defaultDurationSeconds;
+        setRestTimerDuration(duration);
         setShowRestTimer(true);
       }
     }
@@ -444,12 +448,16 @@ export function TodayPage() {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
           // Show rest timer if enabled and there are more sets
           // Use max test rest timer for max test sets, regular rest timer otherwise
+          // Use 50% duration for warmup sets
           if (set.isMaxTest && maxTestRestTimer.enabled) {
             shouldShowTimer = true;
             setRestTimerDuration(maxTestRestTimer.defaultDurationSeconds);
           } else if (!set.isMaxTest && restTimer.enabled) {
             shouldShowTimer = true;
-            setRestTimerDuration(restTimer.defaultDurationSeconds);
+            const duration = set.isWarmup 
+              ? Math.round(restTimer.defaultDurationSeconds * 0.5)
+              : restTimer.defaultDurationSeconds;
+            setRestTimerDuration(duration);
           }
         }
         

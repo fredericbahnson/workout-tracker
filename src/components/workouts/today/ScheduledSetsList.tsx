@@ -93,8 +93,13 @@ export function ScheduledSetsList({
                             : `${targetReps} reps`
                       }${targetWeight ? ` at ${targetWeight} pounds` : ''}${isWarmupSet ? ', warmup set' : ''}. Press Enter for details, Right arrow to complete, Left arrow to skip.`}
                     >
-                      <div className="flex items-center gap-4 p-4 text-left">
-                        <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                      <div className={`flex items-center gap-4 p-4 text-left ${isWarmupSet ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}>
+                        <div className="flex flex-col items-center w-8 flex-shrink-0">
+                          <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600" />
+                          <span className={`text-xs mt-0.5 ${isWarmupSet ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                            {set.setNumber}{isWarmupSet ? 'w' : ''}
+                          </span>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                             {exercise.name}
@@ -102,7 +107,7 @@ export function ScheduledSetsList({
                           <div className="flex items-center gap-2 mt-1">
                             {isWarmupSet && (
                               <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
-                                Warmup
+                                Warmup {set.warmupPercentage ? `${set.warmupPercentage}%` : ''}
                               </span>
                             )}
                             {isMaxTestSet && (
@@ -114,7 +119,7 @@ export function ScheduledSetsList({
                         </div>
                         <div className="flex flex-col items-end">
                           <div className="flex items-baseline gap-1">
-                            <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`}>
+                            <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : isWarmupSet ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'}`}>
                               {isMaxTestSet ? 'MAX' : isTimeBased ? formatTime(targetReps) : targetReps}
                             </span>
                             {targetWeight !== undefined && targetWeight > 0 && (

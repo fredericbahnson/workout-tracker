@@ -175,7 +175,114 @@ function createScheduledWorkout(
     });
   }
 
-  // For each type, create the scheduled sets
+  // Track which exercises will appear in this workout and need warmups
+  // We need to know how many working sets each exercise will have to determine targets
+  const exerciseWorkingSets = new Map<string, { 
+    count: number;
+    assignment: ExerciseAssignment;
+    exercise: Exercise;
+    hasWarmups: boolean;
+  }>();
+  
+  // First pass: count working sets per exercise and determine warmup eligibility
+  for (const [type, setsNeeded] of Object.entries(day.setsByType)) {
+    const exerciseType = type as ExerciseType;
+    const availableExercises = exercisesByType.get(exerciseType) || [];
+    
+    if (availableExercises.length === 0 || setsNeeded === 0) continue;
+    
+    for (let setNum = 0; setNum < setsNeeded; setNum++) {
+      const exIndex = setNum % availableExercises.length;
+      const { exerciseId, assignment } = availableExercises[exIndex];
+      const exercise = exercises.get(exerciseId)!;
+      
+      if (!exerciseWorkingSets.has(exerciseId)) {
+        const hasWarmups = shouldGenerateWarmups(exercise, assignment, cycle, cycleMode);
+        exerciseWorkingSets.set(exerciseId, { 
+          count: 0, 
+          assignment, 
+          exercise,
+          hasWarmups
+        });
+      }
+      exerciseWorkingSets.get(exerciseId)!.count++;
+    }
+  }
+  
+  // Second pass: generate warmup sets for exercises that need them
+  for (const [exerciseId, info] of exerciseWorkingSets) {
+    if (!info.hasWarmups) continue;
+    
+    const { exercise, assignment } = info;
+    const exerciseMode = getExerciseProgressionMode(cycleMode, assignment);
+    const isTimeBased = exercise.measurementType === 'time';
+    const isWeighted = exercise.weightEnabled === true;
+    
+    // Calculate the target value for working sets (needed for warmup calculation)
+    let workoutTargetValue: number;
+    let workoutTargetWeight: number | undefined;
+    let progressionType: 'reps' | 'time' | 'weight' | undefined;
+    
+    if (exerciseMode === 'simple') {
+      // For simple mode, use base values
+      if (isTimeBased) {
+        workoutTargetValue = assignment.simpleBaseTime ?? 30;
+        progressionType = (assignment.simpleTimeProgressionType !== 'constant' && assignment.simpleTimeIncrement) 
+          ? 'time' : undefined;
+      } else {
+        workoutTargetValue = assignment.simpleBaseReps ?? 10;
+        progressionType = (assignment.simpleRepProgressionType !== 'constant' && assignment.simpleRepIncrement)
+          ? 'reps' : undefined;
+      }
+      
+      if (isWeighted) {
+        workoutTargetWeight = assignment.simpleBaseWeight;
+        // Check if weight is the primary progression
+        if (assignment.simpleWeightProgressionType !== 'constant' && assignment.simpleWeightIncrement) {
+          progressionType = 'weight';
+        }
+      }
+    } else {
+      // For RFEM mode, use RFEM percentage (we don't have max here, so use a placeholder)
+      // The actual target will be calculated at workout time based on current max
+      // For warmup purposes, we'll use the RFEM value as a percentage indicator
+      workoutTargetValue = day.rfem * 10; // Rough estimate: RFEM 4 = ~40 reps
+      workoutTargetWeight = isWeighted ? (exercise.defaultWeight ?? 0) : undefined;
+    }
+    
+    const warmups = generateWarmupSets({
+      exerciseId,
+      exerciseType: exercise.type,
+      measurementType: exercise.measurementType || 'reps',
+      isWeighted,
+      workoutTargetValue,
+      workoutTargetWeight,
+      effectiveMode: exerciseMode,
+      progressionType,
+      weightIncrement: assignment.simpleWeightIncrement
+    });
+    
+    // Copy mode-specific fields to warmup sets for display/calculation
+    if (isMixedMode) {
+      warmups.forEach(w => {
+        w.progressionMode = exerciseMode;
+      });
+    }
+    
+    // For RFEM mode warmups, we need to store info to calculate at workout time
+    if (exerciseMode === 'rfem') {
+      warmups.forEach(w => {
+        // Clear any simple mode values - warmups will calculate from RFEM
+        w.simpleBaseReps = undefined;
+        w.simpleBaseTime = undefined;
+        w.simpleBaseWeight = undefined;
+      });
+    }
+    
+    scheduledSets.push(...warmups);
+  }
+
+  // Third pass: generate working sets with adjusted set numbers
   for (const [type, setsNeeded] of Object.entries(day.setsByType)) {
     const exerciseType = type as ExerciseType;
     const availableExercises = exercisesByType.get(exerciseType) || [];
@@ -193,6 +300,11 @@ function createScheduledWorkout(
       // Determine the effective mode for this specific exercise
       const exerciseMode = getExerciseProgressionMode(cycleMode, assignment);
       const usesSimple = exerciseMode === 'simple';
+      
+      // Calculate set number, accounting for warmups
+      const info = exerciseWorkingSets.get(exerciseId)!;
+      const warmupOffset = info.hasWarmups ? 2 : 0; // 2 warmup sets
+      const baseSetNumber = Math.floor(setNum / availableExercises.length) + 1;
 
       const scheduledSet: ScheduledSet = {
         id: generateId(),
@@ -200,7 +312,8 @@ function createScheduledWorkout(
         exerciseType,
         isConditioning,
         measurementType: exercise.measurementType || 'reps',
-        setNumber: Math.floor(setNum / availableExercises.length) + 1
+        setNumber: baseSetNumber + warmupOffset,
+        isWarmup: false
       };
 
       // For mixed mode, denormalize the per-exercise progression mode
@@ -512,3 +625,141 @@ export function validateCycle(
     warnings
   };
 }
+
+/**
+ * Round a weight value to the nearest increment.
+ * @param weight - The weight to round
+ * @param increment - The increment to round to (default 5)
+ */
+function roundToWeightIncrement(weight: number, increment: number = 5): number {
+  if (increment <= 0) return Math.round(weight);
+  return Math.round(weight / increment) * increment;
+}
+
+/**
+ * Determine if an exercise should have warmup sets generated.
+ */
+function shouldGenerateWarmups(
+  exercise: Exercise,
+  assignment: ExerciseAssignment,
+  cycle: Cycle,
+  cycleMode: 'rfem' | 'simple' | 'mixed'
+): boolean {
+  // Conditioning exercises never get warmups
+  if (exercise.mode === 'conditioning') return false;
+  
+  // Time-based exercises only get warmups if includeTimedWarmups is enabled
+  const isTimeBased = exercise.measurementType === 'time';
+  if (isTimeBased && !cycle.includeTimedWarmups) return false;
+  
+  // For mixed mode, check per-exercise setting
+  if (cycleMode === 'mixed') {
+    return assignment.includeWarmup === true;
+  }
+  
+  // For RFEM/Simple modes, check global cycle setting
+  return cycle.includeWarmupSets === true;
+}
+
+interface WarmupParams {
+  exerciseId: string;
+  exerciseType: ExerciseType;
+  measurementType: 'reps' | 'time';
+  isWeighted: boolean;
+  workoutTargetValue: number;        // Target reps or time for working sets
+  workoutTargetWeight?: number;      // Weight for working sets (if applicable)
+  effectiveMode: 'rfem' | 'simple';  // The mode this exercise uses
+  progressionType?: 'reps' | 'time' | 'weight';  // For simple mode: what is progressing
+  weightIncrement?: number;          // For rounding weight
+}
+
+/**
+ * Generate warmup sets for an exercise.
+ * Returns 2 warmup sets at 20% and 40% intensity.
+ */
+function generateWarmupSets(params: WarmupParams): ScheduledSet[] {
+  const {
+    exerciseId,
+    exerciseType,
+    measurementType,
+    isWeighted,
+    workoutTargetValue,
+    workoutTargetWeight,
+    effectiveMode,
+    progressionType,
+    weightIncrement
+  } = params;
+  
+  const isTimeBased = measurementType === 'time';
+  const warmupSets: ScheduledSet[] = [];
+  
+  if (effectiveMode === 'rfem') {
+    // RFEM mode: warmups are 20% and 40% of target reps/time
+    // The actual warmup values are calculated at display time based on current max
+    // We just store the warmupPercentage for calculation
+    for (const percentage of [20, 40]) {
+      warmupSets.push({
+        id: generateId(),
+        exerciseId,
+        exerciseType,
+        isConditioning: false,
+        measurementType,
+        setNumber: warmupSets.length + 1,
+        isWarmup: true,
+        warmupPercentage: percentage
+      });
+    }
+  } else {
+    // Simple mode: warmup calculation depends on what's progressing
+    for (const percentage of [20, 40]) {
+      let warmupReps: number;
+      let warmupWeight: number | undefined;
+      
+      if (progressionType === 'weight' && workoutTargetWeight !== undefined) {
+        // Weight progression: 60% reps, 20%/40% weight
+        warmupReps = isTimeBased
+          ? Math.round(workoutTargetValue * 0.6)
+          : Math.ceil(workoutTargetValue * 0.6);
+        warmupWeight = roundToWeightIncrement(
+          workoutTargetWeight * (percentage / 100),
+          weightIncrement
+        );
+      } else if (progressionType === 'time' && isTimeBased) {
+        // Time progression: 20%/40% of target time
+        warmupReps = Math.round(workoutTargetValue * (percentage / 100));
+        warmupWeight = isWeighted && workoutTargetWeight
+          ? roundToWeightIncrement(workoutTargetWeight * 0.6, 5)
+          : undefined;
+      } else {
+        // Rep progression (default): 20%/40% of target reps, 60% weight
+        warmupReps = isTimeBased
+          ? Math.round(workoutTargetValue * (percentage / 100))
+          : Math.ceil(workoutTargetValue * (percentage / 100));
+        warmupWeight = isWeighted && workoutTargetWeight
+          ? roundToWeightIncrement(workoutTargetWeight * 0.6, 5)
+          : undefined;
+      }
+      
+      // Ensure minimum values
+      warmupReps = Math.max(1, warmupReps);
+      
+      warmupSets.push({
+        id: generateId(),
+        exerciseId,
+        exerciseType,
+        isConditioning: false,
+        measurementType,
+        setNumber: warmupSets.length + 1,
+        isWarmup: true,
+        warmupPercentage: percentage,
+        // Store computed warmup values for simple mode
+        simpleBaseReps: isTimeBased ? undefined : warmupReps,
+        simpleBaseTime: isTimeBased ? warmupReps : undefined,
+        simpleBaseWeight: warmupWeight
+      });
+    }
+  }
+  
+  return warmupSets;
+}
+
