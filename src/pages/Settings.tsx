@@ -6,6 +6,7 @@ import { useAuth, useSync } from '@/contexts';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, Button, Modal, NumberInput, Badge, Select, Input, TimeDurationInput } from '@/components/ui';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
+import { APP_VERSION } from '@/constants/version';
 
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
@@ -619,7 +620,7 @@ export function SettingsPage() {
               About
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v2.5.0
+              Ascend v{APP_VERSION}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training
