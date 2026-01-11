@@ -7,13 +7,14 @@
  * Remote format: snake_case, ISO string dates
  */
 
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '@/types';
+import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences, WeeklySetGoals } from '@/types';
 import type {
   RemoteExercise,
   RemoteMaxRecord,
   RemoteCompletedSet,
   RemoteCycle,
   RemoteScheduledWorkout,
+  RemoteUserPreferences,
 } from './types';
 import { toDate, toDateRequired, toISOString } from '@/utils/dateUtils';
 
@@ -227,5 +228,52 @@ export function localToRemoteScheduledWorkout(local: ScheduledWorkout, userId: s
     scheduled_sets: local.scheduledSets,
     status: local.status,
     completed_at: local.completedAt ? toISOString(local.completedAt) : null,
+  };
+}
+
+// =============================================================================
+// User Preferences Transformers
+// =============================================================================
+
+/**
+ * Convert a remote user preferences record to local format.
+ */
+export function remoteToLocalUserPreferences(remote: RemoteUserPreferences): UserPreferences {
+  return {
+    id: remote.id,
+    defaultMaxReps: remote.default_max_reps,
+    defaultConditioningReps: remote.default_conditioning_reps,
+    conditioningWeeklyIncrement: remote.conditioning_weekly_increment,
+    weeklySetGoals: remote.weekly_set_goals as WeeklySetGoals,
+    restTimer: {
+      enabled: remote.rest_timer_enabled,
+      durationSeconds: remote.rest_timer_duration_seconds,
+    },
+    maxTestRestTimer: {
+      enabled: remote.max_test_rest_timer_enabled,
+      durationSeconds: remote.max_test_rest_timer_duration_seconds,
+    },
+    createdAt: toDateRequired(remote.created_at),
+    updatedAt: toDateRequired(remote.updated_at),
+  };
+}
+
+/**
+ * Convert a local user preferences record to remote format.
+ */
+export function localToRemoteUserPreferences(local: UserPreferences, userId: string) {
+  return {
+    id: local.id,
+    user_id: userId,
+    default_max_reps: local.defaultMaxReps,
+    default_conditioning_reps: local.defaultConditioningReps,
+    conditioning_weekly_increment: local.conditioningWeeklyIncrement,
+    weekly_set_goals: local.weeklySetGoals,
+    rest_timer_enabled: local.restTimer.enabled,
+    rest_timer_duration_seconds: local.restTimer.durationSeconds,
+    max_test_rest_timer_enabled: local.maxTestRestTimer.enabled,
+    max_test_rest_timer_duration_seconds: local.maxTestRestTimer.durationSeconds,
+    created_at: toISOString(local.createdAt),
+    updated_at: toISOString(local.updatedAt),
   };
 }

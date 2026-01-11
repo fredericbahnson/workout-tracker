@@ -1,10 +1,10 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '@/types';
+import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences } from '@/types';
 
 // Sync queue item for offline operations
 export interface SyncQueueItem {
   id: string;
-  table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts';
+  table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences';
   operation: 'upsert' | 'delete';
   itemId: string;
   data?: unknown;
@@ -20,6 +20,7 @@ class AscendDatabase extends Dexie {
   completedSets!: EntityTable<CompletedSet, 'id'>;
   cycles!: EntityTable<Cycle, 'id'>;
   scheduledWorkouts!: EntityTable<ScheduledWorkout, 'id'>;
+  userPreferences!: EntityTable<UserPreferences, 'id'>;
   syncQueue!: EntityTable<SyncQueueItem, 'id'>;
 
   constructor() {
@@ -43,6 +44,17 @@ class AscendDatabase extends Dexie {
       scheduledWorkouts: 'id, cycleId, sequenceNumber, status',
       syncQueue: 'id, table, itemId, createdAt'
     });
+
+    // Version 3: Add user preferences table for synced training preferences
+    this.version(3).stores({
+      exercises: 'id, type, mode, name, createdAt',
+      maxRecords: 'id, exerciseId, recordedAt',
+      completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
+      cycles: 'id, status, startDate',
+      scheduledWorkouts: 'id, cycleId, sequenceNumber, status',
+      syncQueue: 'id, [table+itemId], createdAt',
+      userPreferences: 'id'
+    });
   }
 }
 
@@ -65,14 +77,17 @@ export function generateId(): string {
 
 // Export/Import helpers for backup
 export async function exportData(): Promise<string> {
+  const userPrefs = await db.userPreferences.toArray();
+  
   const data = {
     exercises: await db.exercises.toArray(),
     maxRecords: await db.maxRecords.toArray(),
     completedSets: await db.completedSets.toArray(),
     cycles: await db.cycles.toArray(),
     scheduledWorkouts: await db.scheduledWorkouts.toArray(),
+    userPreferences: userPrefs.length > 0 ? userPrefs[0] : null,
     exportedAt: new Date().toISOString(),
-    version: 1
+    version: 2  // Increment version for new format with preferences
   };
   return JSON.stringify(data, null, 2);
 }
@@ -87,18 +102,24 @@ export async function importData(jsonString: string): Promise<{ success: boolean
     }
 
     // Clear existing data and import
-    await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
+    await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.userPreferences], async () => {
       await db.exercises.clear();
       await db.maxRecords.clear();
       await db.completedSets.clear();
       await db.cycles.clear();
       await db.scheduledWorkouts.clear();
+      await db.userPreferences.clear();
 
       if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
       if (data.maxRecords?.length) await db.maxRecords.bulkAdd(data.maxRecords);
       if (data.completedSets?.length) await db.completedSets.bulkAdd(data.completedSets);
       if (data.cycles?.length) await db.cycles.bulkAdd(data.cycles);
       if (data.scheduledWorkouts?.length) await db.scheduledWorkouts.bulkAdd(data.scheduledWorkouts);
+      
+      // Import user preferences if present (version 2+ backups)
+      if (data.userPreferences) {
+        await db.userPreferences.put(data.userPreferences);
+      }
     });
 
     return { success: true };

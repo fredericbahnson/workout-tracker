@@ -1,0 +1,83 @@
+/**
+ * User Preferences Types
+ * 
+ * Types for training preferences that sync across devices.
+ * UI preferences (theme, font size, etc.) remain in localStorage only.
+ */
+
+import type { ExerciseType } from './exercise';
+
+/**
+ * Weekly set goals per exercise type.
+ */
+export type WeeklySetGoals = Record<ExerciseType, number>;
+
+/**
+ * Timer settings configuration.
+ */
+export interface TimerSettings {
+  enabled: boolean;
+  durationSeconds: number;
+}
+
+/**
+ * User training preferences that sync across devices.
+ * 
+ * These preferences affect workout cycle creation and are
+ * important to maintain consistency across devices.
+ */
+export interface UserPreferences {
+  /** Unique identifier (matches user ID for simplicity) */
+  id: string;
+  
+  /** Default max reps for RFEM calculations when no max record exists */
+  defaultMaxReps: number;
+  
+  /** Default starting reps for conditioning exercises */
+  defaultConditioningReps: number;
+  
+  /** Weekly rep increase for conditioning exercises */
+  conditioningWeeklyIncrement: number;
+  
+  /** Target weekly sets per exercise type */
+  weeklySetGoals: WeeklySetGoals;
+  
+  /** Rest timer settings */
+  restTimer: TimerSettings;
+  
+  /** Max testing rest timer settings */
+  maxTestRestTimer: TimerSettings;
+  
+  /** When preferences were created */
+  createdAt: Date;
+  
+  /** When preferences were last updated */
+  updatedAt: Date;
+}
+
+/**
+ * Default values for user preferences.
+ * Used when creating new preferences or as fallback.
+ */
+export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'> = {
+  defaultMaxReps: 10,
+  defaultConditioningReps: 30,
+  conditioningWeeklyIncrement: 10,
+  weeklySetGoals: {
+    push: 10,
+    pull: 10,
+    legs: 10,
+    core: 0,
+    balance: 0,
+    mobility: 0,
+    other: 0,
+  },
+  restTimer: {
+    enabled: false,
+    durationSeconds: 180,
+  },
+  maxTestRestTimer: {
+    enabled: false,
+    durationSeconds: 300,
+  },
+};

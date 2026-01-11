@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, UserX, Key, Type } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
-import { useAuth, useSync } from '@/contexts';
+import { useAuth, useSync, useSyncedPreferences } from '@/contexts';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, Button, NumberInput, Badge, Select, TimeDurationInput } from '@/components/ui';
 import { AuthModal, DeleteAccountModal, ChangePasswordModal, ClearDataModal } from '@/components/settings';
@@ -11,7 +11,16 @@ import { APP_VERSION } from '@/constants/version';
 
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
-  const { defaults, setDefaults, setWeeklySetGoal, repDisplayMode, setRepDisplayMode, restTimer, setRestTimer, maxTestRestTimer, setMaxTestRestTimer, fontSize, setFontSize } = useAppStore();
+  const { repDisplayMode, setRepDisplayMode, fontSize, setFontSize } = useAppStore();
+  const { 
+    preferences, 
+    setDefaultMaxReps, 
+    setDefaultConditioningReps, 
+    setConditioningWeeklyIncrement, 
+    setWeeklySetGoal, 
+    setRestTimer, 
+    setMaxTestRestTimer 
+  } = useSyncedPreferences();
   const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount, updatePassword } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
   
@@ -408,22 +417,22 @@ export function SettingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <NumberInput
                 label="Default Max (RFEM)"
-                value={defaults.defaultMaxReps}
-                onChange={v => setDefaults({ defaultMaxReps: v })}
+                value={preferences.defaultMaxReps}
+                onChange={v => setDefaultMaxReps(v)}
                 min={1}
               />
               <NumberInput
                 label="Default Reps (Conditioning)"
-                value={defaults.defaultConditioningReps}
-                onChange={v => setDefaults({ defaultConditioningReps: v })}
+                value={preferences.defaultConditioningReps}
+                onChange={v => setDefaultConditioningReps(v)}
                 min={1}
               />
             </div>
 
             <NumberInput
               label="Weekly Rep Increase (Conditioning)"
-              value={defaults.conditioningWeeklyIncrement}
-              onChange={v => setDefaults({ conditioningWeeklyIncrement: v })}
+              value={preferences.conditioningWeeklyIncrement}
+              onChange={v => setConditioningWeeklyIncrement(v)}
               min={0}
             />
 
@@ -439,7 +448,7 @@ export function SettingsPage() {
                     </Badge>
                     <div className="flex items-center gap-2">
                       <NumberInput
-                        value={defaults.weeklySetGoals[type]}
+                        value={preferences.weeklySetGoals[type]}
                         onChange={v => setWeeklySetGoal(type, v)}
                         min={0}
                         className="w-16 flex-shrink-0"
@@ -494,10 +503,10 @@ export function SettingsPage() {
                 </p>
               </div>
               <button
-                onClick={() => setRestTimer({ enabled: !restTimer.enabled })}
+                onClick={() => setRestTimer({ enabled: !preferences.restTimer.enabled })}
                 className={`
                   relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                  ${restTimer.enabled 
+                  ${preferences.restTimer.enabled 
                     ? 'bg-primary-600' 
                     : 'bg-gray-200 dark:bg-gray-700'
                   }
@@ -506,18 +515,18 @@ export function SettingsPage() {
                 <span
                   className={`
                     inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                    ${restTimer.enabled ? 'translate-x-6' : 'translate-x-1'}
+                    ${preferences.restTimer.enabled ? 'translate-x-6' : 'translate-x-1'}
                   `}
                 />
               </button>
             </div>
 
-            {restTimer.enabled && (
+            {preferences.restTimer.enabled && (
               <div className="pt-2 border-t border-gray-200 dark:border-dark-border">
                 <TimeDurationInput
                   label="Default rest duration"
-                  value={restTimer.defaultDurationSeconds}
-                  onChange={v => setRestTimer({ defaultDurationSeconds: v })}
+                  value={preferences.restTimer.durationSeconds}
+                  onChange={v => setRestTimer({ durationSeconds: v })}
                   minSeconds={10}
                   maxSeconds={600}
                 />
@@ -534,10 +543,10 @@ export function SettingsPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setMaxTestRestTimer({ enabled: !maxTestRestTimer.enabled })}
+                  onClick={() => setMaxTestRestTimer({ enabled: !preferences.maxTestRestTimer.enabled })}
                   className={`
                     relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                    ${maxTestRestTimer.enabled 
+                    ${preferences.maxTestRestTimer.enabled 
                       ? 'bg-primary-600' 
                       : 'bg-gray-200 dark:bg-gray-700'
                     }
@@ -546,18 +555,18 @@ export function SettingsPage() {
                   <span
                     className={`
                       inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                      ${maxTestRestTimer.enabled ? 'translate-x-6' : 'translate-x-1'}
+                      ${preferences.maxTestRestTimer.enabled ? 'translate-x-6' : 'translate-x-1'}
                     `}
                   />
                 </button>
               </div>
 
-              {maxTestRestTimer.enabled && (
+              {preferences.maxTestRestTimer.enabled && (
                 <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800">
                   <TimeDurationInput
                     label="Default max test rest duration"
-                    value={maxTestRestTimer.defaultDurationSeconds}
-                    onChange={v => setMaxTestRestTimer({ defaultDurationSeconds: v })}
+                    value={preferences.maxTestRestTimer.durationSeconds}
+                    onChange={v => setMaxTestRestTimer({ durationSeconds: v })}
                     minSeconds={30}
                     maxSeconds={900}
                   />

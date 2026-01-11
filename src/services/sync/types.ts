@@ -140,6 +140,25 @@ export interface RemoteScheduledWorkout {
 }
 
 /**
+ * Remote user preferences record from Supabase.
+ * Corresponds to the `user_preferences` table.
+ */
+export interface RemoteUserPreferences {
+  id: string;
+  user_id: string;
+  default_max_reps: number;
+  default_conditioning_reps: number;
+  conditioning_weekly_increment: number;
+  weekly_set_goals: unknown;
+  rest_timer_enabled: boolean;
+  rest_timer_duration_seconds: number;
+  max_test_rest_timer_enabled: boolean;
+  max_test_rest_timer_duration_seconds: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Table names in the Supabase database.
  */
 export type SyncTableName = 
@@ -147,7 +166,8 @@ export type SyncTableName =
   | 'max_records' 
   | 'completed_sets' 
   | 'cycles' 
-  | 'scheduled_workouts';
+  | 'scheduled_workouts'
+  | 'user_preferences';
 
 /**
  * Union type of all remote record types.
@@ -157,4 +177,5 @@ export type RemoteRecord =
   | RemoteMaxRecord 
   | RemoteCompletedSet 
   | RemoteCycle 
-  | RemoteScheduledWorkout;
+  | RemoteScheduledWorkout
+  | RemoteUserPreferences;

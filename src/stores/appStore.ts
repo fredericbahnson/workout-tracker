@@ -1,29 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+/**
+ * Local-only UI Preferences Store
+ * 
+ * These preferences are stored in localStorage and are device-specific.
+ * They do not sync across devices.
+ * 
+ * Training preferences that sync across devices are managed by
+ * SyncedPreferencesContext instead.
+ */
+
 export type Theme = 'light' | 'dark' | 'system';
 export type RepDisplayMode = 'week' | 'cycle' | 'allTime';
 export type FontSize = 'small' | 'default' | 'large' | 'xl';
-
-export interface AppDefaults {
-  defaultMaxReps: number;
-  defaultConditioningReps: number;
-  conditioningWeeklyIncrement: number;
-  weeklySetGoals: {
-    push: number;
-    pull: number;
-    legs: number;
-    core: number;
-    balance: number;
-    mobility: number;
-    other: number;
-  };
-}
-
-export interface TimerSettings {
-  enabled: boolean;
-  defaultDurationSeconds: number;
-}
 
 interface AppState {
   // Theme
@@ -34,56 +24,18 @@ interface AppState {
   fontSize: FontSize;
   setFontSize: (size: FontSize) => void;
   
-  // App defaults
-  defaults: AppDefaults;
-  setDefaults: (defaults: Partial<AppDefaults>) => void;
-  setWeeklySetGoal: (type: keyof AppDefaults['weeklySetGoals'], value: number) => void;
-  
   // Rep display mode
   repDisplayMode: RepDisplayMode;
   setRepDisplayMode: (mode: RepDisplayMode) => void;
-  
-  // Rest timer settings
-  restTimer: TimerSettings;
-  setRestTimer: (settings: Partial<TimerSettings>) => void;
-  
-  // Max testing rest timer settings
-  maxTestRestTimer: TimerSettings;
-  setMaxTestRestTimer: (settings: Partial<TimerSettings>) => void;
   
   // Onboarding
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
   
-  // UI state
+  // UI state (not persisted)
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }
-
-const DEFAULT_SETTINGS: AppDefaults = {
-  defaultMaxReps: 10,
-  defaultConditioningReps: 30,
-  conditioningWeeklyIncrement: 10,
-  weeklySetGoals: {
-    push: 10,
-    pull: 10,
-    legs: 10,
-    core: 0,
-    balance: 0,
-    mobility: 0,
-    other: 0
-  }
-};
-
-const DEFAULT_REST_TIMER: TimerSettings = {
-  enabled: false,
-  defaultDurationSeconds: 180
-};
-
-const DEFAULT_MAX_TEST_REST_TIMER: TimerSettings = {
-  enabled: false,
-  defaultDurationSeconds: 300 // 5 minutes
-};
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -96,36 +48,9 @@ export const useAppStore = create<AppState>()(
       fontSize: 'default',
       setFontSize: (size) => set({ fontSize: size }),
       
-      // App defaults
-      defaults: DEFAULT_SETTINGS,
-      setDefaults: (newDefaults) => set((state) => ({ 
-        defaults: { ...state.defaults, ...newDefaults } 
-      })),
-      setWeeklySetGoal: (type, value) => set((state) => ({
-        defaults: {
-          ...state.defaults,
-          weeklySetGoals: {
-            ...state.defaults.weeklySetGoals,
-            [type]: value
-          }
-        }
-      })),
-      
       // Rep display mode
       repDisplayMode: 'allTime',
       setRepDisplayMode: (mode) => set({ repDisplayMode: mode }),
-      
-      // Rest timer settings
-      restTimer: DEFAULT_REST_TIMER,
-      setRestTimer: (settings) => set((state) => ({
-        restTimer: { ...state.restTimer, ...settings }
-      })),
-      
-      // Max testing rest timer settings
-      maxTestRestTimer: DEFAULT_MAX_TEST_REST_TIMER,
-      setMaxTestRestTimer: (settings) => set((state) => ({
-        maxTestRestTimer: { ...state.maxTestRestTimer, ...settings }
-      })),
       
       // Onboarding
       hasCompletedOnboarding: false,
@@ -140,11 +65,9 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({ 
         theme: state.theme,
         fontSize: state.fontSize,
-        defaults: state.defaults, 
         repDisplayMode: state.repDisplayMode,
-        restTimer: state.restTimer,
-        maxTestRestTimer: state.maxTestRestTimer,
-        hasCompletedOnboarding: state.hasCompletedOnboarding
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        // Note: sidebarOpen is not persisted
       }),
     }
   )

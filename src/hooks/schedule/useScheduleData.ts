@@ -9,11 +9,11 @@ import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo } from '@/data/repositories';
 import { calculateTargetReps } from '@/services/scheduler';
-import { useAppStore } from '@/stores/appStore';
+import { useSyncedPreferences } from '@/contexts';
 import type { Exercise, ScheduledWorkout, ScheduledSet } from '@/types';
 
 export function useScheduleData() {
-  const { defaults } = useAppStore();
+  const { preferences } = useSyncedPreferences();
 
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
@@ -84,7 +84,7 @@ export function useScheduleData() {
       maxRecord, 
       activeCycle.conditioningWeeklyRepIncrement,
       activeCycle.conditioningWeeklyTimeIncrement || 5,
-      defaults.defaultMaxReps
+      preferences.defaultMaxReps
     );
   };
 

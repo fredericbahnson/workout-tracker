@@ -11,7 +11,7 @@ import {
   SchedulePage 
 } from './pages';
 import { useAppStore } from './stores/appStore';
-import { AuthProvider, SyncProvider, useAuth } from './contexts';
+import { AuthProvider, SyncProvider, useAuth, SyncedPreferencesProvider } from './contexts';
 import { AuthGate, OnboardingFlow } from './components/onboarding';
 
 function AppContent() {
@@ -143,9 +143,11 @@ function App() {
     <ErrorBoundary level="app">
       <AuthProvider>
         <SyncProvider>
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
+          <SyncedPreferencesProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </SyncedPreferencesProvider>
         </SyncProvider>
       </AuthProvider>
     </ErrorBoundary>

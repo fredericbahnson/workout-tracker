@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from '@/data/supabase';
 import { db, generateId } from '@/data/db';
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout } from '@/types';
+import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences } from '@/types';
 import { now, toISOString, isAfter } from '@/utils/dateUtils';
 import { createScopedLogger } from '@/utils/logger';
 import type {
@@ -9,6 +9,7 @@ import type {
   RemoteCompletedSet,
   RemoteCycle,
   RemoteScheduledWorkout,
+  RemoteUserPreferences,
 } from './sync/types';
 import {
   remoteToLocalExercise,
@@ -16,11 +17,13 @@ import {
   remoteToLocalCompletedSet,
   remoteToLocalCycle,
   remoteToLocalScheduledWorkout,
+  remoteToLocalUserPreferences,
   localToRemoteExercise,
   localToRemoteMaxRecord,
   localToRemoteCompletedSet,
   localToRemoteCycle,
   localToRemoteScheduledWorkout,
+  localToRemoteUserPreferences,
 } from './sync/transformers';
 
 const log = createScopedLogger('SyncService');
@@ -97,13 +100,15 @@ export const SyncService = {
       { data: maxRecords },
       { data: completedSets },
       { data: cycles },
-      { data: scheduledWorkouts }
+      { data: scheduledWorkouts },
+      { data: userPreferences }
     ] = await Promise.all([
       supabase.from('exercises').select('*').eq('user_id', userId).is('deleted_at', null),
       supabase.from('max_records').select('*').eq('user_id', userId).is('deleted_at', null),
       supabase.from('completed_sets').select('*').eq('user_id', userId).is('deleted_at', null),
       supabase.from('cycles').select('*').eq('user_id', userId).is('deleted_at', null),
       supabase.from('scheduled_workouts').select('*').eq('user_id', userId).is('deleted_at', null),
+      supabase.from('user_preferences').select('*').eq('user_id', userId),
     ]);
 
     // Merge exercises
@@ -156,6 +161,21 @@ export const SyncService = {
       }
     }
 
+    // Merge user preferences (singleton - take the most recent)
+    if (userPreferences && userPreferences.length > 0) {
+      const remote = userPreferences[0] as RemoteUserPreferences;
+      const localPrefs = await db.userPreferences.toArray();
+      const local = localPrefs.length > 0 ? localPrefs[0] : null;
+      
+      if (!local || isAfter(remote.updated_at, local.updatedAt)) {
+        // Clear existing preferences and put the cloud version
+        await db.userPreferences.clear();
+        await db.userPreferences.put(remoteToLocalUserPreferences(remote));
+        // Update the local ID reference
+        localStorage.setItem('ascend-preferences-id', remote.id);
+      }
+    }
+
     // Handle deletions - fetch deleted items and remove locally
     const [
       { data: deletedExercises },
@@ -200,12 +220,13 @@ export const SyncService = {
 
   // Push local data to Supabase
   async pushToCloud(userId: string) {
-    const [exercises, maxRecords, completedSets, cycles, scheduledWorkouts] = await Promise.all([
+    const [exercises, maxRecords, completedSets, cycles, scheduledWorkouts, userPreferences] = await Promise.all([
       db.exercises.toArray(),
       db.maxRecords.toArray(),
       db.completedSets.toArray(),
       db.cycles.toArray(),
       db.scheduledWorkouts.toArray(),
+      db.userPreferences.toArray(),
     ]);
 
     // Upsert exercises
@@ -252,12 +273,21 @@ export const SyncService = {
       );
       if (error) log.error(error as Error);
     }
+
+    // Upsert user preferences (singleton record)
+    if (userPreferences.length > 0) {
+      const { error } = await supabase.from('user_preferences').upsert(
+        localToRemoteUserPreferences(userPreferences[0], userId),
+        { onConflict: 'id' }
+      );
+      if (error) log.error(error as Error);
+    }
   },
 
   // Sync a single item immediately (called after local writes)
   // If offline, queues the operation for later
   async syncItem(
-    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
+    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences',
     item: unknown,
     userId: string
   ) {
@@ -286,6 +316,9 @@ export const SyncService = {
           break;
         case 'scheduled_workouts':
           remoteItem = localToRemoteScheduledWorkout(item as ScheduledWorkout, userId);
+          break;
+        case 'user_preferences':
+          remoteItem = localToRemoteUserPreferences(item as UserPreferences, userId);
           break;
       }
 
@@ -341,7 +374,7 @@ export const SyncService = {
 
   // Queue an operation for later sync
   async queueOperation(
-    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
+    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences',
     operation: 'upsert' | 'delete',
     item: unknown
   ) {
@@ -413,6 +446,9 @@ export const SyncService = {
               break;
             case 'scheduled_workouts':
               remoteItem = localToRemoteScheduledWorkout(queueItem.data as ScheduledWorkout, userId);
+              break;
+            case 'user_preferences':
+              remoteItem = localToRemoteUserPreferences(queueItem.data as UserPreferences, userId);
               break;
           }
           await supabase.from(queueItem.table).upsert(remoteItem, { onConflict: 'id' });

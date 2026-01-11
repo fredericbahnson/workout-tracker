@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Calendar, CalendarDays, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Dumbbell, List } from 'lucide-react';
 import { CycleRepo, ScheduledWorkoutRepo, ExerciseRepo, MaxRecordRepo, CompletedSetRepo } from '@/data/repositories';
-import { useAppStore } from '@/stores/appStore';
+import { useSyncedPreferences } from '@/contexts';
 import { useSyncItem } from '@/contexts/SyncContext';
 import { PageHeader } from '@/components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '@/components/ui';
@@ -17,7 +17,7 @@ const log = createScopedLogger('Schedule');
 
 export function SchedulePage() {
   const navigate = useNavigate();
-  const { defaults } = useAppStore();
+  const { preferences } = useSyncedPreferences();
   const { syncItem, deleteItem } = useSyncItem();
   
   // Modal states
@@ -353,7 +353,7 @@ export function SchedulePage() {
           activeCycle={activeCycle}
           groupName={getGroupName(previewWorkout)}
           isNextWorkout={pendingWorkouts.length > 0 && pendingWorkouts[0].id === previewWorkout.id}
-          defaultMaxReps={defaults.defaultMaxReps}
+          defaultMaxReps={preferences.defaultMaxReps}
           onStartWorkout={() => { setPreviewWorkout(null); navigate('/'); }}
           onDeleteWorkout={() => setWorkoutToDelete(previewWorkout)}
           onClose={() => setPreviewWorkout(null)}

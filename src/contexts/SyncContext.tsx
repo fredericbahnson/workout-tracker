@@ -173,7 +173,7 @@ export function useSyncItem() {
 
   const syncItem = useCallback(
     async (
-      table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
+      table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences',
       item: unknown
     ) => {
       if (user && isConfigured) {

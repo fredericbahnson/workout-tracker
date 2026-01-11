@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell } from 'lucide-react';
 import { CompletedSetRepo, ExerciseRepo, CycleRepo, ScheduledWorkoutRepo, MaxRecordRepo } from '@/data/repositories';
 import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/scheduler';
-import { useAppStore } from '@/stores/appStore';
+import { useSyncedPreferences } from '@/contexts';
 import { useSyncItem } from '@/contexts/SyncContext';
 import { useWorkoutDisplay, useCycleCompletion, useAdHocWorkout, useTodayModals } from '@/hooks';
 import { PageHeader } from '@/components/layout';
@@ -16,11 +16,11 @@ import { EXERCISE_TYPES, getProgressionMode, type Exercise, type ScheduledWorkou
 
 export function TodayPage() {
   const navigate = useNavigate();
-  const { defaults, restTimer, maxTestRestTimer } = useAppStore();
+  const { preferences } = useSyncedPreferences();
   const { syncItem, deleteItem } = useSyncItem();
   
   // Consolidated modal state via useReducer
-  const modals = useTodayModals({ defaultRestTimerDuration: restTimer.defaultDurationSeconds });
+  const modals = useTodayModals({ defaultRestTimerDuration: preferences.restTimer.durationSeconds });
   
   // Track dismissed workout to force query refresh
   const [dismissedWorkoutId, setDismissedWorkoutId] = useState<string | null>(null);
@@ -153,7 +153,7 @@ export function TodayPage() {
       set, workout, maxRecord, 
       activeCycle.conditioningWeeklyRepIncrement,
       activeCycle.conditioningWeeklyTimeIncrement || 5,
-      defaults.defaultMaxReps
+      preferences.defaultMaxReps
     );
   };
 
@@ -237,8 +237,8 @@ export function TodayPage() {
       markWorkoutCompleted(displayWorkout.id);
     } else {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-      if (restTimer.enabled) {
-        const duration = set.isWarmup ? Math.round(restTimer.defaultDurationSeconds * 0.5) : restTimer.defaultDurationSeconds;
+      if (preferences.restTimer.enabled) {
+        const duration = set.isWarmup ? Math.round(preferences.restTimer.durationSeconds * 0.5) : preferences.restTimer.durationSeconds;
         modals.openRestTimer(duration);
       }
     }
@@ -295,7 +295,7 @@ export function TodayPage() {
   const handleLogSet = async (reps: number, notes: string, parameters: Record<string, string | number>, weight?: number) => {
     modals.setIsLogging(true);
     let shouldShowTimer = false;
-    let timerDuration = restTimer.defaultDurationSeconds;
+    let timerDuration = preferences.restTimer.durationSeconds;
     
     try {
       if (modals.selectedScheduledSet) {
@@ -320,19 +320,19 @@ export function TodayPage() {
           markWorkoutCompleted(displayWorkout.id);
         } else if (newCompletedCount > 0 && displayWorkout) {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-          if (set.isMaxTest && maxTestRestTimer.enabled) {
+          if (set.isMaxTest && preferences.maxTestRestTimer.enabled) {
             shouldShowTimer = true;
-            timerDuration = maxTestRestTimer.defaultDurationSeconds;
-          } else if (!set.isMaxTest && restTimer.enabled) {
+            timerDuration = preferences.maxTestRestTimer.durationSeconds;
+          } else if (!set.isMaxTest && preferences.restTimer.enabled) {
             shouldShowTimer = true;
-            timerDuration = set.isWarmup ? Math.round(restTimer.defaultDurationSeconds * 0.5) : restTimer.defaultDurationSeconds;
+            timerDuration = set.isWarmup ? Math.round(preferences.restTimer.durationSeconds * 0.5) : preferences.restTimer.durationSeconds;
           }
         }
         modals.closeScheduledSetModal();
       } else if (modals.selectedExercise) {
         await CompletedSetRepo.create({ exerciseId: modals.selectedExercise.id, reps, weight, notes, parameters }, displayWorkout?.id);
         modals.clearSelectedExercise();
-        if (restTimer.enabled) { shouldShowTimer = true; timerDuration = restTimer.defaultDurationSeconds; }
+        if (preferences.restTimer.enabled) { shouldShowTimer = true; timerDuration = preferences.restTimer.durationSeconds; }
       }
     } finally {
       modals.setIsLogging(false);

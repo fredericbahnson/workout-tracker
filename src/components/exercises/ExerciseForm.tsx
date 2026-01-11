@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button, Input, NumberInput, Select } from '@/components/ui';
-import { useAppStore } from '@/stores/appStore';
+import { useSyncedPreferences } from '@/contexts';
 import { createScopedLogger } from '@/utils/logger';
 import { 
   EXERCISE_TYPES, 
@@ -24,7 +24,7 @@ interface ExerciseFormProps {
 }
 
 export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: ExerciseFormProps) {
-  const { defaults } = useAppStore();
+  const { preferences } = useSyncedPreferences();
   const [name, setName] = useState(initialData?.name || '');
   const [type, setType] = useState(initialData?.type || 'push');
   const [mode, setMode] = useState(initialData?.mode || 'standard');
@@ -37,7 +37,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   const [initialMaxTime, setInitialMaxTime] = useState<string>('');
   // For conditioning exercises, initialize from existing data or defaults
   const [baselineReps, setBaselineReps] = useState<number>(
-    initialData?.defaultConditioningReps || defaults.defaultConditioningReps
+    initialData?.defaultConditioningReps || preferences.defaultConditioningReps
   );
   const [baselineTime, setBaselineTime] = useState<string>(
     initialData?.defaultConditioningTime ? formatTime(initialData.defaultConditioningTime) : '0:30'

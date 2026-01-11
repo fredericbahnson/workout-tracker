@@ -10,7 +10,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo } from '@/data/repositories';
 import { generateSchedule, validateCycle } from '@/services/scheduler';
 import { generateId } from '@/data/db';
-import { useAppStore } from '@/stores/appStore';
+import { useSyncedPreferences } from '@/contexts';
 import { createScopedLogger } from '@/utils/logger';
 import { getProgressionMode } from '@/types';
 import type { 
@@ -42,7 +42,12 @@ export function useCycleWizardState({
   initialProgressionMode, 
   onComplete 
 }: UseCycleWizardStateProps) {
-  const { defaults } = useAppStore();
+  const { preferences } = useSyncedPreferences();
+  
+  // Create defaults object from preferences for backward compatibility with child components
+  const defaults = useMemo(() => ({
+    defaultConditioningReps: preferences.defaultConditioningReps,
+  }), [preferences.defaultConditioningReps]);
 
   // Progression mode - from props, edit cycle, or default to 'rfem'
   const [progressionMode] = useState<ProgressionMode>(
@@ -75,12 +80,12 @@ export function useCycleWizardState({
   const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(editCycle?.workoutDaysPerWeek || 5);
   const [groups, setGroups] = useState<Group[]>(editCycle?.groups || []);
   const [weeklySetGoals, setWeeklySetGoals] = useState<Record<ExerciseType, number>>(() =>
-    editCycle?.weeklySetGoals || { ...defaults.weeklySetGoals }
+    editCycle?.weeklySetGoals || { ...preferences.weeklySetGoals }
   );
   const [groupRotation, setGroupRotation] = useState<string[]>(editCycle?.groupRotation || []);
   const [rfemRotation, setRfemRotation] = useState<number[]>(editCycle?.rfemRotation || [4, 3, 2]);
   const [conditioningWeeklyRepIncrement, setConditioningWeeklyRepIncrement] = useState(
-    editCycle?.conditioningWeeklyRepIncrement || defaults.conditioningWeeklyIncrement
+    editCycle?.conditioningWeeklyRepIncrement || preferences.conditioningWeeklyIncrement
   );
 
   // Warmup settings
@@ -178,10 +183,10 @@ export function useCycleWizardState({
     setNumberOfWeeks(4);
     setWorkoutDaysPerWeek(5);
     setRfemRotation([4, 3, 2]);
-    setWeeklySetGoals({ ...defaults.weeklySetGoals });
-    setConditioningWeeklyRepIncrement(defaults.conditioningWeeklyIncrement);
+    setWeeklySetGoals({ ...preferences.weeklySetGoals });
+    setConditioningWeeklyRepIncrement(preferences.conditioningWeeklyIncrement);
     setCurrentStep('basics');
-  }, [exercises, defaults, getDefaultCycleName]);
+  }, [exercises, preferences, getDefaultCycleName]);
 
   // Initialize default groups when exercises load
   useEffect(() => {
@@ -335,7 +340,7 @@ export function useCycleWizardState({
     const assignment: ExerciseAssignment = {
       exerciseId,
       conditioningBaseReps: exercise?.mode === 'conditioning'
-        ? (exercise.defaultConditioningReps || defaults.defaultConditioningReps)
+        ? (exercise.defaultConditioningReps || preferences.defaultConditioningReps)
         : undefined
     };
 
@@ -344,7 +349,7 @@ export function useCycleWizardState({
       if (g.exerciseAssignments.some(a => a.exerciseId === exerciseId)) return g;
       return { ...g, exerciseAssignments: [...g.exerciseAssignments, assignment] };
     }));
-  }, [exerciseMap, defaults.defaultConditioningReps]);
+  }, [exerciseMap, preferences.defaultConditioningReps]);
 
   const removeExerciseFromGroup = useCallback((groupId: string, exerciseId: string) => {
     setGroups(prev => prev.map(g => {

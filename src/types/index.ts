@@ -40,6 +40,15 @@ export type {
   QuickLogData,
 } from './forms';
 
+// User preferences types
+export type {
+  WeeklySetGoals,
+  TimerSettings,
+  UserPreferences,
+} from './preferences';
+
+export { DEFAULT_USER_PREFERENCES } from './preferences';
+
 // Constants
 export {
   EXERCISE_TYPES,
