@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, Mail, UserX, Key, Type } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, UserX, Key, Type } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
 import { useAuth, useSync } from '@/contexts';
 import { PageHeader } from '@/components/layout';
-import { Card, CardContent, Button, Modal, NumberInput, Badge, Select, Input, TimeDurationInput } from '@/components/ui';
+import { Card, CardContent, Button, NumberInput, Badge, Select, TimeDurationInput } from '@/components/ui';
+import { AuthModal, DeleteAccountModal, ChangePasswordModal, ClearDataModal } from '@/components/settings';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
 import { APP_VERSION } from '@/constants/version';
 
@@ -629,193 +630,44 @@ export function SettingsPage() {
         </Card>
       </div>
 
-      {/* Clear Data Confirmation */}
-      <Modal
+      <ClearDataModal
         isOpen={showClearConfirm}
+        isClearing={isClearing}
+        onConfirm={handleClearData}
         onClose={() => setShowClearConfirm(false)}
-        title="Clear All Data"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete all data? This will permanently remove all exercises, 
-            max records, completed sets, and cycles. This action cannot be undone.
-          </p>
-          <p className="text-sm text-amber-600 dark:text-amber-400">
-            Consider exporting a backup first.
-          </p>
-          <div className="flex gap-3">
-            <Button 
-              variant="secondary" 
-              onClick={() => setShowClearConfirm(false)} 
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="danger" 
-              onClick={handleClearData} 
-              disabled={isClearing}
-              className="flex-1"
-            >
-              {isClearing ? 'Clearing...' : 'Clear All Data'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      />
 
-      {/* Auth Modal */}
-      <Modal
+      <AuthModal
         isOpen={showAuthModal}
+        mode={authMode}
+        email={email}
+        password={password}
+        error={authError}
+        isSubmitting={isAuthSubmitting}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onModeChange={(mode) => { setAuthMode(mode); setAuthError(null); }}
+        onSubmit={handleAuthSubmit}
         onClose={() => { setShowAuthModal(false); setAuthError(null); }}
-        title={authMode === 'signin' ? 'Sign In' : 'Create Account'}
-      >
-        <div className="space-y-4">
-          {authError && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-              <p className="text-sm text-red-700 dark:text-red-400">{authError}</p>
-            </div>
-          )}
-          
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            autoFocus
-          />
-          
-          <Input
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={authMode === 'signup' ? 'At least 6 characters' : ''}
-          />
-          
-          <Button 
-            className="w-full"
-            onClick={handleAuthSubmit}
-            disabled={isAuthSubmitting || !email || !password}
-          >
-            <Mail className="w-4 h-4 mr-2" />
-            {isAuthSubmitting 
-              ? (authMode === 'signin' ? 'Signing in...' : 'Creating account...')
-              : (authMode === 'signin' ? 'Sign In' : 'Create Account')
-            }
-          </Button>
-          
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            {authMode === 'signin' ? (
-              <>
-                Don't have an account?{' '}
-                <button 
-                  className="text-primary-600 dark:text-primary-400 hover:underline"
-                  onClick={() => { setAuthMode('signup'); setAuthError(null); }}
-                >
-                  Sign up
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{' '}
-                <button 
-                  className="text-primary-600 dark:text-primary-400 hover:underline"
-                  onClick={() => { setAuthMode('signin'); setAuthError(null); }}
-                >
-                  Sign in
-                </button>
-              </>
-            )}
-          </p>
-        </div>
-      </Modal>
+      />
 
-      {/* Delete Account Confirmation */}
-      <Modal
+      <DeleteAccountModal
         isOpen={showDeleteAccountConfirm}
+        isDeleting={isDeleting}
+        onConfirm={handleDeleteAccount}
         onClose={() => setShowDeleteAccountConfirm(false)}
-        title="Delete Account"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete your account? This will permanently remove:
-          </p>
-          <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-            <li>Your account and login credentials</li>
-            <li>All cloud-synced data</li>
-            <li>All local data on this device</li>
-          </ul>
-          <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-            This action cannot be undone.
-          </p>
-          <div className="flex gap-3">
-            <Button 
-              variant="secondary" 
-              onClick={() => setShowDeleteAccountConfirm(false)} 
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="danger" 
-              onClick={handleDeleteAccount} 
-              disabled={isDeleting}
-              className="flex-1"
-            >
-              {isDeleting ? 'Deleting...' : 'Delete Account'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      />
 
-      {/* Change Password Modal */}
-      <Modal
+      <ChangePasswordModal
         isOpen={showChangePassword}
-        onClose={() => { setShowChangePassword(false); setNewPassword(''); setConfirmPassword(''); }}
-        title="Change Password"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              New Password
-            </label>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password (6+ characters)"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Confirm Password
-            </label>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-            />
-          </div>
-          <div className="flex gap-3">
-            <Button 
-              variant="secondary" 
-              onClick={() => { setShowChangePassword(false); setNewPassword(''); setConfirmPassword(''); }} 
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleChangePassword} 
-              disabled={isChangingPassword || !newPassword || !confirmPassword}
-              className="flex-1"
-            >
-              {isChangingPassword ? 'Changing...' : 'Change Password'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        newPassword={newPassword}
+        confirmPassword={confirmPassword}
+        isChanging={isChangingPassword}
+        onNewPasswordChange={setNewPassword}
+        onConfirmPasswordChange={setConfirmPassword}
+        onConfirm={handleChangePassword}
+        onClose={() => setShowChangePassword(false)}
+      />
     </>
   );
 }
