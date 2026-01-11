@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, UserX, Key, Type } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, UserX, Key, Type, Wrench } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
+import { ScheduledWorkoutRepo } from '@/data/repositories';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
 import { useAuth, useSync, useSyncedPreferences } from '@/contexts';
 import { PageHeader } from '@/components/layout';
@@ -35,6 +36,7 @@ export function SettingsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false);
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -174,6 +176,23 @@ export function SettingsPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleCleanupDuplicates = async () => {
+    setIsCleaningDuplicates(true);
+    setMessage(null);
+    try {
+      const removedCount = await ScheduledWorkoutRepo.cleanupDuplicates();
+      if (removedCount > 0) {
+        setMessage({ type: 'success', text: `Removed ${removedCount} duplicate workout(s).` });
+      } else {
+        setMessage({ type: 'success', text: 'No duplicate workouts found.' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to cleanup duplicates.' });
+    } finally {
+      setIsCleaningDuplicates(false);
     }
   };
 
@@ -609,6 +628,22 @@ export function SettingsPage() {
               onChange={handleImport}
               className="hidden"
             />
+
+            <hr className="border-gray-200 dark:border-dark-border" />
+
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Troubleshooting
+            </p>
+            
+            <Button 
+              variant="secondary" 
+              className="w-full justify-start"
+              onClick={handleCleanupDuplicates}
+              disabled={isCleaningDuplicates}
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              {isCleaningDuplicates ? 'Cleaning...' : 'Fix Duplicate Workouts'}
+            </Button>
 
             <hr className="border-gray-200 dark:border-dark-border" />
 

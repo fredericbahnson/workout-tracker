@@ -10,7 +10,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo } from '@/data/repositories';
 import { generateSchedule, validateCycle } from '@/services/scheduler';
 import { generateId } from '@/data/db';
-import { useSyncedPreferences } from '@/contexts';
+import { useSyncedPreferences, useSyncItem } from '@/contexts';
 import { createScopedLogger } from '@/utils/logger';
 import { getProgressionMode } from '@/types';
 import type { 
@@ -43,6 +43,7 @@ export function useCycleWizardState({
   onComplete 
 }: UseCycleWizardStateProps) {
   const { preferences } = useSyncedPreferences();
+  const { syncItem, deleteItem } = useSyncItem();
   
   // Create defaults object from preferences for backward compatibility with child components
   const defaults = useMemo(() => ({
@@ -467,15 +468,19 @@ export function useCycleWizardState({
         };
         await CycleRepo.update(editCycle.id, updatedCycle);
         cycle = updatedCycle;
+        
+        // Sync the updated cycle to cloud
+        await syncItem('cycles', { ...cycle, id: editCycle.id });
 
         if (editMode === 'continue') {
           const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(editCycle.id);
-          const pendingWorkoutIds = allWorkouts
-            .filter(w => w.status === 'pending' || w.status === 'partial')
-            .map(w => w.id);
+          const pendingWorkouts = allWorkouts
+            .filter(w => w.status === 'pending' || w.status === 'partial');
 
-          for (const id of pendingWorkoutIds) {
-            await ScheduledWorkoutRepo.delete(id);
+          // Delete pending workouts locally and sync deletions to cloud
+          for (const workout of pendingWorkouts) {
+            await ScheduledWorkoutRepo.delete(workout.id);
+            await deleteItem('scheduled_workouts', workout.id);
           }
 
           const remainingWorkouts = await ScheduledWorkoutRepo.getByCycleId(editCycle.id);
@@ -491,9 +496,23 @@ export function useCycleWizardState({
           };
 
           const workouts = generateSchedule(scheduleInput);
-          await ScheduledWorkoutRepo.bulkCreate(workouts);
+          const createdWorkouts = await ScheduledWorkoutRepo.bulkCreate(workouts);
+          
+          // Sync newly created workouts to cloud
+          for (const workout of createdWorkouts) {
+            await syncItem('scheduled_workouts', workout);
+          }
         } else {
+          // Get all workouts to delete them from cloud
+          const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(editCycle.id);
+          
+          // Delete all workouts locally
           await ScheduledWorkoutRepo.deleteByCycleId(editCycle.id);
+          
+          // Sync deletions to cloud
+          for (const workout of allWorkouts) {
+            await deleteItem('scheduled_workouts', workout.id);
+          }
 
           const scheduleInput = {
             cycle,
@@ -501,7 +520,12 @@ export function useCycleWizardState({
           };
 
           const workouts = generateSchedule(scheduleInput);
-          await ScheduledWorkoutRepo.bulkCreate(workouts);
+          const createdWorkouts = await ScheduledWorkoutRepo.bulkCreate(workouts);
+          
+          // Sync newly created workouts to cloud
+          for (const workout of createdWorkouts) {
+            await syncItem('scheduled_workouts', workout);
+          }
         }
       } else {
         cycle = await CycleRepo.create({
@@ -520,6 +544,9 @@ export function useCycleWizardState({
           includeTimedWarmups,
           status: 'active'
         });
+        
+        // Sync new cycle to cloud
+        await syncItem('cycles', cycle);
 
         const scheduleInput = {
           cycle,
@@ -527,7 +554,12 @@ export function useCycleWizardState({
         };
 
         const workouts = generateSchedule(scheduleInput);
-        await ScheduledWorkoutRepo.bulkCreate(workouts);
+        const createdWorkouts = await ScheduledWorkoutRepo.bulkCreate(workouts);
+        
+        // Sync newly created workouts to cloud
+        for (const workout of createdWorkouts) {
+          await syncItem('scheduled_workouts', workout);
+        }
       }
 
       await saveLastCycleSettings(groups, progressionMode, exerciseMap);
@@ -542,7 +574,8 @@ export function useCycleWizardState({
     exercises, editCycle, cycleProgress, editMode, name, progressionMode,
     startDate, numberOfWeeks, workoutDaysPerWeek, weeklySetGoals, groups,
     groupRotation, rfemRotation, conditioningWeeklyRepIncrement,
-    includeWarmupSets, includeTimedWarmups, exerciseMap, saveLastCycleSettings, onComplete
+    includeWarmupSets, includeTimedWarmups, exerciseMap, saveLastCycleSettings, onComplete,
+    syncItem, deleteItem
   ]);
 
   // Get cycles available for cloning

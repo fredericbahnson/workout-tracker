@@ -5,6 +5,53 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.4] - 2026-01-11
+
+### Added
+- **Fix Duplicate Workouts** button in Settings > Data Management for cleaning up sync-related data corruption
+
+### Fixed
+- Improved duplicate workout detection and cleanup logic
+
+## [2.6.3] - 2026-01-11
+
+### Fixed
+- **Sync queue processing order**: Process queued deletions before pulling from cloud on app startup, preventing deleted workouts from reappearing
+- **Cycle wizard sync**: All cycle edits and workout changes now sync to cloud immediately, including deletions
+
+## [2.6.2] - 2026-01-11
+
+### Fixed
+- **Warmup set calculation**: Warmup sets now correctly use their stored warmupPercentage (20% and 40%) instead of a fixed 20% for all warmups
+- **Conditioning increment preservation**: Editing a cycle now correctly preserves a conditioning increment of 0 instead of defaulting to 10
+
+### Added
+- Tests for warmup percentage calculation with different values
+
+## [2.6.1] - 2026-01-11
+
+### Fixed
+- Minor warmup calculation refinements
+
+## [2.6.0] - 2026-01-11
+
+### Added
+- **Synced Training Preferences**: Training-related preferences now sync across devices via Supabase
+  - Default Max Reps (RFEM calculations)
+  - Default Conditioning Reps
+  - Conditioning Weekly Increment
+  - Weekly Set Goals (per exercise type)
+  - Rest Timer settings
+  - Max Test Rest Timer settings
+- New `user_preferences` table in Supabase with RLS policies
+- `SyncedPreferencesContext` for reactive preference access
+- IndexedDB schema version 3 with preferences table
+- Export/import now includes preferences (backup format v2)
+
+### Changed
+- UI preferences (theme, font size, rep display mode) remain local-only
+- AppStore simplified to only handle UI preferences
+
 ## [2.5.5] - 2026-01-11
 
 ### Added

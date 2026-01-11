@@ -137,5 +137,60 @@ export const ScheduledWorkoutRepo = {
     const completed = regularWorkouts.filter(w => w.status === 'completed').length;
     const skipped = regularWorkouts.filter(w => w.status === 'skipped').length;
     return { completed, skipped, passed: completed + skipped, total: regularWorkouts.length };
+  },
+
+  /**
+   * Clean up duplicate workouts that may have been created due to sync issues.
+   * For each cycle + sequenceNumber combination, keeps the workout that:
+   * 1. Has warmup sets (if any do), OR
+   * 2. Was created most recently
+   * Returns the number of duplicates removed.
+   */
+  async cleanupDuplicates(): Promise<number> {
+    const allWorkouts = await db.scheduledWorkouts.toArray();
+    
+    // Group by cycleId + sequenceNumber
+    const groups = new Map<string, typeof allWorkouts>();
+    for (const workout of allWorkouts) {
+      // Skip ad-hoc workouts - they don't have sequence conflicts
+      if (workout.isAdHoc) continue;
+      
+      const key = `${workout.cycleId}:${workout.sequenceNumber}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(workout);
+    }
+    
+    // Find and remove duplicates
+    let removedCount = 0;
+    for (const workouts of groups.values()) {
+      if (workouts.length <= 1) continue;
+      
+      // Sort to determine which to keep:
+      // 1. Prefer workouts with warmup sets
+      // 2. Then prefer completed/partial over pending
+      // 3. Finally prefer by ID (newer IDs are typically longer/later)
+      workouts.sort((a, b) => {
+        const aHasWarmups = a.scheduledSets.some(s => s.isWarmup);
+        const bHasWarmups = b.scheduledSets.some(s => s.isWarmup);
+        if (aHasWarmups !== bHasWarmups) return bHasWarmups ? 1 : -1;
+        
+        const aCompleted = a.status === 'completed' || a.status === 'partial';
+        const bCompleted = b.status === 'completed' || b.status === 'partial';
+        if (aCompleted !== bCompleted) return bCompleted ? 1 : -1;
+        
+        return b.id.localeCompare(a.id); // Newer IDs first
+      });
+      
+      // Keep the first one (best), delete the rest
+      const toDelete = workouts.slice(1);
+      for (const workout of toDelete) {
+        await db.scheduledWorkouts.delete(workout.id);
+        removedCount++;
+      }
+    }
+    
+    return removedCount;
   }
 };

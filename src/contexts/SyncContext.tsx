@@ -41,7 +41,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // Initial sync on sign in
   useEffect(() => {
     if (user && isConfigured) {
-      SyncService.fullSync(user.id)
+      // Process any queued operations first, then full sync
+      SyncService.processQueue(user.id)
+        .then(() => SyncService.fullSync(user.id))
         .then(() => {
           setLastSyncTime(SyncService.getLastSyncTime());
           setLastError(null);
@@ -58,7 +60,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleSignIn = () => {
       if (user) {
-        SyncService.fullSync(user.id)
+        // Process any queued operations first, then full sync
+        SyncService.processQueue(user.id)
+          .then(() => SyncService.fullSync(user.id))
           .then(() => {
             setLastSyncTime(SyncService.getLastSyncTime());
             setLastError(null);
