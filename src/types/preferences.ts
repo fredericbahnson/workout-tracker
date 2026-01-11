@@ -21,6 +21,13 @@ export interface TimerSettings {
 }
 
 /**
+ * Application mode determines available features.
+ * - standard: RFEM and Max Testing cycles only (simplified interface)
+ * - advanced: All cycle types and features available
+ */
+export type AppMode = 'standard' | 'advanced';
+
+/**
  * User training preferences that sync across devices.
  * 
  * These preferences affect workout cycle creation and are
@@ -29,6 +36,9 @@ export interface TimerSettings {
 export interface UserPreferences {
   /** Unique identifier (matches user ID for simplicity) */
   id: string;
+  
+  /** Application mode - determines available features */
+  appMode: AppMode;
   
   /** Default max reps for RFEM calculations when no max record exists */
   defaultMaxReps: number;
@@ -60,6 +70,7 @@ export interface UserPreferences {
  * Used when creating new preferences or as fallback.
  */
 export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'> = {
+  appMode: 'standard',
   defaultMaxReps: 10,
   defaultConditioningReps: 30,
   conditioningWeeklyIncrement: 10,

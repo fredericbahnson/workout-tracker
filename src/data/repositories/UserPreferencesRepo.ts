@@ -6,7 +6,7 @@
  */
 
 import { db, generateId } from '@/data/db';
-import type { UserPreferences, WeeklySetGoals, TimerSettings, ExerciseType } from '@/types';
+import type { UserPreferences, WeeklySetGoals, TimerSettings, ExerciseType, AppMode } from '@/types';
 import { DEFAULT_USER_PREFERENCES } from '@/types';
 import { now, normalizeDates } from '@/utils/dateUtils';
 
@@ -142,6 +142,13 @@ export const UserPreferencesRepo = {
         ...settings,
       },
     });
+  },
+
+  /**
+   * Update app mode (standard or advanced).
+   */
+  async setAppMode(mode: AppMode): Promise<UserPreferences> {
+    return this.save({ appMode: mode });
   },
 
   /**

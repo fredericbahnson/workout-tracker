@@ -13,7 +13,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { UserPreferencesRepo } from '@/data/repositories';
 import { useSyncItem, useSync } from './SyncContext';
 import { createScopedLogger } from '@/utils/logger';
-import type { UserPreferences, TimerSettings, ExerciseType } from '@/types';
+import type { UserPreferences, TimerSettings, ExerciseType, AppMode } from '@/types';
 import { DEFAULT_USER_PREFERENCES } from '@/types';
 
 const log = createScopedLogger('SyncedPrefs');
@@ -24,6 +24,9 @@ interface SyncedPreferencesContextType {
   
   /** Whether preferences are currently loading */
   isLoading: boolean;
+  
+  /** Update app mode (standard or advanced) */
+  setAppMode: (mode: AppMode) => Promise<void>;
   
   /** Update default max reps */
   setDefaultMaxReps: (value: number) => Promise<void>;
@@ -92,6 +95,11 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
   }, [syncItem]);
 
   // Setters
+  const setAppMode = useCallback(async (mode: AppMode) => {
+    const updated = await UserPreferencesRepo.setAppMode(mode);
+    await saveAndSync(updated);
+  }, [saveAndSync]);
+
   const setDefaultMaxReps = useCallback(async (value: number) => {
     const updated = await UserPreferencesRepo.setDefaultMaxReps(value);
     await saveAndSync(updated);
@@ -126,6 +134,7 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     <SyncedPreferencesContext.Provider value={{
       preferences,
       isLoading,
+      setAppMode,
       setDefaultMaxReps,
       setDefaultConditioningReps,
       setConditioningWeeklyIncrement,

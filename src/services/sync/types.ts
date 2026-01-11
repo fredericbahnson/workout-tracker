@@ -146,6 +146,7 @@ export interface RemoteScheduledWorkout {
 export interface RemoteUserPreferences {
   id: string;
   user_id: string;
+  app_mode: string;
   default_max_reps: number;
   default_conditioning_reps: number;
   conditioning_weekly_increment: number;

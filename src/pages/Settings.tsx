@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, UserX, Key, Type, Wrench } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, UserX, Key, Type, Wrench, Layers } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
 import { ScheduledWorkoutRepo } from '@/data/repositories';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
@@ -15,6 +15,7 @@ export function SettingsPage() {
   const { repDisplayMode, setRepDisplayMode, fontSize, setFontSize } = useAppStore();
   const { 
     preferences, 
+    setAppMode,
     setDefaultMaxReps, 
     setDefaultConditioningReps, 
     setConditioningWeeklyIncrement, 
@@ -412,6 +413,96 @@ export function SettingsPage() {
                   </span>
                 </button>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* App Mode */}
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-2 mb-2">
+              <Layers className="w-4 h-4 text-gray-500" />
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                App Mode
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Choose between a simplified interface or full feature access.
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => setAppMode('standard')}
+                className={`
+                  w-full p-3 rounded-lg border-2 transition-colors text-left
+                  ${preferences.appMode === 'standard'
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`
+                    w-4 h-4 rounded-full border-2 flex items-center justify-center
+                    ${preferences.appMode === 'standard'
+                      ? 'border-primary-500 bg-primary-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                    }
+                  `}>
+                    {preferences.appMode === 'standard' && (
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <span className={`text-sm font-medium ${
+                      preferences.appMode === 'standard' 
+                        ? 'text-primary-600 dark:text-primary-400' 
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      Standard
+                    </span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      RFEM-based training and max testing cycles
+                    </p>
+                  </div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setAppMode('advanced')}
+                className={`
+                  w-full p-3 rounded-lg border-2 transition-colors text-left
+                  ${preferences.appMode === 'advanced'
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+                  }
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`
+                    w-4 h-4 rounded-full border-2 flex items-center justify-center
+                    ${preferences.appMode === 'advanced'
+                      ? 'border-primary-500 bg-primary-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                    }
+                  `}>
+                    {preferences.appMode === 'advanced' && (
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <span className={`text-sm font-medium ${
+                      preferences.appMode === 'advanced' 
+                        ? 'text-primary-600 dark:text-primary-400' 
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      Advanced
+                    </span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      All cycle types including simple progression and mixed
+                    </p>
+                  </div>
+                </div>
+              </button>
             </div>
           </CardContent>
         </Card>

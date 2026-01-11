@@ -1,320 +1,394 @@
-# Implementation Plan: Standard/Advanced App Mode
+# Implementation Plan: Standard and Advanced App Modes
 
-**Version:** 1.0  
-**Date:** January 10, 2026  
-**Feature:** User-controlled Standard/Advanced mode selector  
-**Target Version:** 2.6.0
-
----
+**Document Version:** 1.0  
+**Created:** 2026-01-11  
+**Target Version:** 2.7.0  
+**Status:** Planning
 
 ## Executive Summary
 
-This document outlines the implementation plan for adding a Standard/Advanced mode toggle to Ascend. This feature allows users to choose between a simplified RFEM-focused experience (Standard) and the full-featured app (Advanced), preparing the app for potential tiered access in future App Store distribution.
+This document outlines the implementation plan for adding Standard and Advanced app modes to Ascend. Standard mode provides a simplified interface focused on RFEM-based training, while Advanced mode exposes the full feature set including Simple Progression and Mixed cycle types.
 
-### Key Objectives
-
-1. Add persistent app mode preference to user settings
-2. Filter cycle creation options based on selected mode
-3. Maintain backward compatibility with existing functionality
-4. Prepare infrastructure for future monetization/subscription model
+The app mode preference will sync across devices via the existing `UserPreferences` infrastructure, ensuring consistent user experience across platforms. This architecture also prepares for future subscription-based feature gating.
 
 ---
 
-## Architecture Overview
+## Table of Contents
 
-### Current State
-
-The app currently offers three cycle progression modes via `CycleTypeSelector`:
-- **RFEM Training Cycle** - Periodized progression based on max reps
-- **Simple Progression Cycle** - Traditional rep/weight increments
-- **Mixed Cycle** - Per-exercise RFEM or Simple configuration
-- **Max Testing** - Establish/re-test maximum reps
-
-### Proposed State
-
-| App Mode | Available Cycle Types |
-|----------|----------------------|
-| **Standard** | RFEM Training, Max Testing |
-| **Advanced** | RFEM Training, Simple Progression, Mixed Cycle, Max Testing |
+1. [Requirements](#1-requirements)
+2. [Architecture Overview](#2-architecture-overview)
+3. [Implementation Phases](#3-implementation-phases)
+4. [Detailed Implementation](#4-detailed-implementation)
+5. [Database Migration](#5-database-migration)
+6. [Testing Strategy](#6-testing-strategy)
+7. [Future Considerations](#7-future-considerations)
+8. [File Change Summary](#8-file-change-summary)
 
 ---
 
-## Implementation Phases
+## 1. Requirements
 
-### Phase 1: Type Definitions & Store Updates
+### 1.1 Functional Requirements
 
-#### 1.1 Add App Mode Type
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-1 | User can select between Standard and Advanced modes | Must Have |
+| FR-2 | Mode selection persists locally (IndexedDB) | Must Have |
+| FR-3 | Mode selection syncs across devices via Supabase | Must Have |
+| FR-4 | Standard mode limits cycle creation to RFEM and Max Testing only | Must Have |
+| FR-5 | Advanced mode provides full access to all cycle types | Must Have |
+| FR-6 | Default mode for new users is Standard | Must Have |
+| FR-7 | Mode switch is accessible from Settings page | Must Have |
+| FR-8 | Mode affects only cycle creation wizard, not existing cycles | Must Have |
 
-**File:** `src/types/constants.ts`
+### 1.2 Non-Functional Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| NFR-1 | Mode switch should be instantaneous (no page reload) | Must Have |
+| NFR-2 | Backward compatible with existing data | Must Have |
+| NFR-3 | Architecture supports future subscription gating | Should Have |
+| NFR-4 | Clear UI indication of current mode | Should Have |
+
+### 1.3 Mode Feature Matrix
+
+| Feature | Standard | Advanced |
+|---------|----------|----------|
+| RFEM Training Cycles | ✅ | ✅ |
+| Max Rep Testing Cycles | ✅ | ✅ |
+| Simple Progression Cycles | ❌ | ✅ |
+| Mixed Cycles | ❌ | ✅ |
+| Warmup Sets | ✅ | ✅ |
+| Cloud Sync | ✅ | ✅ |
+| All other features | ✅ | ✅ |
+
+---
+
+## 2. Architecture Overview
+
+### 2.1 Current Preferences Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     User Preferences Flow                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ┌──────────────┐         ┌───────────────────┐                │
+│   │  appStore    │         │ SyncedPreferences │                │
+│   │  (Zustand)   │         │    (Context)      │                │
+│   ├──────────────┤         ├───────────────────┤                │
+│   │ • theme      │         │ • defaultMaxReps  │                │
+│   │ • fontSize   │         │ • weeklySetGoals  │                │
+│   │ • repDisplay │         │ • restTimer       │                │
+│   └──────┬───────┘         │ • etc.            │                │
+│          │                 └─────────┬─────────┘                │
+│          ▼                           ▼                          │
+│   ┌──────────────┐         ┌───────────────────┐                │
+│   │ localStorage │         │    IndexedDB      │                │
+│   │ (device only)│         │  (local-first)    │                │
+│   └──────────────┘         └─────────┬─────────┘                │
+│                                      │                          │
+│                                      ▼                          │
+│                            ┌───────────────────┐                │
+│                            │    Supabase       │                │
+│                            │  (cloud sync)     │                │
+│                            └───────────────────┘                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 Where App Mode Fits
+
+The `appMode` setting should be stored in **SyncedPreferences** (not appStore) because:
+
+1. **Cross-device consistency**: Users expect the same mode on all devices
+2. **Subscription preparation**: Future subscription verification will happen server-side
+3. **Architectural consistency**: It's a training-related preference, not a UI preference
+
+### 2.3 Component Impact Analysis
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Components Affected by Mode                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Settings.tsx                                                   │
+│   └── New "App Mode" section with toggle/selector               │
+│                                                                  │
+│   CycleTypeSelector.tsx                                          │
+│   └── Conditionally render cycle options based on mode          │
+│                                                                  │
+│   SyncedPreferencesContext.tsx                                   │
+│   └── Add appMode state and setter                              │
+│                                                                  │
+│   UserPreferencesRepo.ts                                         │
+│   └── Add setAppMode method                                     │
+│                                                                  │
+│   types/preferences.ts                                           │
+│   └── Add AppMode type and field to UserPreferences             │
+│                                                                  │
+│   services/sync/types.ts                                         │
+│   └── Add app_mode to RemoteUserPreferences                     │
+│                                                                  │
+│   services/sync/transformers.ts                                  │
+│   └── Transform appMode <-> app_mode                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Implementation Phases
+
+### Phase 1: Type System & Data Layer (Foundation)
+**Estimated Time:** 1-2 hours  
+**Risk:** Low
+
+1. Define `AppMode` type
+2. Add `appMode` to `UserPreferences` interface
+3. Update `DEFAULT_USER_PREFERENCES`
+4. Add `setAppMode` to `UserPreferencesRepo`
+
+### Phase 2: Sync Infrastructure
+**Estimated Time:** 1-2 hours  
+**Risk:** Medium (requires DB migration)
+
+1. Update `RemoteUserPreferences` type
+2. Update sync transformers
+3. Create Supabase migration script
+4. Test sync round-trip
+
+### Phase 3: Context & Hook Layer
+**Estimated Time:** 1 hour  
+**Risk:** Low
+
+1. Add `appMode` to `SyncedPreferencesContext`
+2. Add `setAppMode` setter function
+3. Export new hook functionality
+
+### Phase 4: UI Implementation
+**Estimated Time:** 2-3 hours  
+**Risk:** Low
+
+1. Add mode selector to Settings page
+2. Update `CycleTypeSelector` to filter options
+3. Add visual indicator of current mode (optional)
+
+### Phase 5: Testing & Validation
+**Estimated Time:** 2-3 hours  
+**Risk:** Low
+
+1. Unit tests for new repo methods
+2. Integration tests for sync
+3. Manual testing of mode switching
+4. Cross-device sync verification
+
+---
+
+## 4. Detailed Implementation
+
+### 4.1 Type Definitions
+
+**File:** `src/types/preferences.ts`
 
 ```typescript
 /**
- * App feature mode.
- * - standard: RFEM-focused simplified experience
- * - advanced: Full feature set with all progression modes
+ * Application mode determines available features.
+ * - standard: RFEM and Max Testing cycles only (simplified)
+ * - advanced: All cycle types and features available
  */
 export type AppMode = 'standard' | 'advanced';
 
-export const APP_MODE_LABELS: Record<AppMode, string> = {
-  standard: 'Standard',
-  advanced: 'Advanced',
+export interface UserPreferences {
+  id: string;
+  
+  /** Application mode - determines available features */
+  appMode: AppMode;
+  
+  // ... existing fields ...
+  defaultMaxReps: number;
+  defaultConditioningReps: number;
+  conditioningWeeklyIncrement: number;
+  weeklySetGoals: WeeklySetGoals;
+  restTimer: TimerSettings;
+  maxTestRestTimer: TimerSettings;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'> = {
+  appMode: 'standard', // Default to standard for new users
+  defaultMaxReps: 10,
+  defaultConditioningReps: 30,
+  conditioningWeeklyIncrement: 10,
+  weeklySetGoals: {
+    push: 10,
+    pull: 10,
+    legs: 10,
+    core: 0,
+    balance: 0,
+    mobility: 0,
+    other: 0,
+  },
+  restTimer: {
+    enabled: false,
+    durationSeconds: 180,
+  },
+  maxTestRestTimer: {
+    enabled: false,
+    durationSeconds: 300,
+  },
 };
 ```
 
-**File:** `src/types/index.ts`
+### 4.2 Repository Updates
 
-Add export:
+**File:** `src/data/repositories/UserPreferencesRepo.ts`
+
 ```typescript
-export type { AppMode } from './constants';
-export { APP_MODE_LABELS } from './constants';
+// Add new method
+async setAppMode(mode: AppMode): Promise<UserPreferences> {
+  return this.save({ appMode: mode });
+}
 ```
 
-#### 1.2 Update App Store
+### 4.3 Sync Types
 
-**File:** `src/stores/appStore.ts`
+**File:** `src/services/sync/types.ts`
 
-Add to the store interface and implementation:
+```typescript
+export interface RemoteUserPreferences {
+  id: string;
+  user_id: string;
+  app_mode: string; // 'standard' | 'advanced'
+  default_max_reps: number;
+  default_conditioning_reps: number;
+  conditioning_weekly_increment: number;
+  weekly_set_goals: unknown;
+  rest_timer_enabled: boolean;
+  rest_timer_duration_seconds: number;
+  max_test_rest_timer_enabled: boolean;
+  max_test_rest_timer_duration_seconds: number;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### 4.4 Sync Transformers
+
+**File:** `src/services/sync/transformers.ts`
 
 ```typescript
 import type { AppMode } from '@/types';
 
-interface AppState {
-  // ... existing properties
-  
-  // App mode
-  appMode: AppMode;
-  setAppMode: (mode: AppMode) => void;
+export function remoteToLocalUserPreferences(remote: RemoteUserPreferences): UserPreferences {
+  return {
+    id: remote.id,
+    appMode: (remote.app_mode as AppMode) || 'standard', // Fallback for existing records
+    defaultMaxReps: remote.default_max_reps,
+    defaultConditioningReps: remote.default_conditioning_reps,
+    conditioningWeeklyIncrement: remote.conditioning_weekly_increment,
+    weeklySetGoals: remote.weekly_set_goals as WeeklySetGoals,
+    restTimer: {
+      enabled: remote.rest_timer_enabled,
+      durationSeconds: remote.rest_timer_duration_seconds,
+    },
+    maxTestRestTimer: {
+      enabled: remote.max_test_rest_timer_enabled,
+      durationSeconds: remote.max_test_rest_timer_duration_seconds,
+    },
+    createdAt: toDateRequired(remote.created_at),
+    updatedAt: toDateRequired(remote.updated_at),
+  };
 }
 
-// In the store implementation:
-export const useAppStore = create<AppState>()(
-  persist(
-    (set) => ({
-      // ... existing state
-      
-      // App mode - default to advanced for existing users
-      appMode: 'advanced',
-      setAppMode: (mode) => set({ appMode: mode }),
-    }),
-    {
-      name: 'ascend-settings',
-      partialize: (state) => ({ 
-        // ... existing persisted fields
-        appMode: state.appMode,
-      }),
-    }
-  )
+export function localToRemoteUserPreferences(local: UserPreferences, userId: string) {
+  return {
+    id: local.id,
+    user_id: userId,
+    app_mode: local.appMode || 'standard',
+    default_max_reps: local.defaultMaxReps,
+    default_conditioning_reps: local.defaultConditioningReps,
+    conditioning_weekly_increment: local.conditioningWeeklyIncrement,
+    weekly_set_goals: local.weeklySetGoals,
+    rest_timer_enabled: local.restTimer.enabled,
+    rest_timer_duration_seconds: local.restTimer.durationSeconds,
+    max_test_rest_timer_enabled: local.maxTestRestTimer.enabled,
+    max_test_rest_timer_duration_seconds: local.maxTestRestTimer.durationSeconds,
+    created_at: toISOString(local.createdAt),
+    updated_at: toISOString(local.updatedAt),
+  };
+}
+```
+
+### 4.5 Context Updates
+
+**File:** `src/contexts/SyncedPreferencesContext.tsx`
+
+```typescript
+import type { UserPreferences, TimerSettings, ExerciseType, AppMode } from '@/types';
+
+interface SyncedPreferencesContextType {
+  preferences: UserPreferences;
+  isLoading: boolean;
+  
+  // Existing setters...
+  setDefaultMaxReps: (value: number) => Promise<void>;
+  setDefaultConditioningReps: (value: number) => Promise<void>;
+  setConditioningWeeklyIncrement: (value: number) => Promise<void>;
+  setWeeklySetGoal: (type: ExerciseType, value: number) => Promise<void>;
+  setRestTimer: (settings: Partial<TimerSettings>) => Promise<void>;
+  setMaxTestRestTimer: (settings: Partial<TimerSettings>) => Promise<void>;
+  
+  // New setter
+  setAppMode: (mode: AppMode) => Promise<void>;
+}
+
+// In provider:
+const setAppMode = useCallback(async (mode: AppMode) => {
+  const updated = await UserPreferencesRepo.setAppMode(mode);
+  await saveAndSync(updated);
+}, [saveAndSync]);
+
+// In return value:
+return (
+  <SyncedPreferencesContext.Provider value={{
+    preferences,
+    isLoading,
+    setDefaultMaxReps,
+    setDefaultConditioningReps,
+    setConditioningWeeklyIncrement,
+    setWeeklySetGoal,
+    setRestTimer,
+    setMaxTestRestTimer,
+    setAppMode, // New
+  }}>
+    {children}
+  </SyncedPreferencesContext.Provider>
 );
 ```
 
-**Migration Note:** Defaulting to `'advanced'` ensures existing users retain full functionality. New users can choose during onboarding (Phase 4, optional).
-
----
-
-### Phase 2: Utility Functions
-
-#### 2.1 Create Mode Utility Functions
-
-**File:** `src/utils/appMode.ts` (new file)
-
-```typescript
-/**
- * App Mode Utilities
- * 
- * Helper functions for checking app mode and feature availability.
- */
-
-import type { AppMode, ProgressionMode } from '@/types';
-
-/**
- * Check if the app is in Standard mode.
- */
-export function isStandardMode(mode: AppMode): boolean {
-  return mode === 'standard';
-}
-
-/**
- * Check if the app is in Advanced mode.
- */
-export function isAdvancedMode(mode: AppMode): boolean {
-  return mode === 'advanced';
-}
-
-/**
- * Get available progression modes based on app mode.
- * Standard: Only RFEM
- * Advanced: RFEM, Simple, Mixed
- */
-export function getAvailableProgressionModes(appMode: AppMode): ProgressionMode[] {
-  if (appMode === 'standard') {
-    return ['rfem'];
-  }
-  return ['rfem', 'simple', 'mixed'];
-}
-
-/**
- * Check if a specific progression mode is available in the current app mode.
- */
-export function isProgressionModeAvailable(
-  progressionMode: ProgressionMode, 
-  appMode: AppMode
-): boolean {
-  return getAvailableProgressionModes(appMode).includes(progressionMode);
-}
-
-/**
- * Check if Simple Progression is available (Advanced mode only).
- */
-export function isSimpleProgressionAvailable(appMode: AppMode): boolean {
-  return isAdvancedMode(appMode);
-}
-
-/**
- * Check if Mixed Cycle is available (Advanced mode only).
- */
-export function isMixedCycleAvailable(appMode: AppMode): boolean {
-  return isAdvancedMode(appMode);
-}
-```
-
-**File:** `src/utils/index.ts`
-
-Add export:
-```typescript
-export * from './appMode';
-```
-
----
-
-### Phase 3: UI Components
-
-#### 3.1 Create App Mode Selector Component
-
-**File:** `src/components/settings/AppModeSelector.tsx` (new file)
-
-```typescript
-/**
- * AppModeSelector Component
- * 
- * Toggle control for switching between Standard and Advanced app modes.
- * Used in Settings page.
- */
-
-import { Zap, Sparkles } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui';
-import type { AppMode } from '@/types';
-
-interface AppModeSelectorProps {
-  mode: AppMode;
-  onChange: (mode: AppMode) => void;
-}
-
-export function AppModeSelector({ mode, onChange }: AppModeSelectorProps) {
-  const options: Array<{
-    value: AppMode;
-    label: string;
-    description: string;
-    icon: typeof Zap;
-    gradient: string;
-  }> = [
-    {
-      value: 'standard',
-      label: 'Standard',
-      description: 'RFEM-based training with max testing cycles',
-      icon: Zap,
-      gradient: 'from-blue-500 to-cyan-500',
-    },
-    {
-      value: 'advanced',
-      label: 'Advanced',
-      description: 'All progression modes including simple and mixed cycles',
-      icon: Sparkles,
-      gradient: 'from-purple-500 to-pink-500',
-    },
-  ];
-
-  return (
-    <Card>
-      <CardContent className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-gray-500" />
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            App Mode
-          </h3>
-        </div>
-        
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Choose your training experience
-        </p>
-        
-        <div className="grid grid-cols-2 gap-3">
-          {options.map(({ value, label, description, icon: Icon, gradient }) => (
-            <button
-              key={value}
-              onClick={() => onChange(value)}
-              className={`
-                p-3 rounded-xl border-2 text-left transition-all
-                ${mode === value
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
-                }
-              `}
-            >
-              <div className={`
-                w-10 h-10 rounded-lg bg-gradient-to-br ${gradient} 
-                flex items-center justify-center mb-2
-              `}>
-                <Icon className="w-5 h-5 text-white" />
-              </div>
-              <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                {label}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {description}
-              </div>
-            </button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-**File:** `src/components/settings/index.ts`
-
-Add export:
-```typescript
-export * from './AppModeSelector';
-```
-
-#### 3.2 Update CycleTypeSelector Component
+### 4.6 CycleTypeSelector Updates
 
 **File:** `src/components/cycles/CycleTypeSelector.tsx`
 
-Modify to accept `appMode` prop and conditionally render options:
-
 ```typescript
-import { Calendar, Target, ArrowRight, TrendingUp, Layers } from 'lucide-react';
-import { Button } from '@/components/ui';
-import { isAdvancedMode } from '@/utils/appMode';
-import type { ProgressionMode, AppMode } from '@/types';
+import { useSyncedPreferences } from '@/contexts';
 
 interface CycleTypeSelectorProps {
-  appMode: AppMode;
   onSelectTraining: (mode: ProgressionMode) => void;
   onSelectMaxTesting: () => void;
   onCancel: () => void;
 }
 
 export function CycleTypeSelector({ 
-  appMode,
   onSelectTraining, 
   onSelectMaxTesting, 
   onCancel 
 }: CycleTypeSelectorProps) {
-  const showAdvancedOptions = isAdvancedMode(appMode);
-  
+  const { preferences } = useSyncedPreferences();
+  const isAdvancedMode = preferences.appMode === 'advanced';
+
   return (
     <div className="p-4 space-y-6">
       <div className="text-center mb-6">
@@ -327,104 +401,28 @@ export function CycleTypeSelector({
       </div>
 
       <div className="space-y-3">
-        {/* RFEM Training Cycle Option - Always visible */}
-        <button
-          onClick={() => onSelectTraining('rfem')}
-          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-primary-500 dark:hover:border-primary-500 bg-white dark:bg-dark-surface transition-colors text-left group"
-        >
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0">
-              <Calendar className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  RFEM Training Cycle
-                </h3>
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Periodized progression based on your max reps. 
-                Targets calculated automatically using RFEM percentages.
-              </p>
-            </div>
-          </div>
+        {/* RFEM Training Cycle - Always visible */}
+        <button onClick={() => onSelectTraining('rfem')} /* ... */ >
+          {/* RFEM option content */}
         </button>
 
-        {/* Simple Progression Cycle Option - Advanced only */}
-        {showAdvancedOptions && (
-          <button
-            onClick={() => onSelectTraining('simple')}
-            className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-emerald-500 dark:hover:border-emerald-500 bg-white dark:bg-dark-surface transition-colors text-left group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Simple Progression Cycle
-                  </h3>
-                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 transition-colors" />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Set your own rep targets for each exercise. 
-                  Optionally add reps each workout or week.
-                </p>
-              </div>
-            </div>
+        {/* Simple Progression - Advanced mode only */}
+        {isAdvancedMode && (
+          <button onClick={() => onSelectTraining('simple')} /* ... */ >
+            {/* Simple progression content */}
           </button>
         )}
 
-        {/* Mixed Cycle Option - Advanced only */}
-        {showAdvancedOptions && (
-          <button
-            onClick={() => onSelectTraining('mixed')}
-            className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-indigo-500 dark:hover:border-indigo-500 bg-white dark:bg-dark-surface transition-colors text-left group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <Layers className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Mixed Cycle
-                  </h3>
-                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Configure RFEM or simple progression individually for each exercise. 
-                  Best for combining different training approaches.
-                </p>
-              </div>
-            </div>
+        {/* Mixed Cycle - Advanced mode only */}
+        {isAdvancedMode && (
+          <button onClick={() => onSelectTraining('mixed')} /* ... */ >
+            {/* Mixed cycle content */}
           </button>
         )}
 
-        {/* Max Testing Option - Always visible */}
-        <button
-          onClick={onSelectMaxTesting}
-          className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-purple-500 dark:hover:border-purple-500 bg-white dark:bg-dark-surface transition-colors text-left group"
-        >
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-              <Target className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Max Rep Testing
-                </h3>
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-purple-500 transition-colors" />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Establish or re-test your maximum reps for exercises. 
-                Includes warmup sets and records new maxes automatically.
-              </p>
-            </div>
-          </div>
+        {/* Max Testing - Always visible */}
+        <button onClick={onSelectMaxTesting} /* ... */ >
+          {/* Max testing content */}
         </button>
       </div>
 
@@ -438,318 +436,377 @@ export function CycleTypeSelector({
 }
 ```
 
----
-
-### Phase 4: Page Updates
-
-#### 4.1 Update Settings Page
+### 4.7 Settings Page Updates
 
 **File:** `src/pages/Settings.tsx`
 
-Add the App Mode selector card near the top of the settings (after Account & Sync):
+Add a new section for App Mode selection:
 
-```typescript
-import { AppModeSelector } from '@/components/settings';
+```tsx
+// Import
+import type { AppMode } from '@/types';
 
-export function SettingsPage() {
-  const { 
-    // ... existing destructuring
-    appMode, 
-    setAppMode 
-  } = useAppStore();
+// In component, get from context
+const { 
+  preferences, 
+  setAppMode,
+  // ... other setters
+} = useSyncedPreferences();
 
-  // ... existing code
+// Handler
+const handleAppModeChange = async (mode: AppMode) => {
+  await setAppMode(mode);
+  setMessage({ type: 'success', text: `Switched to ${mode === 'advanced' ? 'Advanced' : 'Standard'} mode` });
+};
 
-  return (
-    <>
-      <PageHeader title="Settings" />
-
-      <div className="px-4 py-4 space-y-4">
-        {/* Message */}
-        {/* ... existing message code */}
-
-        {/* Account / Cloud Sync */}
-        {/* ... existing account card */}
-
-        {/* App Mode - NEW */}
-        <AppModeSelector mode={appMode} onChange={setAppMode} />
-
-        {/* Theme */}
-        {/* ... rest of existing cards */}
-      </div>
-
-      {/* ... existing modals */}
-    </>
-  );
-}
-```
-
-#### 4.2 Update Schedule Page
-
-**File:** `src/pages/Schedule.tsx`
-
-Pass `appMode` to `CycleTypeSelector`:
-
-```typescript
-import { useAppStore } from '@/stores/appStore';
-
-export function SchedulePage() {
-  // ... existing hooks
-  const { defaults, appMode } = useAppStore();
-
-  // ... existing code
-
-  // Update CycleTypeSelectorModal component
-  function CycleTypeSelectorModal({ 
-    isOpen, 
-    appMode,
-    onSelectTraining, 
-    onSelectMaxTesting, 
-    onClose 
-  }: { 
-    isOpen: boolean;
-    appMode: AppMode;
-    onSelectTraining: (mode: ProgressionMode) => void;
-    onSelectMaxTesting: () => void;
-    onClose: () => void;
-  }) {
-    return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Create New Cycle">
-        <CycleTypeSelector
-          appMode={appMode}
-          onSelectTraining={onSelectTraining}
-          onSelectMaxTesting={onSelectMaxTesting}
-          onCancel={onClose}
-        />
-      </Modal>
-    );
-  }
-
-  // Update all usages of CycleTypeSelectorModal to include appMode prop:
-  // <CycleTypeSelectorModal appMode={appMode} ... />
-}
+// JSX - Add section after "About" or before "Training Defaults"
+<Card>
+  <CardContent className="p-6">
+    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+      <Layers className="w-5 h-5" />
+      App Mode
+    </h2>
+    
+    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+      Choose between a simplified interface or full feature access.
+    </p>
+    
+    <div className="space-y-3">
+      <button
+        onClick={() => handleAppModeChange('standard')}
+        className={`w-full p-4 rounded-xl border-2 transition-colors text-left ${
+          preferences.appMode === 'standard'
+            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+            : 'border-gray-200 dark:border-dark-border hover:border-primary-300'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+            preferences.appMode === 'standard'
+              ? 'border-primary-500 bg-primary-500'
+              : 'border-gray-300 dark:border-gray-600'
+          }`}>
+            {preferences.appMode === 'standard' && (
+              <div className="w-2 h-2 rounded-full bg-white" />
+            )}
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">
+              Standard
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              RFEM-based training cycles and max testing. Perfect for KBoges-style calisthenics.
+            </p>
+          </div>
+        </div>
+      </button>
+      
+      <button
+        onClick={() => handleAppModeChange('advanced')}
+        className={`w-full p-4 rounded-xl border-2 transition-colors text-left ${
+          preferences.appMode === 'advanced'
+            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+            : 'border-gray-200 dark:border-dark-border hover:border-primary-300'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+            preferences.appMode === 'advanced'
+              ? 'border-primary-500 bg-primary-500'
+              : 'border-gray-300 dark:border-gray-600'
+          }`}>
+            {preferences.appMode === 'advanced' && (
+              <div className="w-2 h-2 rounded-full bg-white" />
+            )}
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">
+              Advanced
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Full access to all cycle types including simple progression and mixed modes.
+            </p>
+          </div>
+        </div>
+      </button>
+    </div>
+  </CardContent>
+</Card>
 ```
 
 ---
 
-### Phase 5: Testing & Validation
+## 5. Database Migration
 
-#### 5.1 Test Cases
+**File:** `supabase-migration-app-mode.sql`
 
-**Unit Tests:** `src/utils/appMode.test.ts` (new file)
+```sql
+-- Migration: Add app_mode column to user_preferences
+-- Date: 2026-01-XX
+-- Version: 2.7.0
+
+-- =============================================================================
+-- ADD APP_MODE COLUMN
+-- =============================================================================
+
+-- Add the app_mode column with default 'standard'
+ALTER TABLE user_preferences 
+ADD COLUMN IF NOT EXISTS app_mode TEXT NOT NULL DEFAULT 'standard';
+
+-- Add check constraint to ensure valid values
+ALTER TABLE user_preferences 
+ADD CONSTRAINT valid_app_mode CHECK (app_mode IN ('standard', 'advanced'));
+
+-- =============================================================================
+-- COMMENTS
+-- =============================================================================
+
+COMMENT ON COLUMN user_preferences.app_mode IS 'Application mode: standard (RFEM only) or advanced (all features)';
+
+-- =============================================================================
+-- VERIFICATION
+-- =============================================================================
+
+-- Verify the column was added
+SELECT column_name, data_type, column_default, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'user_preferences' AND column_name = 'app_mode';
+```
+
+### 5.1 Migration Steps
+
+1. **Backup first**: Create a backup of the `user_preferences` table
+2. **Run migration**: Execute the SQL in Supabase SQL editor
+3. **Verify**: Check that all existing rows have `app_mode = 'standard'`
+4. **Test**: Create a test user and verify the column works
+
+### 5.2 Rollback Script
+
+```sql
+-- Rollback: Remove app_mode column
+ALTER TABLE user_preferences DROP CONSTRAINT IF EXISTS valid_app_mode;
+ALTER TABLE user_preferences DROP COLUMN IF EXISTS app_mode;
+```
+
+---
+
+## 6. Testing Strategy
+
+### 6.1 Unit Tests
+
+**File:** `src/data/repositories/UserPreferencesRepo.test.ts`
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import {
-  isStandardMode,
-  isAdvancedMode,
-  getAvailableProgressionModes,
-  isProgressionModeAvailable,
-} from './appMode';
-
-describe('appMode utilities', () => {
-  describe('isStandardMode', () => {
-    it('returns true for standard mode', () => {
-      expect(isStandardMode('standard')).toBe(true);
-    });
-    
-    it('returns false for advanced mode', () => {
-      expect(isStandardMode('advanced')).toBe(false);
-    });
-  });
-
-  describe('isAdvancedMode', () => {
-    it('returns true for advanced mode', () => {
-      expect(isAdvancedMode('advanced')).toBe(true);
-    });
-    
-    it('returns false for standard mode', () => {
-      expect(isAdvancedMode('standard')).toBe(false);
-    });
-  });
-
-  describe('getAvailableProgressionModes', () => {
-    it('returns only rfem for standard mode', () => {
-      expect(getAvailableProgressionModes('standard')).toEqual(['rfem']);
+describe('UserPreferencesRepo', () => {
+  describe('setAppMode', () => {
+    it('should set app mode to standard', async () => {
+      const result = await UserPreferencesRepo.setAppMode('standard');
+      expect(result.appMode).toBe('standard');
     });
 
-    it('returns all modes for advanced mode', () => {
-      expect(getAvailableProgressionModes('advanced')).toEqual(['rfem', 'simple', 'mixed']);
-    });
-  });
-
-  describe('isProgressionModeAvailable', () => {
-    it('rfem is available in standard mode', () => {
-      expect(isProgressionModeAvailable('rfem', 'standard')).toBe(true);
+    it('should set app mode to advanced', async () => {
+      const result = await UserPreferencesRepo.setAppMode('advanced');
+      expect(result.appMode).toBe('advanced');
     });
 
-    it('simple is not available in standard mode', () => {
-      expect(isProgressionModeAvailable('simple', 'standard')).toBe(false);
+    it('should persist mode change', async () => {
+      await UserPreferencesRepo.setAppMode('advanced');
+      const prefs = await UserPreferencesRepo.get();
+      expect(prefs.appMode).toBe('advanced');
     });
 
-    it('mixed is not available in standard mode', () => {
-      expect(isProgressionModeAvailable('mixed', 'standard')).toBe(false);
-    });
-
-    it('all modes are available in advanced mode', () => {
-      expect(isProgressionModeAvailable('rfem', 'advanced')).toBe(true);
-      expect(isProgressionModeAvailable('simple', 'advanced')).toBe(true);
-      expect(isProgressionModeAvailable('mixed', 'advanced')).toBe(true);
+    it('should update timestamps on mode change', async () => {
+      const before = await UserPreferencesRepo.get();
+      await new Promise(r => setTimeout(r, 10));
+      const after = await UserPreferencesRepo.setAppMode('advanced');
+      expect(after.updatedAt.getTime()).toBeGreaterThan(before.updatedAt.getTime());
     });
   });
 });
 ```
 
-#### 5.2 Manual Testing Checklist
+### 6.2 Integration Tests
 
-- [ ] Settings page displays App Mode selector
-- [ ] Mode persists across app restarts
-- [ ] Standard mode shows only RFEM and Max Testing in CycleTypeSelector
-- [ ] Advanced mode shows all cycle types
-- [ ] Existing cycles remain accessible regardless of mode
-- [ ] Mode can be changed without affecting existing data
-- [ ] UI updates immediately when mode changes
+**File:** `src/services/syncService.test.ts`
+
+```typescript
+describe('SyncService - User Preferences', () => {
+  it('should sync app mode to cloud', async () => {
+    // Set mode locally
+    const prefs = await UserPreferencesRepo.setAppMode('advanced');
+    
+    // Sync to cloud
+    await SyncService.syncItem('user_preferences', prefs, mockUserId);
+    
+    // Verify in cloud (mock or actual)
+    const cloudPrefs = await fetchFromCloud('user_preferences', prefs.id);
+    expect(cloudPrefs.app_mode).toBe('advanced');
+  });
+
+  it('should pull app mode from cloud', async () => {
+    // Set up cloud data with advanced mode
+    await seedCloudData({ app_mode: 'advanced' });
+    
+    // Pull from cloud
+    await SyncService.pullFromCloud(mockUserId);
+    
+    // Verify local
+    const localPrefs = await UserPreferencesRepo.get();
+    expect(localPrefs.appMode).toBe('advanced');
+  });
+});
+```
+
+### 6.3 Manual Test Cases
+
+| Test Case | Steps | Expected Result |
+|-----------|-------|-----------------|
+| TC-1: Default mode | New user opens app | Mode is 'standard' |
+| TC-2: Switch to advanced | Settings → App Mode → Advanced | Mode changes, UI updates |
+| TC-3: Cycle options in standard | Standard mode → New Cycle | Only RFEM and Max Testing visible |
+| TC-4: Cycle options in advanced | Advanced mode → New Cycle | All 4 cycle types visible |
+| TC-5: Cross-device sync | Change mode on device A | Device B shows same mode after sync |
+| TC-6: Existing cycles unaffected | Switch modes | Previously created cycles work normally |
+| TC-7: Offline mode change | Change mode while offline | Mode persists, syncs when online |
 
 ---
 
-## Phase 6: Optional Enhancements (Future)
+## 7. Future Considerations
 
-### 6.1 Onboarding Mode Selection
+### 7.1 Subscription Integration
 
-Add mode selection to the onboarding flow for new users:
-
-**File:** `src/components/onboarding/OnboardingFlow.tsx`
-
-Add a new slide after the existing slides, before exercise creation:
+When implementing subscription-based feature gating:
 
 ```typescript
-{
-  id: 'mode-selection',
-  icon: Sparkles,
-  title: 'Choose Your Experience',
-  description: 'Select Standard for focused RFEM training, or Advanced for full control over your progression.',
-  gradient: 'from-indigo-500 to-purple-500',
-  isInteractive: true, // Flag to render AppModeSelector
+// Future: Subscription-aware mode checking
+interface SubscriptionStatus {
+  tier: 'free' | 'premium';
+  isActive: boolean;
+  expiresAt?: Date;
+}
+
+function getEffectiveAppMode(
+  userPreference: AppMode,
+  subscription: SubscriptionStatus
+): AppMode {
+  // If user has premium subscription, allow their preference
+  if (subscription.tier === 'premium' && subscription.isActive) {
+    return userPreference;
+  }
+  
+  // Free users are limited to standard mode
+  return 'standard';
 }
 ```
 
-### 6.2 Settings Badge/Indicator
+### 7.2 Feature Flag Architecture
 
-Show current mode in header or navigation:
+Consider adding a more flexible feature flag system:
 
 ```typescript
-// In Layout.tsx or PageHeader.tsx
-{appMode === 'standard' && (
-  <Badge className="text-2xs">Standard</Badge>
-)}
+interface FeatureFlags {
+  simpleProgressionCycles: boolean;
+  mixedCycles: boolean;
+  // Future features...
+  socialFeatures: boolean;
+  advancedAnalytics: boolean;
+}
+
+function getFeatureFlags(appMode: AppMode): FeatureFlags {
+  const standardFlags: FeatureFlags = {
+    simpleProgressionCycles: false,
+    mixedCycles: false,
+    socialFeatures: false,
+    advancedAnalytics: false,
+  };
+  
+  const advancedFlags: FeatureFlags = {
+    simpleProgressionCycles: true,
+    mixedCycles: true,
+    socialFeatures: false, // Not yet implemented
+    advancedAnalytics: false, // Not yet implemented
+  };
+  
+  return appMode === 'advanced' ? advancedFlags : standardFlags;
+}
 ```
 
-### 6.3 Future Monetization Hooks
+### 7.3 Analytics Events
 
-When preparing for App Store distribution, the mode toggle could be converted to:
+Track mode usage for product decisions:
 
 ```typescript
-interface AppFeatureAccess {
-  mode: AppMode;
-  isSubscribed: boolean;
-  canAccessAdvanced: boolean;
-}
+// Track mode changes
+analytics.track('app_mode_changed', {
+  from: previousMode,
+  to: newMode,
+  timestamp: Date.now(),
+});
 
-// In subscription context
-function checkAdvancedAccess(): boolean {
-  // Check subscription status, IAP, etc.
-}
+// Track feature usage by mode
+analytics.track('cycle_created', {
+  cycleType: 'rfem',
+  appMode: preferences.appMode,
+});
 ```
 
 ---
 
-## File Change Summary
+## 8. File Change Summary
 
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `src/utils/appMode.ts` | App mode utility functions |
-| `src/utils/appMode.test.ts` | Unit tests for mode utilities |
-| `src/components/settings/AppModeSelector.tsx` | Mode toggle component |
-
-### Modified Files
+### 8.1 Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/types/constants.ts` | Add `AppMode` type and labels |
-| `src/types/index.ts` | Export new type |
-| `src/utils/index.ts` | Export new utilities |
-| `src/stores/appStore.ts` | Add `appMode` state and setter |
-| `src/components/cycles/CycleTypeSelector.tsx` | Accept `appMode` prop, filter options |
-| `src/components/settings/index.ts` | Export `AppModeSelector` |
-| `src/pages/Settings.tsx` | Add App Mode section |
-| `src/pages/Schedule.tsx` | Pass `appMode` to CycleTypeSelector |
+| `src/types/preferences.ts` | Add `AppMode` type, add `appMode` field |
+| `src/types/index.ts` | Export `AppMode` type |
+| `src/data/repositories/UserPreferencesRepo.ts` | Add `setAppMode` method |
+| `src/services/sync/types.ts` | Add `app_mode` to `RemoteUserPreferences` |
+| `src/services/sync/transformers.ts` | Update both transformers for `appMode` |
+| `src/contexts/SyncedPreferencesContext.tsx` | Add `appMode` and `setAppMode` |
+| `src/components/cycles/CycleTypeSelector.tsx` | Conditional rendering based on mode |
+| `src/pages/Settings.tsx` | Add App Mode selector UI |
+
+### 8.2 Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase-migration-app-mode.sql` | Database migration script |
+| `src/data/repositories/UserPreferencesRepo.test.ts` | New test cases (if not exists) |
+
+### 8.3 Estimated Total Changes
+
+- **Lines added:** ~150-200
+- **Lines modified:** ~50-75
+- **New files:** 1-2
+- **Total effort:** 8-12 hours
 
 ---
 
-## Implementation Order
+## Appendix A: Migration Checklist
 
-1. **Type definitions** (`src/types/constants.ts`, `src/types/index.ts`)
-2. **Utility functions** (`src/utils/appMode.ts`, `src/utils/index.ts`)
-3. **Store update** (`src/stores/appStore.ts`)
-4. **AppModeSelector component** (`src/components/settings/AppModeSelector.tsx`)
-5. **Update CycleTypeSelector** (`src/components/cycles/CycleTypeSelector.tsx`)
-6. **Update Settings page** (`src/pages/Settings.tsx`)
-7. **Update Schedule page** (`src/pages/Schedule.tsx`)
-8. **Write tests** (`src/utils/appMode.test.ts`)
-9. **Manual testing**
-10. **Update version** (`src/constants/version.ts`)
-11. **Update CHANGELOG** (`CHANGELOG.md`)
-
----
-
-## Risk Assessment
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| Existing users lose features | Low | High | Default to 'advanced' mode |
-| Store migration issues | Low | Medium | Zustand handles missing keys gracefully |
-| UI confusion | Medium | Low | Clear mode descriptions and easy toggle |
-| Breaking existing cycles | None | High | Mode only affects creation, not existing data |
+- [ ] Create database backup
+- [ ] Run migration on staging/test database
+- [ ] Verify migration success
+- [ ] Update type definitions
+- [ ] Update repository methods
+- [ ] Update sync transformers
+- [ ] Update context and hooks
+- [ ] Update CycleTypeSelector
+- [ ] Update Settings page
+- [ ] Write unit tests
+- [ ] Write integration tests
+- [ ] Manual testing on web
+- [ ] Manual testing on mobile
+- [ ] Cross-device sync testing
+- [ ] Run migration on production
+- [ ] Deploy new version
+- [ ] Monitor for errors
 
 ---
 
-## Estimated Effort
+## Appendix B: Revision History
 
-| Phase | Estimated Time |
-|-------|----------------|
-| Phase 1: Types & Store | 30 minutes |
-| Phase 2: Utilities | 20 minutes |
-| Phase 3: UI Components | 1 hour |
-| Phase 4: Page Updates | 45 minutes |
-| Phase 5: Testing | 45 minutes |
-| **Total** | **~3.5 hours** |
-
----
-
-## Acceptance Criteria
-
-1. ✅ App mode can be toggled in Settings
-2. ✅ Mode preference persists across sessions
-3. ✅ Standard mode hides Simple and Mixed cycle options
-4. ✅ Advanced mode shows all cycle options
-5. ✅ Existing users default to Advanced mode
-6. ✅ No impact on existing cycles or data
-7. ✅ All new code includes appropriate TypeScript types
-8. ✅ Utility functions have unit test coverage
-9. ✅ Code follows existing architectural patterns
-
----
-
-## Appendix: Complete Code Listings
-
-The code examples in this document are designed to integrate seamlessly with the existing codebase patterns. Key conventions followed:
-
-- **JSDoc comments** for exported functions
-- **React.memo** for presentational components where beneficial
-- **Tailwind CSS** for styling consistency
-- **Lucide icons** matching existing icon usage
-- **Type-safe props** with TypeScript interfaces
-- **Path aliases** (`@/`) for imports
-- **Scoped logger** for debugging (if needed)
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2026-01-11 | Claude | Initial document |

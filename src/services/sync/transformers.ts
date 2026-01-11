@@ -7,7 +7,7 @@
  * Remote format: snake_case, ISO string dates
  */
 
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences, WeeklySetGoals } from '@/types';
+import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences, WeeklySetGoals, AppMode } from '@/types';
 import type {
   RemoteExercise,
   RemoteMaxRecord,
@@ -241,6 +241,7 @@ export function localToRemoteScheduledWorkout(local: ScheduledWorkout, userId: s
 export function remoteToLocalUserPreferences(remote: RemoteUserPreferences): UserPreferences {
   return {
     id: remote.id,
+    appMode: (remote.app_mode as AppMode) || 'standard', // Fallback for existing records
     defaultMaxReps: remote.default_max_reps,
     defaultConditioningReps: remote.default_conditioning_reps,
     conditioningWeeklyIncrement: remote.conditioning_weekly_increment,
@@ -265,6 +266,7 @@ export function localToRemoteUserPreferences(local: UserPreferences, userId: str
   return {
     id: local.id,
     user_id: userId,
+    app_mode: local.appMode || 'standard',
     default_max_reps: local.defaultMaxReps,
     default_conditioning_reps: local.defaultConditioningReps,
     conditioning_weekly_increment: local.conditioningWeeklyIncrement,

@@ -44,6 +44,7 @@ export type {
 export type {
   WeeklySetGoals,
   TimerSettings,
+  AppMode,
   UserPreferences,
 } from './preferences';
 

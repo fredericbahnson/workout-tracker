@@ -5,18 +5,24 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.6.5] - 2026-01-11
+## [2.7.0] - 2026-01-11
 
-### Fixed
-- **Duplicate cleanup now syncs to cloud**: "Fix Duplicate Workouts" button now also soft-deletes duplicates from the cloud, preventing them from returning on app restart
-- **Duplicate prevention in sync**: `pullFromCloud` now skips workouts that would create duplicates (same cycle + sequence number as existing local workout)
+### Added
+- **Standard and Advanced app modes**: Users can now choose between simplified (Standard) or full-featured (Advanced) interfaces
+  - Standard mode: RFEM-based training cycles and max testing only
+  - Advanced mode: All cycle types including Simple Progression and Mixed cycles
+- **App Mode setting in Settings page**: New radio-style selector under Appearance section
+- **Cross-device sync for app mode**: Mode preference syncs via Supabase like other user preferences
 
-## [2.6.6] - 2026-01-11
+### Changed
+- CycleTypeSelector now conditionally displays cycle options based on selected app mode
+- New users default to Standard mode for a streamlined experience
 
-### Fixed
-- **Duplicate workout cleanup now properly syncs to cloud**: Cleanup button now returns success/failure feedback and properly soft-deletes duplicates in Supabase
-- **Removed post-cleanup sync** that was re-fetching duplicates from cloud
-- **Duplicate prevention in pullFromCloud**: Sync now skips remote workouts that would create cycle+sequence duplicates with existing local workouts
+### Technical
+- Added `AppMode` type to preferences system
+- Extended `UserPreferences` interface with `appMode` field
+- Updated sync transformers to handle `app_mode` field
+- Added `setAppMode` to `UserPreferencesRepo` and `SyncedPreferencesContext`
 
 ## [2.6.5] - 2026-01-11
 
