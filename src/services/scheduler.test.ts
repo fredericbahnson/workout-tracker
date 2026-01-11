@@ -338,6 +338,69 @@ describe('calculateTargetReps', () => {
       expect(target).toBe(5); // Minimum 5 seconds
     });
   });
+
+  describe('normal warmup sets (with warmupPercentage)', () => {
+    it('calculates 20% warmup as percentage of working set target', () => {
+      const set = createMockScheduledSet({ 
+        isWarmup: true,
+        warmupPercentage: 20
+      });
+      const workout = createMockScheduledWorkout({ rfem: 3 });
+      const maxRecord = createMockMaxRecord({ maxReps: 20 });
+
+      // Working target = 20 - 3 = 17
+      // Warmup = ceil(17 * 0.20) = ceil(3.4) = 4
+      const target = calculateTargetReps(set, workout, maxRecord, 5, 5, 10);
+
+      expect(target).toBe(4);
+    });
+
+    it('calculates 40% warmup as percentage of working set target', () => {
+      const set = createMockScheduledSet({ 
+        isWarmup: true,
+        warmupPercentage: 40
+      });
+      const workout = createMockScheduledWorkout({ rfem: 3 });
+      const maxRecord = createMockMaxRecord({ maxReps: 20 });
+
+      // Working target = 20 - 3 = 17
+      // Warmup = ceil(17 * 0.40) = ceil(6.8) = 7
+      const target = calculateTargetReps(set, workout, maxRecord, 5, 5, 10);
+
+      expect(target).toBe(7);
+    });
+
+    it('uses different percentages for two warmup sets correctly', () => {
+      const maxRecord = createMockMaxRecord({ maxReps: 20 });
+      const workout = createMockScheduledWorkout({ rfem: 5 });
+      
+      // Working target = 20 - 5 = 15
+      const warmup20 = createMockScheduledSet({ isWarmup: true, warmupPercentage: 20 });
+      const warmup40 = createMockScheduledSet({ isWarmup: true, warmupPercentage: 40 });
+
+      const target20 = calculateTargetReps(warmup20, workout, maxRecord, 5, 5, 10);
+      const target40 = calculateTargetReps(warmup40, workout, maxRecord, 5, 5, 10);
+
+      // Warmup 20% = ceil(15 * 0.20) = ceil(3) = 3
+      // Warmup 40% = ceil(15 * 0.40) = ceil(6) = 6
+      expect(target20).toBe(3);
+      expect(target40).toBe(6);
+    });
+
+    it('uses default max when no max record exists', () => {
+      const set = createMockScheduledSet({ 
+        isWarmup: true,
+        warmupPercentage: 20
+      });
+      const workout = createMockScheduledWorkout({ rfem: 2 });
+
+      // Working target = 10 (default) - 2 = 8
+      // Warmup = ceil(8 * 0.20) = ceil(1.6) = 2
+      const target = calculateTargetReps(set, workout, undefined, 5, 5, 10);
+
+      expect(target).toBe(2);
+    });
+  });
 });
 
 // ============================================================================

@@ -85,7 +85,7 @@ export function useCycleWizardState({
   const [groupRotation, setGroupRotation] = useState<string[]>(editCycle?.groupRotation || []);
   const [rfemRotation, setRfemRotation] = useState<number[]>(editCycle?.rfemRotation || [4, 3, 2]);
   const [conditioningWeeklyRepIncrement, setConditioningWeeklyRepIncrement] = useState(
-    editCycle?.conditioningWeeklyRepIncrement || preferences.conditioningWeeklyIncrement
+    editCycle?.conditioningWeeklyRepIncrement ?? preferences.conditioningWeeklyIncrement
   );
 
   // Warmup settings

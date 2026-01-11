@@ -553,14 +553,49 @@ export function calculateTargetReps(
   // RFEM mode calculation (or conditioning exercises in any mode)
   const isTimeBased = set.measurementType === 'time';
   
-  // Max testing warmup: percentage of previous max (or default)
+  // Handle warmup sets
   if (set.isWarmup) {
+    // For simple mode warmups, the values are pre-calculated and stored on the set
+    if (set.simpleBaseReps !== undefined) {
+      return set.simpleBaseReps;
+    }
+    if (set.simpleBaseTime !== undefined) {
+      return set.simpleBaseTime;
+    }
+    
+    // Max testing warmups: use previousMaxReps/Time with fixed 20% intensity
+    if (set.previousMaxReps !== undefined || set.previousMaxTime !== undefined) {
+      if (isTimeBased) {
+        const prevMax = set.previousMaxTime || maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
+        return Math.max(WARMUP.MIN_TIME_SECONDS, Math.round(prevMax * WARMUP.MAX_TEST_INTENSITY));
+      } else {
+        const prevMax = set.previousMaxReps || maxRecord?.maxReps || defaultMax;
+        return Math.max(WARMUP.MIN_REPS, Math.round(prevMax * WARMUP.MAX_TEST_INTENSITY));
+      }
+    }
+    
+    // Normal warmups: use warmupPercentage of working set target
+    if (set.warmupPercentage) {
+      const percentage = set.warmupPercentage / 100;
+      
+      if (isTimeBased) {
+        const max = maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
+        const workingTarget = Math.max(RFEM.MIN_TARGET_TIME_SECONDS, max - workout.rfem * RFEM.TIME_SCALE_FACTOR);
+        return Math.max(WARMUP.MIN_TIME_SECONDS, Math.round(workingTarget * percentage));
+      } else {
+        const max = maxRecord?.maxReps || defaultMax;
+        const workingTarget = Math.max(RFEM.MIN_TARGET_REPS, max - workout.rfem);
+        return Math.max(WARMUP.MIN_REPS, Math.ceil(workingTarget * percentage));
+      }
+    }
+    
+    // Fallback: if neither previousMax nor warmupPercentage is set, use 20% of max
     if (isTimeBased) {
-      const prevMax = set.previousMaxTime || maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
-      return Math.max(WARMUP.MIN_TIME_SECONDS, Math.round(prevMax * WARMUP.MAX_TEST_INTENSITY));
+      const max = maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
+      return Math.max(WARMUP.MIN_TIME_SECONDS, Math.round(max * WARMUP.MAX_TEST_INTENSITY));
     } else {
-      const prevMax = set.previousMaxReps || maxRecord?.maxReps || defaultMax;
-      return Math.max(WARMUP.MIN_REPS, Math.round(prevMax * WARMUP.MAX_TEST_INTENSITY));
+      const max = maxRecord?.maxReps || defaultMax;
+      return Math.max(WARMUP.MIN_REPS, Math.round(max * WARMUP.MAX_TEST_INTENSITY));
     }
   }
   
