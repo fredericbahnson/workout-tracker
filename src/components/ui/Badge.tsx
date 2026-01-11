@@ -1,4 +1,4 @@
-import { type HTMLAttributes, forwardRef } from 'react';
+import { type HTMLAttributes, forwardRef, memo } from 'react';
 import type { ExerciseType } from '@/types';
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
@@ -15,7 +15,7 @@ const typeColors: Record<ExerciseType, string> = {
   other: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
 };
 
-export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
+const BadgeComponent = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className = '', variant = 'default', children, ...props }, ref) => {
     const isExerciseType = variant in typeColors;
     
@@ -39,4 +39,6 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   }
 );
 
-Badge.displayName = 'Badge';
+BadgeComponent.displayName = 'Badge';
+
+export const Badge = memo(BadgeComponent);

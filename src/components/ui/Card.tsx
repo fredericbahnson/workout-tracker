@@ -1,10 +1,10 @@
-import { type HTMLAttributes, forwardRef } from 'react';
+import { type HTMLAttributes, forwardRef, memo } from 'react';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'interactive';
 }
 
-export const Card = forwardRef<HTMLDivElement, CardProps>(
+const CardComponent = forwardRef<HTMLDivElement, CardProps>(
   ({ className = '', variant = 'default', children, ...props }, ref) => {
     const variants = {
       default: 'bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border',
@@ -23,32 +23,37 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
   }
 );
 
-Card.displayName = 'Card';
+CardComponent.displayName = 'Card';
+
+export const Card = memo(CardComponent);
 
 // Sub-components
-export const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const CardHeaderComponent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className = '', children, ...props }, ref) => (
     <div ref={ref} className={`px-4 py-3 border-b border-gray-200 dark:border-dark-border ${className}`} {...props}>
       {children}
     </div>
   )
 );
-CardHeader.displayName = 'CardHeader';
+CardHeaderComponent.displayName = 'CardHeader';
+export const CardHeader = memo(CardHeaderComponent);
 
-export const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const CardContentComponent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className = '', children, ...props }, ref) => (
     <div ref={ref} className={`px-4 py-4 ${className}`} {...props}>
       {children}
     </div>
   )
 );
-CardContent.displayName = 'CardContent';
+CardContentComponent.displayName = 'CardContent';
+export const CardContent = memo(CardContentComponent);
 
-export const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const CardFooterComponent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className = '', children, ...props }, ref) => (
     <div ref={ref} className={`px-4 py-3 border-t border-gray-200 dark:border-dark-border ${className}`} {...props}>
       {children}
     </div>
   )
 );
-CardFooter.displayName = 'CardFooter';
+CardFooterComponent.displayName = 'CardFooter';
+export const CardFooter = memo(CardFooterComponent);

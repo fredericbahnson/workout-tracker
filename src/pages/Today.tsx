@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell } from 'lucide-react';
@@ -123,22 +123,27 @@ export function TodayPage() {
     return CompletedSetRepo.getForScheduledWorkout(displayWorkout.id);
   }, [displayWorkout?.id]);
 
-  // Maps
-  const exerciseMap = new Map<string, Exercise>();
-  exercises?.forEach(ex => exerciseMap.set(ex.id, ex));
+  // Memoized maps and computations
+  const exerciseMap = useMemo(() => {
+    const map = new Map<string, Exercise>();
+    exercises?.forEach(ex => map.set(ex.id, ex));
+    return map;
+  }, [exercises]);
 
   // Calculate which scheduled sets are completed
-  const completedScheduledSetIds = new Set(
-    workoutCompletedSets?.map(s => s.scheduledSetId) || []
+  const completedScheduledSetIds = useMemo(() => 
+    new Set(workoutCompletedSets?.map(s => s.scheduledSetId) || []),
+    [workoutCompletedSets]
   );
 
-  const scheduledSetsRemaining = displayWorkout?.scheduledSets.filter(
-    s => !completedScheduledSetIds.has(s.id)
-  ) || [];
-  
-  const scheduledSetsCompleted = displayWorkout?.scheduledSets.filter(
-    s => completedScheduledSetIds.has(s.id)
-  ) || [];
+  const { scheduledSetsRemaining, scheduledSetsCompleted } = useMemo(() => ({
+    scheduledSetsRemaining: displayWorkout?.scheduledSets.filter(
+      s => !completedScheduledSetIds.has(s.id)
+    ) || [],
+    scheduledSetsCompleted: displayWorkout?.scheduledSets.filter(
+      s => completedScheduledSetIds.has(s.id)
+    ) || [],
+  }), [displayWorkout?.scheduledSets, completedScheduledSetIds]);
 
   // Helper functions
   const getTargetReps = (set: ScheduledSet, workout: ScheduledWorkout): number => {
@@ -157,7 +162,7 @@ export function TodayPage() {
     return calculateSimpleTargetWeight(set, workout, activeCycle);
   };
 
-  const groupSetsByType = (sets: ScheduledSet[]) => {
+  const groupSetsByType = useMemo(() => (sets: ScheduledSet[]) => {
     return EXERCISE_TYPES.map(type => ({
       type,
       sets: sets
@@ -168,18 +173,31 @@ export function TodayPage() {
           return (exA?.name || '').localeCompare(exB?.name || '');
         })
     })).filter(group => group.sets.length > 0);
-  };
+  }, [exerciseMap]);
 
-  const groupedSetsRemaining = groupSetsByType(scheduledSetsRemaining);
-  const groupedSetsCompleted = groupSetsByType(scheduledSetsCompleted);
-
-  const adHocCompletedSets = workoutCompletedSets?.filter(s => s.scheduledSetId === null) || [];
+  const groupedSetsRemaining = useMemo(() => 
+    groupSetsByType(scheduledSetsRemaining), 
+    [groupSetsByType, scheduledSetsRemaining]
+  );
   
-  const groupedAdHocSets = EXERCISE_TYPES.map(type => ({
-    type,
-    sets: adHocCompletedSets.filter(set => exerciseMap.get(set.exerciseId)?.type === type)
-      .sort((a, b) => (exerciseMap.get(a.exerciseId)?.name || '').localeCompare(exerciseMap.get(b.exerciseId)?.name || ''))
-  })).filter(group => group.sets.length > 0);
+  const groupedSetsCompleted = useMemo(() => 
+    groupSetsByType(scheduledSetsCompleted), 
+    [groupSetsByType, scheduledSetsCompleted]
+  );
+
+  const adHocCompletedSets = useMemo(() => 
+    workoutCompletedSets?.filter(s => s.scheduledSetId === null) || [],
+    [workoutCompletedSets]
+  );
+  
+  const groupedAdHocSets = useMemo(() => 
+    EXERCISE_TYPES.map(type => ({
+      type,
+      sets: adHocCompletedSets.filter(set => exerciseMap.get(set.exerciseId)?.type === type)
+        .sort((a, b) => (exerciseMap.get(a.exerciseId)?.name || '').localeCompare(exerciseMap.get(b.exerciseId)?.name || ''))
+    })).filter(group => group.sets.length > 0),
+    [adHocCompletedSets, exerciseMap]
+  );
 
   // Event handlers
   const handleSkipWorkout = async () => {

@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, Copy } from 'lucide-react';
 import { createScopedLogger } from '@/utils/logger';
 
 const log = createScopedLogger('ErrorBoundary');
@@ -118,6 +118,20 @@ function AppErrorFallback({
   error: Error | null; 
   onReload: () => void;
 }) {
+  const handleCopyError = () => {
+    const errorDetails = [
+      `Error: ${error?.message || 'Unknown error'}`,
+      `Stack: ${error?.stack || 'No stack trace'}`,
+      `Time: ${new Date().toISOString()}`,
+      `URL: ${window.location.href}`,
+      `User Agent: ${navigator.userAgent}`,
+    ].join('\n\n');
+    
+    navigator.clipboard.writeText(errorDetails).then(() => {
+      alert('Error details copied to clipboard. You can paste this when reporting the issue.');
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
@@ -142,13 +156,23 @@ function AppErrorFallback({
           </div>
         )}
 
-        <button
-          onClick={onReload}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Reload App
-        </button>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={onReload}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reload App
+          </button>
+          
+          <button
+            onClick={handleCopyError}
+            className="inline-flex items-center justify-center gap-2 px-6 py-2 text-gray-600 dark:text-gray-400 text-sm hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+          >
+            <Copy className="w-4 h-4" />
+            Copy Error Details
+          </button>
+        </div>
       </div>
     </div>
   );

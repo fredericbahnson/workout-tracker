@@ -16,12 +16,23 @@ import { createScopedLogger } from '@/utils/logger';
 
 const log = createScopedLogger('Scheduler');
 
+/**
+ * Input configuration for schedule generation.
+ */
 interface SchedulerInput {
+  /** The cycle to generate a schedule for */
   cycle: Cycle;
+  /** Map of exercise IDs to Exercise objects for all exercises in the cycle */
   exercises: Map<string, Exercise>;
-  startFromWorkout?: number; // If provided, only generate workouts from this sequence number
+  /** Optional max records for RFEM calculations */
+  maxRecords?: Map<string, MaxRecord>;
+  /** If provided, only generate workouts starting from this sequence number (1-indexed) */
+  startFromWorkout?: number;
 }
 
+/**
+ * Internal representation of a single training day.
+ */
 interface DayAllocation {
   sequenceNumber: number;
   weekNumber: number;
@@ -32,7 +43,27 @@ interface DayAllocation {
 }
 
 /**
- * Generates all scheduled workouts for a cycle
+ * Generates all scheduled workouts for a training cycle.
+ * 
+ * This is the main entry point for the scheduling engine. It creates a complete
+ * workout plan based on the cycle configuration, distributing sets across weeks
+ * and days according to the defined goals and rotation patterns.
+ * 
+ * @param input - The scheduler configuration
+ * @param input.cycle - The cycle defining training parameters (weeks, days, goals)
+ * @param input.exercises - Map of all exercises available for scheduling
+ * @param input.maxRecords - Optional max records for RFEM-based progression
+ * @param input.startFromWorkout - Optional starting point for partial regeneration
+ * @returns Array of scheduled workouts (without IDs - caller should assign)
+ * 
+ * @example
+ * ```ts
+ * const workouts = generateSchedule({
+ *   cycle: myCycle,
+ *   exercises: exerciseMap,
+ *   maxRecords: maxRecordMap
+ * });
+ * ```
  */
 export function generateSchedule(input: SchedulerInput): Omit<ScheduledWorkout, 'id'>[] {
   const { cycle, exercises, startFromWorkout = 1 } = input;
@@ -375,8 +406,22 @@ function createScheduledWorkout(
 }
 
 /**
- * Calculate target reps/time for a scheduled set in Simple Progression mode.
- * Returns reps for rep-based exercises, seconds for time-based exercises.
+ * Calculates target reps or time for a scheduled set using Simple Progression mode.
+ * 
+ * Simple Progression uses a base value plus periodic increments, allowing for
+ * predictable linear progression without the need for max testing.
+ * 
+ * @param set - The scheduled set to calculate targets for
+ * @param workout - The workout containing the set (provides week/day context)
+ * @param _cycle - The cycle (reserved for future use, maintains API consistency)
+ * @returns Target reps for rep-based exercises, or seconds for time-based exercises
+ * 
+ * @example
+ * ```ts
+ * // For a set with simpleBaseReps: 10, simpleRepIncrement: 2, per_week progression
+ * // Week 1: 10 reps, Week 2: 12 reps, Week 3: 14 reps
+ * const target = calculateSimpleTargetReps(set, workout, cycle);
+ * ```
  */
 export function calculateSimpleTargetReps(
   set: ScheduledSet,
@@ -401,9 +446,22 @@ export function calculateSimpleTargetReps(
 }
 
 /**
- * Calculate target weight for a scheduled set in Simple Progression mode.
- * Returns weight in lbs, or undefined if no weight is set.
- * (Future-proofing for weighted exercises)
+ * Calculates target weight for a scheduled set using Simple Progression mode.
+ * 
+ * Used for weighted exercises where the user wants to progress by adding weight
+ * rather than increasing reps.
+ * 
+ * @param set - The scheduled set to calculate weight for
+ * @param workout - The workout containing the set (provides week/day context)
+ * @param _cycle - The cycle (reserved for future use, maintains API consistency)
+ * @returns Target weight in the user's configured unit, or undefined if not weighted
+ * 
+ * @example
+ * ```ts
+ * // For a set with simpleBaseWeight: 20, simpleWeightIncrement: 2.5, per_week progression
+ * // Week 1: 20 lbs, Week 2: 22.5 lbs, Week 3: 25 lbs
+ * const weight = calculateSimpleTargetWeight(set, workout, cycle);
+ * ```
  */
 export function calculateSimpleTargetWeight(
   set: ScheduledSet,
@@ -446,12 +504,32 @@ function calculateProgressedValue(
 }
 
 /**
- * Calculate target reps/time for a scheduled set dynamically.
- * Returns reps for rep-based exercises, seconds for time-based exercises.
+ * Calculates target reps or time for a scheduled set dynamically at workout time.
  * 
- * For RFEM mode: Uses max records and RFEM percentage
- * For Simple mode: Uses base value + progression increments
- * For Mixed mode: Uses the per-exercise mode (RFEM or Simple) stored on the set
+ * This is the primary function for determining what targets to show the user.
+ * It handles all progression modes:
+ * - **RFEM**: max - RFEM offset (scaled for time-based exercises)
+ * - **Simple**: base + periodic increments
+ * - **Mixed**: Uses per-exercise mode stored on the set
+ * - **Conditioning**: base + weekly increment
+ * - **Warmup**: Percentage of working intensity (20% or 40%)
+ * - **Max Test**: Returns 0 (UI shows "Go to Max")
+ * 
+ * @param set - The scheduled set to calculate targets for
+ * @param workout - The workout containing the set
+ * @param maxRecord - The user's max record for this exercise (for RFEM calculation)
+ * @param conditioningWeeklyIncrement - Rep increment per week for conditioning exercises
+ * @param conditioningWeeklyTimeIncrement - Time increment per week for time-based conditioning
+ * @param defaultMax - Default max to use if no max record exists
+ * @param cycle - Optional cycle for mixed mode calculations
+ * @returns Target reps for rep-based, seconds for time-based, or 0 for max tests
+ * 
+ * @example
+ * ```ts
+ * // RFEM mode with max of 30 reps, RFEM offset of 5
+ * // Returns: 30 - 5 = 25 target reps
+ * const target = calculateTargetReps(set, workout, maxRecord, 2, 5, 20);
+ * ```
  */
 export function calculateTargetReps(
   set: ScheduledSet,
@@ -517,7 +595,37 @@ export function calculateTargetReps(
 }
 
 /**
- * Validates a cycle configuration before generating schedule
+ * Validates a cycle configuration before generating a schedule.
+ * 
+ * Checks for common configuration errors and potential issues that could
+ * cause problems during schedule generation or workout execution.
+ * 
+ * @param cycle - The cycle configuration to validate (without ID fields)
+ * @param exercises - Map of all available exercises
+ * @returns Validation result with arrays of errors (blocking) and warnings (informational)
+ * 
+ * @example
+ * ```ts
+ * const { valid, errors, warnings } = validateCycle(cycleConfig, exerciseMap);
+ * if (!valid) {
+ *   console.error('Cannot create cycle:', errors);
+ * }
+ * if (warnings.length > 0) {
+ *   console.warn('Potential issues:', warnings);
+ * }
+ * ```
+ * 
+ * @remarks
+ * Errors include:
+ * - Missing required fields (name, groups, rotation)
+ * - Invalid numeric ranges (weeks, days per week)
+ * - Missing RFEM rotation in RFEM/mixed modes
+ * - References to non-existent groups or exercises
+ * 
+ * Warnings include:
+ * - Empty groups
+ * - Missing base values for Simple mode exercises
+ * - Missing conditioning increments
  */
 export function validateCycle(
   cycle: Omit<Cycle, 'id' | 'createdAt' | 'updatedAt'>,

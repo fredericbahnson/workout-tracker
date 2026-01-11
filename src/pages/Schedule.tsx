@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Calendar, CalendarDays, CheckCircle, Circle, Clock, ChevronRight, Plus, SkipForward, History, Edit2, Dumbbell, List } from 'lucide-react';
@@ -50,11 +50,14 @@ export function SchedulePage() {
   const exercises = useLiveQuery(() => ExerciseRepo.getAll(), []);
   const maxRecords = useLiveQuery(() => MaxRecordRepo.getLatestForAllExercises(), []);
 
-  const exerciseMap = new Map<string, Exercise>();
-  exercises?.forEach(ex => exerciseMap.set(ex.id, ex));
+  const exerciseMap = useMemo(() => {
+    const map = new Map<string, Exercise>();
+    exercises?.forEach(ex => map.set(ex.id, ex));
+    return map;
+  }, [exercises]);
 
   // Helper to get group name from any cycle
-  const getGroupName = (workout: ScheduledWorkout): string | undefined => {
+  const getGroupName = useCallback((workout: ScheduledWorkout): string | undefined => {
     if (workout.isAdHoc) return undefined;
     const activeGroup = activeCycle?.groups.find(g => g.id === workout.groupId);
     if (activeGroup) return activeGroup.name;
@@ -63,30 +66,32 @@ export function SchedulePage() {
       if (group) return group.name;
     }
     return undefined;
-  };
+  }, [activeCycle, allCycles]);
 
-  // Split workouts
-  const pendingWorkouts = allWorkouts?.filter(w => w.status === 'pending' || w.status === 'partial') || [];
-  const doneWorkouts = allWorkouts?.filter(w => w.status === 'completed') || [];
-  const skippedWorkouts = allWorkouts?.filter(w => w.status === 'skipped') || [];
-  const passedWorkouts = allWorkouts?.filter(w => w.status === 'completed' || w.status === 'skipped') || [];
+  // Split workouts - memoized for performance
+  const { pendingWorkouts, doneWorkouts, skippedWorkouts, passedWorkouts } = useMemo(() => ({
+    pendingWorkouts: allWorkouts?.filter(w => w.status === 'pending' || w.status === 'partial') || [],
+    doneWorkouts: allWorkouts?.filter(w => w.status === 'completed') || [],
+    skippedWorkouts: allWorkouts?.filter(w => w.status === 'skipped') || [],
+    passedWorkouts: allWorkouts?.filter(w => w.status === 'completed' || w.status === 'skipped') || [],
+  }), [allWorkouts]);
 
-  const getStatusIcon = (status: ScheduledWorkout['status']) => {
+  const getStatusIcon = useCallback((status: ScheduledWorkout['status']) => {
     switch (status) {
       case 'completed': return { icon: CheckCircle, color: 'text-green-500' };
       case 'partial': return { icon: Clock, color: 'text-yellow-500' };
       case 'skipped': return { icon: SkipForward, color: 'text-gray-400' };
       default: return { icon: Circle, color: 'text-gray-300 dark:text-gray-600' };
     }
-  };
+  }, []);
 
-  const getSetsSummary = (workout: ScheduledWorkout) => {
+  const getSetsSummary = useCallback((workout: ScheduledWorkout) => {
     const summary: Record<string, number> = {};
     workout.scheduledSets.forEach(set => {
       summary[set.exerciseType] = (summary[set.exerciseType] || 0) + 1;
     });
     return summary;
-  };
+  }, []);
 
   const handleWorkoutClick = (workout: ScheduledWorkout) => setPreviewWorkout(workout);
 

@@ -1,11 +1,12 @@
-import { type InputHTMLAttributes, forwardRef, useState, useEffect } from 'react';
+import { type InputHTMLAttributes, forwardRef, useState, useEffect, memo } from 'react';
+import { inputClasses } from '@/styles/classes';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
+const InputComponent = forwardRef<HTMLInputElement, InputProps>(
   ({ className = '', label, error, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     
@@ -23,14 +24,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={`
-            w-full px-3 py-2 rounded-lg border transition-colors
-            bg-white dark:bg-dark-surface
-            text-gray-900 dark:text-gray-100
-            border-gray-300 dark:border-dark-border
-            focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
-            placeholder:text-gray-400 dark:placeholder:text-gray-500
+            ${inputClasses.fullWidth} ${inputClasses.base}
             disabled:bg-gray-50 disabled:dark:bg-dark-bg disabled:cursor-not-allowed
-            ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}
+            ${error ? inputClasses.error : ''}
             ${className}
           `}
           {...props}
@@ -43,7 +39,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   }
 );
 
-Input.displayName = 'Input';
+InputComponent.displayName = 'Input';
+export const Input = memo(InputComponent);
 
 // Number input that properly handles empty state during editing
 interface NumberInputProps {
@@ -57,7 +54,7 @@ interface NumberInputProps {
   disabled?: boolean;
 }
 
-export function NumberInput({ 
+export const NumberInput = memo(function NumberInput({ 
   label, 
   value, 
   onChange, 
@@ -104,6 +101,7 @@ export function NumberInput({
   };
 
   const inputId = label?.toLowerCase().replace(/\s+/g, '-');
+  const inputClassName = `${inputClasses.base} ${inputClasses.disabled} ${className}`;
 
   // If there's no label, render just the input (for inline use)
   if (!label) {
@@ -117,16 +115,7 @@ export function NumberInput({
         onBlur={handleBlur}
         placeholder={placeholder}
         disabled={disabled}
-        className={`
-          px-3 py-2 rounded-lg border transition-colors
-          bg-white dark:bg-dark-surface
-          text-gray-900 dark:text-gray-100
-          border-gray-300 dark:border-dark-border
-          focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
-          placeholder:text-gray-400 dark:placeholder:text-gray-500
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${className}
-        `}
+        className={inputClassName}
       />
     );
   }
@@ -149,20 +138,11 @@ export function NumberInput({
         onBlur={handleBlur}
         placeholder={placeholder}
         disabled={disabled}
-        className={`
-          w-full px-3 py-2 rounded-lg border transition-colors
-          bg-white dark:bg-dark-surface
-          text-gray-900 dark:text-gray-100
-          border-gray-300 dark:border-dark-border
-          focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
-          placeholder:text-gray-400 dark:placeholder:text-gray-500
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${className}
-        `}
+        className={`${inputClasses.fullWidth} ${inputClassName}`}
       />
     </div>
   );
-}
+});
 
 // Time duration input in MM:SS format
 interface TimeDurationInputProps {
@@ -173,7 +153,7 @@ interface TimeDurationInputProps {
   maxSeconds?: number;
 }
 
-export function TimeDurationInput({
+export const TimeDurationInput = memo(function TimeDurationInput({
   label,
   value,
   onChange,
@@ -244,13 +224,7 @@ export function TimeDurationInput({
     updateValue(parseInt(minutes, 10) || 0, boundedSecs);
   };
 
-  const inputClass = `
-    w-16 px-3 py-2 rounded-lg border transition-colors text-center
-    bg-white dark:bg-dark-surface
-    text-gray-900 dark:text-gray-100
-    border-gray-300 dark:border-dark-border
-    focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
-  `;
+  const inputClass = `w-16 ${inputClasses.base} text-center`;
 
   return (
     <div className="w-full">
@@ -286,4 +260,4 @@ export function TimeDurationInput({
       </div>
     </div>
   );
-}
+});
