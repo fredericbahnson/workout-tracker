@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from '@/data/supabase';
 import { db, generateId } from '@/data/db';
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences } from '@/types';
+import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, ScheduledSet, UserPreferences } from '@/types';
 import { now, toISOString, isAfter } from '@/utils/dateUtils';
 import { createScopedLogger } from '@/utils/logger';
 import type {
@@ -153,10 +153,63 @@ export const SyncService = {
 
     // Merge scheduled workouts
     if (scheduledWorkouts) {
+      // Build a map of existing cycleId:sequenceNumber combinations to prevent duplicates
+      // Map stores the local workout ID for each key, so we can compare
+      const localWorkouts = await db.scheduledWorkouts.toArray();
+      const existingWorkoutsByKey = new Map<string, ScheduledWorkout>();
+      
+      for (const w of localWorkouts) {
+        // Skip ad-hoc workouts - they don't have sequence conflicts
+        if (w.isAdHoc) continue;
+        // Skip workouts without a valid sequence number
+        if (w.sequenceNumber === undefined || w.sequenceNumber === null) continue;
+        
+        const key = `${w.cycleId}:${w.sequenceNumber}`;
+        existingWorkoutsByKey.set(key, w);
+      }
+      
       for (const remote of scheduledWorkouts as RemoteScheduledWorkout[]) {
         const local = await db.scheduledWorkouts.get(remote.id);
+        
+        // Skip if remote has no sequence number (shouldn't happen but be defensive)
+        if (remote.sequence_number === undefined || remote.sequence_number === null) {
+          continue;
+        }
+        
+        // Check if this would create a duplicate (same cycle + sequence but different ID)
+        const remoteKey = `${remote.cycle_id}:${remote.sequence_number}`;
+        const existingLocal = existingWorkoutsByKey.get(remoteKey);
+        const wouldCreateDuplicate = !local && existingLocal !== undefined;
+        
+        if (wouldCreateDuplicate && existingLocal) {
+          // We have a local workout with the same cycle/sequence but different ID
+          // Compare and decide which to keep
+          const localHasWarmups = existingLocal.scheduledSets.some(s => s.isWarmup);
+          const remoteHasWarmups = (remote.scheduled_sets as ScheduledSet[])?.some(s => s.isWarmup) ?? false;
+          
+          if (localHasWarmups && !remoteHasWarmups) {
+            // Local has warmups, remote doesn't - skip remote, keep local
+            log.debug(`Skipping remote workout ${remote.id} - local ${existingLocal.id} has warmups`);
+            continue;
+          } else if (!localHasWarmups && remoteHasWarmups) {
+            // Remote has warmups, local doesn't - replace local with remote
+            log.debug(`Replacing local workout ${existingLocal.id} with remote ${remote.id} - remote has warmups`);
+            await db.scheduledWorkouts.delete(existingLocal.id);
+            await db.scheduledWorkouts.put(remoteToLocalScheduledWorkout(remote));
+            existingWorkoutsByKey.set(remoteKey, remoteToLocalScheduledWorkout(remote));
+            continue;
+          } else {
+            // Both have same warmup status - prefer local (don't overwrite with cloud version)
+            log.debug(`Skipping remote workout ${remote.id} - keeping local ${existingLocal.id}`);
+            continue;
+          }
+        }
+        
         if (!local || (remote.completed_at && (!local.completedAt || isAfter(remote.completed_at, local.completedAt)))) {
-          await db.scheduledWorkouts.put(remoteToLocalScheduledWorkout(remote));
+          const converted = remoteToLocalScheduledWorkout(remote);
+          await db.scheduledWorkouts.put(converted);
+          // Track this workout
+          existingWorkoutsByKey.set(remoteKey, converted);
         }
       }
     }
@@ -337,27 +390,75 @@ export const SyncService = {
     table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
     id: string,
     userId: string
-  ) {
-    if (!isSupabaseConfigured()) return;
+  ): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
     
     // If offline, queue for later
     if (!this.isOnline()) {
       await this.queueOperation(table, 'delete', { id });
-      return;
+      return true; // Queued successfully
     }
 
     try {
-      await supabase
+      const { error, data } = await supabase
         .from(table)
         .update({ deleted_at: toISOString(now()) })
         .eq('id', id)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select('id');
+      
+      if (error) {
+        log.error(error as unknown as Error, { operation: 'delete', table, id });
+        return false;
+      }
+      
+      // Log if no rows were updated (item might not exist in cloud)
+      if (!data || data.length === 0) {
+        log.debug(`No rows updated for delete ${table}:${id} - item may not exist in cloud`);
+      }
+      
+      return true;
     } catch (error) {
-      log.error(error as Error, { operation: 'delete', table });
+      log.error(error as Error, { operation: 'delete', table, id });
       // Queue for retry on network errors
       if (this.isNetworkError(error)) {
         await this.queueOperation(table, 'delete', { id });
+        return true; // Queued for retry
       }
+      return false;
+    }
+  },
+
+  // Hard delete an item from cloud (permanent, use for cleanup)
+  async hardDeleteItem(
+    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
+    id: string,
+    userId: string
+  ): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    
+    if (!this.isOnline()) {
+      // Can't hard delete while offline - soft delete instead
+      await this.queueOperation(table, 'delete', { id });
+      return true;
+    }
+
+    try {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
+      
+      if (error) {
+        log.error(error as unknown as Error, { operation: 'hardDelete', table, id });
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      log.error(error as Error, { operation: 'hardDelete', table, id });
+      return false;
     }
   },
 

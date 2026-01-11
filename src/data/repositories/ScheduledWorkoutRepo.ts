@@ -144,9 +144,9 @@ export const ScheduledWorkoutRepo = {
    * For each cycle + sequenceNumber combination, keeps the workout that:
    * 1. Has warmup sets (if any do), OR
    * 2. Was created most recently
-   * Returns the number of duplicates removed.
+   * Returns the IDs of removed duplicates (for cloud sync).
    */
-  async cleanupDuplicates(): Promise<number> {
+  async cleanupDuplicates(): Promise<string[]> {
     const allWorkouts = await db.scheduledWorkouts.toArray();
     
     // Group by cycleId + sequenceNumber
@@ -163,7 +163,7 @@ export const ScheduledWorkoutRepo = {
     }
     
     // Find and remove duplicates
-    let removedCount = 0;
+    const deletedIds: string[] = [];
     for (const workouts of groups.values()) {
       if (workouts.length <= 1) continue;
       
@@ -187,10 +187,10 @@ export const ScheduledWorkoutRepo = {
       const toDelete = workouts.slice(1);
       for (const workout of toDelete) {
         await db.scheduledWorkouts.delete(workout.id);
-        removedCount++;
+        deletedIds.push(workout.id);
       }
     }
     
-    return removedCount;
+    return deletedIds;
   }
 };

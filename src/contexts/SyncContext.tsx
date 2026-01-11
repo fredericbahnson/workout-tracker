@@ -191,13 +191,27 @@ export function useSyncItem() {
     async (
       table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
       id: string
-    ) => {
+    ): Promise<boolean> => {
       if (user && isConfigured) {
-        await SyncService.deleteItem(table, id, user.id);
+        return await SyncService.deleteItem(table, id, user.id);
       }
+      return false;
     },
     [user, isConfigured]
   );
 
-  return { syncItem, deleteItem };
+  const hardDeleteItem = useCallback(
+    async (
+      table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
+      id: string
+    ): Promise<boolean> => {
+      if (user && isConfigured) {
+        return await SyncService.hardDeleteItem(table, id, user.id);
+      }
+      return false;
+    },
+    [user, isConfigured]
+  );
+
+  return { syncItem, deleteItem, hardDeleteItem };
 }

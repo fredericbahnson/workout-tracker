@@ -3,7 +3,7 @@ import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle,
 import { exportData, importData, db } from '@/data/db';
 import { ScheduledWorkoutRepo } from '@/data/repositories';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
-import { useAuth, useSync, useSyncedPreferences } from '@/contexts';
+import { useAuth, useSync, useSyncedPreferences, useSyncItem } from '@/contexts';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, Button, NumberInput, Badge, Select, TimeDurationInput } from '@/components/ui';
 import { AuthModal, DeleteAccountModal, ChangePasswordModal, ClearDataModal } from '@/components/settings';
@@ -24,6 +24,7 @@ export function SettingsPage() {
   } = useSyncedPreferences();
   const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount, updatePassword } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
+  const { deleteItem, hardDeleteItem } = useSyncItem();
   
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -183,9 +184,37 @@ export function SettingsPage() {
     setIsCleaningDuplicates(true);
     setMessage(null);
     try {
-      const removedCount = await ScheduledWorkoutRepo.cleanupDuplicates();
-      if (removedCount > 0) {
-        setMessage({ type: 'success', text: `Removed ${removedCount} duplicate workout(s).` });
+      const deletedIds = await ScheduledWorkoutRepo.cleanupDuplicates();
+      
+      if (deletedIds.length > 0) {
+        // Hard delete from cloud so they don't come back
+        let successCount = 0;
+        let failCount = 0;
+        for (const id of deletedIds) {
+          try {
+            // Use hardDeleteItem for permanent removal from cloud
+            const success = await hardDeleteItem('scheduled_workouts', id);
+            if (success) {
+              successCount++;
+            } else {
+              // If hard delete fails, try soft delete as fallback
+              const softSuccess = await deleteItem('scheduled_workouts', id);
+              if (softSuccess) successCount++;
+              else failCount++;
+            }
+          } catch (e) {
+            failCount++;
+          }
+        }
+        
+        if (failCount > 0) {
+          setMessage({ 
+            type: 'success', 
+            text: `Removed ${deletedIds.length} duplicate(s). ${successCount} synced to cloud, ${failCount} may return on next sync.` 
+          });
+        } else {
+          setMessage({ type: 'success', text: `Removed ${deletedIds.length} duplicate workout(s) and synced to cloud.` });
+        }
       } else {
         setMessage({ type: 'success', text: 'No duplicate workouts found.' });
       }

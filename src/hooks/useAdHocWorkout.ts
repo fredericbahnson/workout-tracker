@@ -17,7 +17,7 @@ interface UseAdHocWorkoutParams {
   /** Sync item function */
   syncItem: (table: SyncTable, item: unknown) => Promise<void>;
   /** Delete item function */
-  deleteItem: (table: SyncTable, id: string) => Promise<void>;
+  deleteItem: (table: SyncTable, id: string) => Promise<void | boolean>;
   /** Mark workout as completed (shows completion view) */
   markWorkoutCompleted: (workoutId: string) => void;
   /** Dismiss completion view (when starting ad-hoc) */
