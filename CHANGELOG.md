@@ -5,6 +5,15 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.6] - 2026-01-12
+
+### Fixed
+- **Cycle wizard layout (continued)**: Secondary badges (Cond, Wt) now stack vertically below exercise type badge
+  - Gives exercise names maximum horizontal space
+  - Prevents awkward text wrapping on narrow screens
+  - Shortened badge labels: "Conditioning" → "Cond", "Weighted" → "Wt"
+  - Applied consistently across GroupsStep, MixedExerciseConfig, and ExerciseProgressionEditor
+
 ## [2.7.5] - 2026-01-12
 
 ### Fixed

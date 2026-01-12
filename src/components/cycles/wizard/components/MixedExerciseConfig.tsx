@@ -88,19 +88,21 @@ export function MixedExerciseConfig({
   if (isConditioning) {
     return (
       <div className="border border-gray-200 dark:border-dark-border rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Badge variant={exercise.type} className="text-2xs">
-              {EXERCISE_TYPE_LABELS[exercise.type]}
-            </Badge>
-            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{exercise.name}</span>
-            <Badge variant="other" className="text-2xs">Conditioning</Badge>
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-start gap-2">
+            <div className="flex flex-col gap-1 flex-shrink-0">
+              <Badge variant={exercise.type} className="text-2xs">
+                {EXERCISE_TYPE_LABELS[exercise.type]}
+              </Badge>
+              <Badge variant="other" className="text-2xs">Cond</Badge>
+            </div>
+            <span className="font-medium text-sm text-gray-900 dark:text-gray-100 pt-0.5">{exercise.name}</span>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onRemove}
-            className="p-1 text-gray-400 hover:text-red-500"
+            className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
           >
             <Trash2 className="w-3 h-3" />
           </Button>
@@ -145,19 +147,21 @@ export function MixedExerciseConfig({
   // Standard exercise UI with RFEM/Simple toggle
   return (
     <div className="border border-gray-200 dark:border-dark-border rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Badge variant={exercise.type} className="text-2xs">
-            {EXERCISE_TYPE_LABELS[exercise.type]}
-          </Badge>
-          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{exercise.name}</span>
-          {isWeighted && <Badge variant="other" className="text-2xs">Weighted</Badge>}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-start gap-2">
+          <div className="flex flex-col gap-1 flex-shrink-0">
+            <Badge variant={exercise.type} className="text-2xs">
+              {EXERCISE_TYPE_LABELS[exercise.type]}
+            </Badge>
+            {isWeighted && <Badge variant="other" className="text-2xs">Wt</Badge>}
+          </div>
+          <span className="font-medium text-sm text-gray-900 dark:text-gray-100 pt-0.5">{exercise.name}</span>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={onRemove}
-          className="p-1 text-gray-400 hover:text-red-500"
+          className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
         >
           <Trash2 className="w-3 h-3" />
         </Button>

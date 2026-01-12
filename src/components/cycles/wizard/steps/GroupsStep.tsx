@@ -109,14 +109,16 @@ export function GroupsStep({
                       key={assignment.exerciseId}
                       className="py-2 px-2 bg-gray-50 dark:bg-gray-800/50 rounded"
                     >
-                      <div className="flex items-center gap-2">
-                        <Badge variant={exercise.type} className="text-2xs flex-shrink-0">
-                          {EXERCISE_TYPE_LABELS[exercise.type]}
-                        </Badge>
-                        <span className="flex-1 text-sm min-w-0 break-words">{exercise.name}</span>
-                        {exercise.mode === 'conditioning' && (
-                          <Badge variant="other" className="text-2xs flex-shrink-0">Cond</Badge>
-                        )}
+                      <div className="flex items-start gap-2">
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          <Badge variant={exercise.type} className="text-2xs">
+                            {EXERCISE_TYPE_LABELS[exercise.type]}
+                          </Badge>
+                          {exercise.mode === 'conditioning' && (
+                            <Badge variant="other" className="text-2xs">Cond</Badge>
+                          )}
+                        </div>
+                        <span className="flex-1 text-sm min-w-0 break-words pt-0.5">{exercise.name}</span>
                         <Button
                           variant="ghost"
                           size="sm"

@@ -110,14 +110,16 @@ export function ExerciseProgressionEditor({
 
   return (
     <div className="border border-dark-border rounded-lg p-3">
-      <div className="flex items-center gap-2 mb-3">
-        <Badge variant={exercise.type} className="text-2xs">
-          {EXERCISE_TYPE_LABELS[exercise.type]}
-        </Badge>
-        <span className="font-medium text-gray-900 dark:text-gray-100">{exercise.name}</span>
-        {isWeighted && (
-          <Badge variant="other" className="text-2xs">Weighted</Badge>
-        )}
+      <div className="flex items-start gap-2 mb-3">
+        <div className="flex flex-col gap-1 flex-shrink-0">
+          <Badge variant={exercise.type} className="text-2xs">
+            {EXERCISE_TYPE_LABELS[exercise.type]}
+          </Badge>
+          {isWeighted && (
+            <Badge variant="other" className="text-2xs">Wt</Badge>
+          )}
+        </div>
+        <span className="font-medium text-gray-900 dark:text-gray-100 pt-0.5">{exercise.name}</span>
       </div>
 
       {/* Reps/Time Row */}
