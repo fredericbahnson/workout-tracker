@@ -1,5 +1,6 @@
 import { Circle, CheckCircle, Edit2 } from 'lucide-react';
 import { SwipeableSetCard } from '@/components/workouts/SwipeableSetCard';
+import { getWeightUnitLabel } from '@/constants';
 import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledSet, type CompletedSet, type ExerciseType } from '@/types';
 
 interface SetGroup {
@@ -129,7 +130,7 @@ export function ScheduledSetsList({
                             )}
                           </div>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : isTimeBased ? 'hold' : targetWeight ? 'reps @ lbs' : 'reps'}
+                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : isTimeBased ? 'hold' : targetWeight ? `reps @ ${getWeightUnitLabel()}` : 'reps'}
                           </span>
                         </div>
                       </div>

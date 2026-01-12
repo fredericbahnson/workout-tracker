@@ -113,7 +113,6 @@ export interface GroupsStepProps {
   onUpdateGroupName: (id: string, name: string) => void;
   onAddExercise: (groupId: string, exerciseId: string) => void;
   onRemoveExercise: (groupId: string, exerciseId: string) => void;
-  onUpdateConditioningReps: (groupId: string, exerciseId: string, reps: number) => void;
   onUpdateAssignment: (groupId: string, exerciseId: string, updates: Partial<ExerciseAssignment>) => void;
 }
 

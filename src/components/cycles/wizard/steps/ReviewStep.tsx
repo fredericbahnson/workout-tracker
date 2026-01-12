@@ -7,6 +7,7 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { Card, Badge } from '@/components/ui';
+import { formatWeightAt, formatWeightIncrement, getWeightUnitLabel } from '@/constants';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, PROGRESSION_INTERVAL_LABELS } from '@/types';
 import type { ReviewStepProps } from '../types';
 
@@ -202,7 +203,7 @@ export function ReviewStep({
                         <span className="text-gray-600 dark:text-gray-400">{exercise.name}:</span>
                         <span className="font-medium">
                           {baseValue || '?'} {isTimeBased ? 'sec' : 'reps'}
-                          {isWeighted && baseWeight ? ` @ ${baseWeight} lbs` : ''}
+                          {isWeighted && baseWeight ? ` ${formatWeightAt(baseWeight)}` : ''}
                         </span>
                         {progressionType && progressionType !== 'constant' && increment && (
                           <span className="text-gray-500 dark:text-gray-400">
@@ -211,7 +212,7 @@ export function ReviewStep({
                         )}
                         {isWeighted && weightProgressionType && weightProgressionType !== 'constant' && weightIncrement && (
                           <span className="text-gray-500 dark:text-gray-400">
-                            (+{weightIncrement} lbs {PROGRESSION_INTERVAL_LABELS[weightProgressionType].toLowerCase()})
+                            ({formatWeightIncrement(weightIncrement)} {PROGRESSION_INTERVAL_LABELS[weightProgressionType].toLowerCase()})
                           </span>
                         )}
                       </div>
@@ -270,7 +271,7 @@ export function ReviewStep({
                         <span className="text-gray-600 dark:text-gray-400">{exercise.name}:</span>
                         <span className="font-medium">
                           {baseValue || '?'} {isTimeBased ? 'sec' : 'reps'}
-                          {isWeighted && baseWeight ? ` @ ${baseWeight} lbs` : ''}
+                          {isWeighted && baseWeight ? ` ${formatWeightAt(baseWeight)}` : ''}
                         </span>
                         {progressionType && progressionType !== 'constant' && increment && (
                           <span className="text-gray-500 dark:text-gray-400">
@@ -279,7 +280,7 @@ export function ReviewStep({
                         )}
                         {isWeighted && weightProgressionType && weightProgressionType !== 'constant' && weightIncrement && (
                           <span className="text-gray-500 dark:text-gray-400">
-                            (+{weightIncrement} lbs/{weightProgressionType === 'per_workout' ? 'workout' : 'week'})
+                            (+{weightIncrement} {getWeightUnitLabel()}/{weightProgressionType === 'per_workout' ? 'workout' : 'week'})
                           </span>
                         )}
                       </div>

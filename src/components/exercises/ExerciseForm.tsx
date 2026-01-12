@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button, Input, NumberInput, Select } from '@/components/ui';
 import { useSyncedPreferences } from '@/contexts';
 import { createScopedLogger } from '@/utils/logger';
+import { getWeightUnitLabel } from '@/constants';
 import { 
   EXERCISE_TYPES, 
   EXERCISE_TYPE_LABELS, 
@@ -192,7 +193,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         {weightEnabled && (
           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-border">
             <Input
-              label="Default Weight (lbs, optional)"
+              label={`Default Weight (${getWeightUnitLabel()}, optional)`}
               type="number"
               min={0}
               step={0.5}

@@ -23,7 +23,6 @@ export function GroupsStep({
   onUpdateGroupName,
   onAddExercise,
   onRemoveExercise,
-  onUpdateConditioningReps,
   onUpdateAssignment
 }: GroupsStepProps) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -108,34 +107,49 @@ export function GroupsStep({
                   return (
                     <div
                       key={assignment.exerciseId}
-                      className="flex items-start gap-2 py-1.5 px-2 bg-gray-50 dark:bg-gray-800/50 rounded"
+                      className="py-2 px-2 bg-gray-50 dark:bg-gray-800/50 rounded"
                     >
-                      <Badge variant={exercise.type} className="text-2xs flex-shrink-0 mt-0.5">
-                        {EXERCISE_TYPE_LABELS[exercise.type]}
-                      </Badge>
-                      <span className="flex-1 text-sm min-w-0 break-words">{exercise.name}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={exercise.type} className="text-2xs flex-shrink-0">
+                          {EXERCISE_TYPE_LABELS[exercise.type]}
+                        </Badge>
+                        <span className="flex-1 text-sm min-w-0 break-words">{exercise.name}</span>
+                        {exercise.mode === 'conditioning' && (
+                          <Badge variant="other" className="text-2xs flex-shrink-0">Cond</Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRemoveExercise(group.id, assignment.exerciseId)}
+                          className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
 
                       {exercise.mode === 'conditioning' && (
-                        <NumberInput
-                          value={assignment.conditioningBaseReps || defaults.defaultConditioningReps}
-                          onChange={v => onUpdateConditioningReps(
-                            group.id,
-                            assignment.exerciseId,
-                            v
-                          )}
-                          min={1}
-                          className="w-16 text-xs py-1 flex-shrink-0"
-                        />
+                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs text-gray-500 dark:text-gray-400">
+                              Base {exercise.measurementType === 'time' ? 'Time (sec)' : 'Reps'}:
+                            </label>
+                            <NumberInput
+                              value={exercise.measurementType === 'time'
+                                ? (assignment.conditioningBaseTime || exercise.defaultConditioningTime || 30)
+                                : (assignment.conditioningBaseReps || defaults.defaultConditioningReps)}
+                              onChange={v => onUpdateAssignment(
+                                group.id,
+                                assignment.exerciseId,
+                                exercise.measurementType === 'time'
+                                  ? { conditioningBaseTime: v }
+                                  : { conditioningBaseReps: v }
+                              )}
+                              min={1}
+                              className="w-20 text-xs"
+                            />
+                          </div>
+                        </div>
                       )}
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveExercise(group.id, assignment.exerciseId)}
-                        className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
                     </div>
                   );
                 })}

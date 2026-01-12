@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Button, Input, Select } from '@/components/ui';
+import { formatWeightLabel, formatWeightAt } from '@/constants';
 import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from '@/types';
 
 interface QuickLogFormProps {
@@ -88,7 +89,7 @@ export function QuickLogForm({
     if (suggestedReps === undefined) return null;
     const repsText = isTimeBased ? formatTime(suggestedReps) : `${suggestedReps} reps`;
     if (suggestedWeight !== undefined && suggestedWeight > 0) {
-      return `${repsText} @ ${suggestedWeight} lbs`;
+      return `${repsText} ${formatWeightAt(suggestedWeight)}`;
     }
     return repsText;
   };
@@ -135,7 +136,7 @@ export function QuickLogForm({
       {/* Weight Input - only show if exercise has weight tracking enabled */}
       {exercise.weightEnabled && (
         <Input
-          label="Added Weight (lbs)"
+          label={formatWeightLabel('Added Weight')}
           type="number"
           min={0}
           step={0.5}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, NumberInput } from '@/components/ui';
+import { formatWeightLabel } from '@/constants';
 import type { Exercise, CompletedSet } from '@/types';
 
 interface EditCompletedSetModalProps {
@@ -91,7 +92,7 @@ export function EditCompletedSetModal({
           {exercise.weightEnabled && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Added Weight (lbs)
+                {formatWeightLabel('Added Weight')}
               </label>
               <input
                 type="number"

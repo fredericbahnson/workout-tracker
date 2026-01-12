@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react';
 import { NumberInput, Select } from '@/components/ui';
+import { getWeightUnitLabel } from '@/constants';
 import type { ProgressionInterval } from '@/types';
 import type { SimpleProgressionFieldsProps } from '../types';
 
@@ -117,7 +118,7 @@ export function SimpleProgressionFields({
         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-200 dark:border-dark-border">
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Weight (lbs)
+              Weight ({getWeightUnitLabel()})
             </label>
             <NumberInput
               value={baseWeight}
@@ -143,7 +144,7 @@ export function SimpleProgressionFields({
           </div>
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              +lbs
+              +{getWeightUnitLabel()}
             </label>
             <NumberInput
               value={weightIncrement}

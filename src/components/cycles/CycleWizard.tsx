@@ -94,7 +94,6 @@ export function CycleWizard({
     updateGroupName,
     addExerciseToGroup,
     removeExerciseFromGroup,
-    updateConditioningReps,
     updateAssignment,
   } = useCycleWizardState({ editCycle, initialProgressionMode, onComplete });
 
@@ -147,7 +146,6 @@ export function CycleWizard({
             onUpdateGroupName={updateGroupName}
             onAddExercise={addExerciseToGroup}
             onRemoveExercise={removeExerciseFromGroup}
-            onUpdateConditioningReps={updateConditioningReps}
             onUpdateAssignment={updateAssignment}
           />
         )}

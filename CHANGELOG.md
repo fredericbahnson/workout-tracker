@@ -5,6 +5,33 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.5] - 2026-01-12
+
+### Fixed
+- **Cycle wizard layout**: Conditioning exercise input fields now appear below the exercise name row instead of inline
+  - Prevents exercise names from being squeezed into narrow columns on mobile
+  - Added "Cond" badge for visual clarity
+  - Now properly supports both rep-based and time-based conditioning exercises
+  
+### Changed
+- Simplified `GroupsStep` component by using `onUpdateAssignment` for conditioning exercises
+- Removed deprecated `onUpdateConditioningReps` prop from `GroupsStepProps` interface
+
+## [2.7.4] - 2026-01-12
+
+### Changed
+- **Centralized weight unit configuration**: All hardcoded "lbs" strings (20+ locations) now use centralized constants
+  - Created `src/constants/units.ts` with `WEIGHT_UNIT` configuration and formatting utilities
+  - `formatWeight(value)` - formats as "20 lbs"
+  - `formatWeightAt(value)` - formats as "@ 20 lbs" for combined displays
+  - `formatWeightIncrement(value)` - formats as "+5 lbs" for progression displays
+  - `formatWeightLabel(text)` - formats as "Weight (lbs)" for input labels
+  - `getWeightUnitLabel()` - returns unit string for inline use
+
+### Technical
+- Enables future support for user-selectable weight units (lbs vs kg)
+- Updated components: ExerciseCard, ExerciseForm, MaxRecordForm, QuickLogForm, EditCompletedSetModal, ReviewStep, SimpleProgressionFields, ExerciseProgressionEditor, ExerciseDetail, ScheduledSetsList
+
 ## [2.7.3] - 2026-01-11
 
 ### Fixed

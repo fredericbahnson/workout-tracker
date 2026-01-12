@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react';
 import { NumberInput, Select, Badge } from '@/components/ui';
+import { formatWeightAt, getWeightUnitLabel } from '@/constants';
 import { EXERCISE_TYPE_LABELS, type ProgressionInterval } from '@/types';
 import type { ExerciseProgressionEditorProps } from '../types';
 
@@ -172,7 +173,7 @@ export function ExerciseProgressionEditor({
           {/* Base Weight */}
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Base Weight (lbs)
+              Base Weight ({getWeightUnitLabel()})
             </label>
             <NumberInput
               value={baseWeight}
@@ -202,7 +203,7 @@ export function ExerciseProgressionEditor({
           {/* Weight Increment */}
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Add lbs
+              Add {getWeightUnitLabel()}
             </label>
             <NumberInput
               value={weightIncrement || 0}
@@ -220,15 +221,15 @@ export function ExerciseProgressionEditor({
        (isWeighted && weightProgressionType !== 'constant' && weightIncrement && weightIncrement > 0) ? (
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
           Week 1: {baseValue}{isTimeBased ? ' sec' : ' reps'}
-          {isWeighted && baseWeight > 0 && ` @ ${baseWeight} lbs`}
+          {isWeighted && baseWeight > 0 && ` ${formatWeightAt(baseWeight)}`}
           {' → '}
           Week 4: {progressionType !== 'constant' && increment
             ? baseValue + (progressionType === 'per_week' ? 3 : 11) * increment
             : baseValue}
           {isTimeBased ? ' sec' : ' reps'}
           {isWeighted && baseWeight > 0 && weightProgressionType !== 'constant' && weightIncrement
-            ? ` @ ${baseWeight + (weightProgressionType === 'per_week' ? 3 : 11) * weightIncrement} lbs`
-            : isWeighted && baseWeight > 0 ? ` @ ${baseWeight} lbs` : ''}
+            ? ` ${formatWeightAt(baseWeight + (weightProgressionType === 'per_week' ? 3 : 11) * weightIncrement)}`
+            : isWeighted && baseWeight > 0 ? ` ${formatWeightAt(baseWeight)}` : ''}
         </div>
       ) : null}
     </div>

@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/appStore';
 import { PageHeader } from '@/components/layout';
 import { Button, Card, CardContent, Badge, Modal, EmptyState } from '@/components/ui';
 import { ExerciseForm, MaxRecordForm } from '@/components/exercises';
+import { formatWeightIncrement } from '@/constants';
 import { EXERCISE_TYPE_LABELS, formatTime, type ExerciseFormData } from '@/types';
 
 export function ExerciseDetailPage() {
@@ -216,7 +217,7 @@ export function ExerciseDetailPage() {
                       Current Max
                       {latestMax?.weight !== undefined && latestMax.weight > 0 && (
                         <span className="block text-purple-600 dark:text-purple-400">
-                          +{latestMax.weight} lbs
+                          {formatWeightIncrement(latestMax.weight)}
                         </span>
                       )}
                     </p>
@@ -272,7 +273,7 @@ export function ExerciseDetailPage() {
                       </span>
                       {record.weight !== undefined && record.weight > 0 && (
                         <span className="ml-2 text-sm text-purple-600 dark:text-purple-400">
-                          +{record.weight} lbs
+                          {formatWeightIncrement(record.weight)}
                         </span>
                       )}
                       {index === 0 && (

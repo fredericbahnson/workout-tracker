@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { Card, Badge } from '@/components/ui';
 import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type MaxRecord } from '@/types';
+import { formatWeight, formatWeightAt } from '@/constants';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -40,7 +41,7 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
       }
       
       if (weight && weight > 0) {
-        parts.push(`${weight} lbs`);
+        parts.push(formatWeight(weight));
       }
       
       if (parts.length === 0) return null;
@@ -48,7 +49,7 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
       // Join with " @ " if both base and weight present, otherwise just return what we have
       if (baseValue && weight && weight > 0) {
         const formattedValue = isTimeBased ? formatTime(baseValue) : baseValue;
-        return `Base: ${formattedValue}${unit} @ ${weight} lbs`;
+        return `Base: ${formattedValue}${unit} ${formatWeightAt(weight)}`;
       }
       return parts.join('');
       
@@ -68,10 +69,10 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
         if (maxValue) {
           // Weight alongside max
           const formattedValue = isTimeBased ? formatTime(maxValue) : maxValue;
-          return `Max: ${formattedValue}${unit} @ ${weight} lbs`;
+          return `Max: ${formattedValue}${unit} ${formatWeightAt(weight)}`;
         } else {
           // Weight only (no max record yet)
-          parts.push(`Weight: ${weight} lbs`);
+          parts.push(`Weight: ${formatWeight(weight)}`);
         }
       }
       

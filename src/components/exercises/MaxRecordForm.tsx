@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Button, Input } from '@/components/ui';
+import { formatWeightLabel, getWeightUnitLabel } from '@/constants';
 
 interface MaxRecordFormProps {
   currentMax?: number;
@@ -49,7 +50,7 @@ export function MaxRecordForm({
 
       {weightEnabled && (
         <Input
-          label="At Weight (lbs)"
+          label={formatWeightLabel('At Weight')}
           type="number"
           min={0}
           step={0.5}
@@ -62,7 +63,7 @@ export function MaxRecordForm({
       {currentMax && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Current max: {currentMax} reps
-          {currentMaxWeight !== undefined && currentMaxWeight > 0 && ` @ +${currentMaxWeight} lbs`}
+          {currentMaxWeight !== undefined && currentMaxWeight > 0 && ` @ +${currentMaxWeight} ${getWeightUnitLabel()}`}
         </p>
       )}
 
