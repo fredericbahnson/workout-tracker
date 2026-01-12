@@ -5,6 +5,11 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.3] - 2026-01-11
+
+### Fixed
+- **Time display in Exercises tab**: Time-based exercises now display duration in MM:SS format without redundant "sec" label (e.g., "Max: 1:30" instead of "Max: 1:30 sec")
+
 ## [2.7.2] - 2026-01-11
 
 ### Added

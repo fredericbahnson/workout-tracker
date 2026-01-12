@@ -24,7 +24,8 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
   const getDisplayValue = () => {
     const isTimeBased = exercise.measurementType === 'time';
     const isWeighted = exercise.weightEnabled === true;
-    const unit = isTimeBased ? 'sec' : 'reps';
+    // Time-based uses MM:SS format (no unit needed), reps-based uses "reps"
+    const unit = isTimeBased ? '' : ' reps';
     
     if (exercise.mode === 'conditioning') {
       // Conditioning: show base reps/time and/or weight
@@ -35,7 +36,7 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
       
       if (baseValue) {
         const formattedValue = isTimeBased ? formatTime(baseValue) : baseValue;
-        parts.push(`Base: ${formattedValue} ${unit}`);
+        parts.push(`Base: ${formattedValue}${unit}`);
       }
       
       if (weight && weight > 0) {
@@ -47,7 +48,7 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
       // Join with " @ " if both base and weight present, otherwise just return what we have
       if (baseValue && weight && weight > 0) {
         const formattedValue = isTimeBased ? formatTime(baseValue) : baseValue;
-        return `Base: ${formattedValue} ${unit} @ ${weight} lbs`;
+        return `Base: ${formattedValue}${unit} @ ${weight} lbs`;
       }
       return parts.join('');
       
@@ -60,14 +61,14 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
       
       if (maxValue) {
         const formattedValue = isTimeBased ? formatTime(maxValue) : maxValue;
-        parts.push(`Max: ${formattedValue} ${unit}`);
+        parts.push(`Max: ${formattedValue}${unit}`);
       }
       
       if (weight && weight > 0) {
         if (maxValue) {
           // Weight alongside max
           const formattedValue = isTimeBased ? formatTime(maxValue) : maxValue;
-          return `Max: ${formattedValue} ${unit} @ ${weight} lbs`;
+          return `Max: ${formattedValue}${unit} @ ${weight} lbs`;
         } else {
           // Weight only (no max record yet)
           parts.push(`Weight: ${weight} lbs`);
