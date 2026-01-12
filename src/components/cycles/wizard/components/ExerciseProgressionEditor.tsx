@@ -109,7 +109,7 @@ export function ExerciseProgressionEditor({
   };
 
   return (
-    <div className="border border-dark-border rounded-lg p-3">
+    <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-gray-100 dark:bg-gray-800">
       <div className="flex items-start gap-2 mb-3">
         <div className="flex flex-col gap-1 flex-shrink-0">
           <Badge variant={exercise.type} className="text-2xs">
@@ -171,7 +171,7 @@ export function ExerciseProgressionEditor({
 
       {/* Weight Row (only for weighted exercises) */}
       {isWeighted && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-dark-border">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-200/60 dark:border-gray-700/40">
           {/* Base Weight */}
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">

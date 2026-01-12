@@ -5,6 +5,20 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.7] - 2026-01-12
+
+### Fixed
+- **Cycle wizard date field overflow**: Start Date input now constrained to container width at large font sizes
+- **Exercise tile contrast**: Increased contrast between exercise tiles and card background for better visual separation
+  - Light mode: `bg-gray-50` → `bg-gray-100`, border `gray-200` → `gray-300`
+  - Dark mode: `bg-gray-800/50` → `bg-gray-800`, border `dark-border` → `gray-700`
+- **Internal dividers softened**: Reduced visibility of dividers within exercise tiles (between name row and input fields)
+  - Creates clearer visual association between exercise name and its configuration
+  - More obvious separation between different exercise tiles
+
+### Changed
+- Applied consistent styling across GroupsStep, MixedExerciseConfig, and ExerciseProgressionEditor
+
 ## [2.7.6] - 2026-01-12
 
 ### Fixed

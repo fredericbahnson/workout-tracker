@@ -31,12 +31,15 @@ export function BasicsStep({
         placeholder="e.g., Winter 2025 Block 1"
       />
 
-      <Input
-        label="Start Date"
-        type="date"
-        value={startDate}
-        onChange={e => setStartDate(e.target.value)}
-      />
+      <div className="overflow-hidden">
+        <Input
+          label="Start Date"
+          type="date"
+          value={startDate}
+          onChange={e => setStartDate(e.target.value)}
+          className="max-w-full"
+        />
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <NumberInput

@@ -107,7 +107,7 @@ export function GroupsStep({
                   return (
                     <div
                       key={assignment.exerciseId}
-                      className="py-2 px-2 bg-gray-50 dark:bg-gray-800/50 rounded"
+                      className="py-2 px-2 bg-gray-100 dark:bg-gray-800 rounded"
                     >
                       <div className="flex items-start gap-2">
                         <div className="flex flex-col gap-1 flex-shrink-0">
@@ -130,7 +130,7 @@ export function GroupsStep({
                       </div>
 
                       {exercise.mode === 'conditioning' && (
-                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/40">
                           <div className="flex items-center gap-3">
                             <label className="text-xs text-gray-500 dark:text-gray-400">
                               Base {exercise.measurementType === 'time' ? 'Time (sec)' : 'Reps'}:
