@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, type ReactNode, type KeyboardEvent } from 'react';
-import { CheckCircle, X, ChevronRight } from 'lucide-react';
+import { CheckCircle, X } from 'lucide-react';
 import { 
   SWIPE_THRESHOLD, 
   VELOCITY_THRESHOLD, 
@@ -272,13 +272,6 @@ export function SwipeableSetCard({
       >
         {children}
       </div>
-
-      {/* Swipe hint indicator (subtle) */}
-      {translateX === 0 && !isDragging && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 pointer-events-none" aria-hidden="true">
-          <ChevronRight className="w-4 h-4" />
-        </div>
-      )}
     </div>
   );
 }

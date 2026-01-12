@@ -407,11 +407,14 @@ export function TodayPage() {
               />
             )}
 
-            {!isShowingAdHocWorkout && (isShowingCompletedWorkout || scheduledSetsRemaining.length > 0) && (
+            {/* Show action buttons for:
+                1. Completed workouts (both scheduled and ad-hoc) - shows "Continue to Next Workout"
+                2. In-progress scheduled workouts with remaining sets - shows Skip/End Early */}
+            {(isShowingCompletedWorkout || (!isShowingAdHocWorkout && scheduledSetsRemaining.length > 0)) && (
               <WorkoutActionButtons
                 isShowingCompletedWorkout={isShowingCompletedWorkout}
                 hasNextWorkout={!!nextPendingWorkout}
-                hasCompletedSets={scheduledSetsCompleted.length > 0}
+                hasCompletedSets={isShowingAdHocWorkout ? adHocCompletedSets.length > 0 : scheduledSetsCompleted.length > 0}
                 onContinue={handleProceedToNextWorkout}
                 onSkip={modals.openSkipWorkoutConfirm}
                 onEndEarly={modals.openEndWorkoutConfirm}
