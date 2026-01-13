@@ -6,7 +6,15 @@ export type CycleFormData = Omit<Cycle, 'id' | 'createdAt' | 'updatedAt'>;
 
 const DATE_FIELDS: (keyof Cycle)[] = ['startDate', 'createdAt', 'updatedAt'];
 
+/**
+ * Repository for Cycle CRUD operations.
+ * Handles training cycle configuration and lifecycle management.
+ */
 export const CycleRepo = {
+  /**
+   * Retrieves all cycles, sorted by start date descending.
+   * @returns Promise resolving to array of all cycles (newest first)
+   */
   async getAll(): Promise<Cycle[]> {
     const records = await db.cycles.toArray();
     const normalized = normalizeDatesArray(records, DATE_FIELDS);
@@ -14,16 +22,30 @@ export const CycleRepo = {
     return normalized.sort((a, b) => compareDates(b.startDate, a.startDate));
   },
 
+  /**
+   * Retrieves a cycle by ID.
+   * @param id - The cycle UUID
+   * @returns Promise resolving to the cycle, or undefined if not found
+   */
   async getById(id: string): Promise<Cycle | undefined> {
     const record = await db.cycles.get(id);
     return record ? normalizeDates(record, DATE_FIELDS) : undefined;
   },
 
+  /**
+   * Retrieves the currently active cycle (status = 'active').
+   * @returns Promise resolving to the active cycle, or undefined if none
+   */
   async getActive(): Promise<Cycle | undefined> {
     const record = await db.cycles.where('status').equals('active').first();
     return record ? normalizeDates(record, DATE_FIELDS) : undefined;
   },
 
+  /**
+   * Creates a new cycle.
+   * @param data - Cycle configuration data
+   * @returns Promise resolving to the created cycle
+   */
   async create(data: CycleFormData): Promise<Cycle> {
     const timestamp = now();
     const cycle: Cycle = {
@@ -36,6 +58,12 @@ export const CycleRepo = {
     return cycle;
   },
 
+  /**
+   * Updates an existing cycle.
+   * @param id - The cycle UUID
+   * @param data - Partial cycle data to merge
+   * @returns Promise resolving to updated cycle, or undefined if not found
+   */
   async update(id: string, data: Partial<CycleFormData>): Promise<Cycle | undefined> {
     const existing = await this.getById(id);
     if (!existing) return undefined;

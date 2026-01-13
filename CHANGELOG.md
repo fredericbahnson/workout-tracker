@@ -5,6 +5,39 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-01-13
+
+### Added
+- **Phase 4: Testing Expansion** — 49 new tests (237 total, up from 188)
+  - `useWorkoutDisplay.test.ts`: 14 tests for workout display state management
+  - `useAdHocWorkout.test.ts`: 18 tests for ad-hoc workout operations
+  - `transformers.test.ts`: 17 tests for sync data transformations
+  - Test setup infrastructure with React Testing Library and jsdom
+  - Created `src/test/setup.ts` for common test configuration
+
+- **Phase 5: Documentation**
+  - `docs/ARCHITECTURE.md`: Complete architecture overview
+    - Tech stack, directory structure, data flow diagrams
+    - Key systems (scheduler, sync, state management)
+    - Component architecture and PWA features
+  - `docs/DATABASE_SCHEMA.md`: Comprehensive database documentation
+    - Local (IndexedDB) and remote (Supabase) schemas
+    - All tables with field types and indexes
+    - Data transformation examples and sync strategy
+  - JSDoc documentation for all repository methods
+    - ExerciseRepo, MaxRecordRepo, CompletedSetRepo
+    - CycleRepo, ScheduledWorkoutRepo
+  - Updated CSS documentation for dark surface utility classes
+
+### Changed
+- Updated vite.config.ts with vitest test configuration
+- Clarified dark surface CSS classes are actively used (not legacy)
+
+### Technical
+- Phases 4 & 5 complete
+- All code review items now addressed
+- Test coverage significantly improved for hooks and sync transformers
+
 ## [2.9.0] - 2026-01-12
 
 ### Added

@@ -17,23 +17,46 @@ function normalizeWorkouts(workouts: ScheduledWorkout[]): ScheduledWorkout[] {
   return workouts.map(normalizeWorkout);
 }
 
+/**
+ * Repository for ScheduledWorkout CRUD operations.
+ * Handles workout plans within training cycles, including ad-hoc workouts.
+ */
 export const ScheduledWorkoutRepo = {
+  /**
+   * Retrieves all scheduled workouts.
+   * @returns Promise resolving to array of all scheduled workouts
+   */
   async getAll(): Promise<ScheduledWorkout[]> {
     const records = await db.scheduledWorkouts.toArray();
     return normalizeWorkouts(records);
   },
 
+  /**
+   * Retrieves a scheduled workout by ID.
+   * @param id - The workout UUID
+   * @returns Promise resolving to the workout, or undefined if not found
+   */
   async getById(id: string): Promise<ScheduledWorkout | undefined> {
     const record = await db.scheduledWorkouts.get(id);
     return record ? normalizeWorkout(record) : undefined;
   },
 
+  /**
+   * Retrieves all workouts for a cycle, sorted by sequence number.
+   * @param cycleId - The cycle UUID
+   * @returns Promise resolving to array of workouts in order
+   */
   async getByCycleId(cycleId: string): Promise<ScheduledWorkout[]> {
     const workouts = await db.scheduledWorkouts.where('cycleId').equals(cycleId).toArray();
     const normalized = normalizeWorkouts(workouts);
     return normalized.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
   },
 
+  /**
+   * Retrieves the next pending (or partial) non-ad-hoc workout in a cycle.
+   * @param cycleId - The cycle UUID
+   * @returns Promise resolving to the next workout, or undefined if all complete
+   */
   async getNextPending(cycleId: string): Promise<ScheduledWorkout | undefined> {
     const workouts = await this.getByCycleId(cycleId);
     // Return first workout that's pending OR partial (in progress)
@@ -44,6 +67,11 @@ export const ScheduledWorkoutRepo = {
     return pending;
   },
 
+  /**
+   * Retrieves an in-progress ad-hoc workout for a cycle.
+   * @param cycleId - The cycle UUID
+   * @returns Promise resolving to the ad-hoc workout, or undefined if none in progress
+   */
   async getInProgressAdHoc(cycleId: string): Promise<ScheduledWorkout | undefined> {
     const workouts = await this.getByCycleId(cycleId);
     // Return ad-hoc workout that's in progress (partial status)

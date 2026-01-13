@@ -101,7 +101,16 @@ html.font-xl {
     display: none;
   }
 
-  /* Dark surface colors for cards/elevated elements - legacy support */
+  /**
+   * Dark surface color classes for cards and elevated elements.
+   * These use CSS custom properties for consistent theming.
+   * 
+   * Usage:
+   * - dark-surface: Primary surface color for cards, modals (#1a1a2e)
+   * - dark-elevated: Elevated elements like hover states, nested cards (#252538)
+   * - dark-border: Border color for dark mode elements
+   * - dark-border-hover: Border color on hover
+   */
   .dark .dark-surface {
     background-color: var(--color-dark-surface);
   }
