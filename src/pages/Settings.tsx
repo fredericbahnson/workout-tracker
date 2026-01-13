@@ -19,11 +19,13 @@ import {
   Type,
   Wrench,
   Layers,
+  Lock,
+  Crown,
 } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
 import { ScheduledWorkoutRepo } from '@/data/repositories';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
-import { useAuth, useSync, useSyncedPreferences, useSyncItem } from '@/contexts';
+import { useAuth, useSync, useSyncedPreferences, useSyncItem, useEntitlement } from '@/contexts';
 import { PageHeader } from '@/components/layout';
 import {
   Card,
@@ -40,6 +42,7 @@ import {
   ChangePasswordModal,
   ClearDataModal,
 } from '@/components/settings';
+import { TrialBanner } from '@/components/paywall';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
 import { APP_VERSION } from '@/constants';
 
@@ -68,6 +71,7 @@ export function SettingsPage() {
   } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
   const { deleteItem, hardDeleteItem } = useSyncItem();
+  const { trial, purchase, canAccessAdvanced, showPaywall } = useEntitlement();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -487,6 +491,39 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Subscription Status */}
+        {!purchase && (trial.isActive || trial.hasExpired) && <TrialBanner variant="full" />}
+
+        {/* Subscription Info (if purchased) */}
+        {purchase && (
+          <Card>
+            <CardContent>
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-4 h-4 text-purple-500" />
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Subscription
+                </h3>
+                <span
+                  className={`ml-auto text-xs px-2 py-0.5 rounded font-medium ${
+                    purchase.tier === 'advanced'
+                      ? 'bg-purple-500/20 text-purple-300'
+                      : 'bg-gray-500/20 text-gray-300'
+                  }`}
+                >
+                  {purchase.tier === 'advanced' ? 'Advanced' : 'Standard'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {purchase.type === 'lifetime'
+                  ? 'Lifetime access'
+                  : purchase.expiresAt
+                    ? `Renews ${purchase.expiresAt.toLocaleDateString()}`
+                    : 'Active subscription'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* App Mode */}
         <Card>
           <CardContent>
@@ -542,13 +579,28 @@ export function SettingsPage() {
               </button>
 
               <button
-                onClick={() => setAppMode('advanced')}
+                onClick={() => {
+                  if (canAccessAdvanced) {
+                    setAppMode('advanced');
+                  } else {
+                    // Show paywall if user doesn't have access
+                    const reason =
+                      purchase?.tier === 'standard'
+                        ? 'standard_only'
+                        : trial.hasExpired
+                          ? 'trial_expired'
+                          : 'not_purchased';
+                    showPaywall('advanced', reason);
+                  }
+                }}
                 className={`
                   w-full p-3 rounded-lg border-2 transition-colors text-left
                   ${
-                    preferences.appMode === 'advanced'
+                    preferences.appMode === 'advanced' && canAccessAdvanced
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+                      : !canAccessAdvanced
+                        ? 'border-gray-200 dark:border-dark-border opacity-60'
+                        : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
               >
@@ -557,30 +609,40 @@ export function SettingsPage() {
                     className={`
                     w-4 h-4 rounded-full border-2 flex items-center justify-center
                     ${
-                      preferences.appMode === 'advanced'
+                      preferences.appMode === 'advanced' && canAccessAdvanced
                         ? 'border-primary-500 bg-primary-500'
                         : 'border-gray-300 dark:border-gray-600'
                     }
                   `}
                   >
-                    {preferences.appMode === 'advanced' && (
+                    {preferences.appMode === 'advanced' && canAccessAdvanced && (
                       <div className="w-2 h-2 rounded-full bg-white" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <span
-                      className={`text-sm font-medium ${
-                        preferences.appMode === 'advanced'
-                          ? 'text-primary-600 dark:text-primary-400'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      Advanced
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-sm font-medium ${
+                          preferences.appMode === 'advanced' && canAccessAdvanced
+                            ? 'text-primary-600 dark:text-primary-400'
+                            : !canAccessAdvanced
+                              ? 'text-gray-500 dark:text-gray-500'
+                              : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        Advanced
+                      </span>
+                      {!canAccessAdvanced && <Lock className="w-3 h-3 text-gray-400" />}
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       All cycle types including simple progression and mixed
                     </p>
                   </div>
+                  {!canAccessAdvanced && (
+                    <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">
+                      Upgrade
+                    </span>
+                  )}
                 </div>
               </button>
             </div>

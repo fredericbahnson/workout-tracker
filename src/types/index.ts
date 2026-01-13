@@ -32,6 +32,19 @@ export type { WeeklySetGoals, TimerSettings, AppMode, UserPreferences } from './
 
 export { DEFAULT_USER_PREFERENCES } from './preferences';
 
+// Entitlement types
+export type {
+  PurchaseTier,
+  PurchaseType,
+  TrialStatus,
+  PurchaseInfo,
+  EntitlementStatus,
+  LockReason,
+  LockedFeatureInfo,
+} from './entitlement';
+
+export { TRIAL_CONFIG } from './entitlement';
+
 // Constants
 export {
   EXERCISE_TYPES,

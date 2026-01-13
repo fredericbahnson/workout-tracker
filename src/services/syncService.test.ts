@@ -57,6 +57,12 @@ vi.mock('../data/db', () => ({
       delete: vi.fn(),
       toArray: vi.fn(),
     },
+    userPreferences: {
+      get: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      toArray: vi.fn(),
+    },
     syncQueue: {
       orderBy: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])) })),
       where: vi.fn(() => ({
@@ -105,6 +111,12 @@ const mockDbCycles = db.cycles as {
   toArray: Mock;
 };
 const mockDbScheduledWorkouts = db.scheduledWorkouts as {
+  get: Mock;
+  put: Mock;
+  delete: Mock;
+  toArray: Mock;
+};
+const mockDbUserPreferences = db.userPreferences as {
   get: Mock;
   put: Mock;
   delete: Mock;
@@ -268,6 +280,7 @@ describe('SyncService', () => {
         completed_sets: { data: [] },
         cycles: { data: [] },
         scheduled_workouts: { data: [] },
+        user_preferences: { data: [] },
       });
 
       mockDbExercises.toArray.mockResolvedValue([]);
@@ -275,6 +288,7 @@ describe('SyncService', () => {
       mockDbCompletedSets.toArray.mockResolvedValue([]);
       mockDbCycles.toArray.mockResolvedValue([]);
       mockDbScheduledWorkouts.toArray.mockResolvedValue([]);
+      mockDbUserPreferences.toArray.mockResolvedValue([]);
 
       const statusChanges: string[] = [];
       const unsubscribe = SyncService.onStatusChange(status => {
@@ -312,6 +326,7 @@ describe('SyncService', () => {
         completed_sets: { data: [] },
         cycles: { data: [] },
         scheduled_workouts: { data: [] },
+        user_preferences: { data: [] },
       });
 
       mockDbExercises.toArray.mockResolvedValue([]);
@@ -319,6 +334,7 @@ describe('SyncService', () => {
       mockDbCompletedSets.toArray.mockResolvedValue([]);
       mockDbCycles.toArray.mockResolvedValue([]);
       mockDbScheduledWorkouts.toArray.mockResolvedValue([]);
+      mockDbUserPreferences.toArray.mockResolvedValue([]);
 
       const beforeSync = new Date();
       await SyncService.fullSync('user-1');

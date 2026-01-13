@@ -11,8 +11,32 @@ import {
   SchedulePage,
 } from './pages';
 import { useAppStore, useThemeEffect } from './stores/appStore';
-import { AuthProvider, SyncProvider, useAuth, SyncedPreferencesProvider } from './contexts';
+import {
+  AuthProvider,
+  SyncProvider,
+  useAuth,
+  SyncedPreferencesProvider,
+  EntitlementProvider,
+  useEntitlement,
+} from './contexts';
 import { AuthGate, OnboardingFlow } from './components/onboarding';
+import { PaywallModal } from './components/paywall';
+
+/**
+ * Paywall container that renders the modal based on entitlement context state.
+ */
+function PaywallContainer() {
+  const { paywall, closePaywall } = useEntitlement();
+
+  return (
+    <PaywallModal
+      isOpen={paywall.isOpen}
+      onClose={closePaywall}
+      requiredTier={paywall.requiredTier}
+      reason={paywall.reason}
+    />
+  );
+}
 
 function AppContent() {
   const navigate = useNavigate();
@@ -116,9 +140,12 @@ function App() {
       <AuthProvider>
         <SyncProvider>
           <SyncedPreferencesProvider>
-            <BrowserRouter>
-              <AppContent />
-            </BrowserRouter>
+            <EntitlementProvider>
+              <BrowserRouter>
+                <AppContent />
+                <PaywallContainer />
+              </BrowserRouter>
+            </EntitlementProvider>
           </SyncedPreferencesProvider>
         </SyncProvider>
       </AuthProvider>

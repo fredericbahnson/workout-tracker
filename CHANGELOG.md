@@ -5,6 +5,54 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-01-13
+
+### Added
+- **Entitlement System for IAP Readiness**: Infrastructure to support iOS App Store in-app purchases
+  - `EntitlementProvider` context provides global access to trial/purchase state
+  - `PaywallModal` for purchase/upgrade prompts with tier comparison
+  - `TrialBanner` component (compact and full variants) for trial status display
+  - Types in `types/entitlement.ts`: `PurchaseTier`, `TrialStatus`, `LockReason`, etc.
+  
+- **Free Trial System**: 4-week trial starts automatically on first app launch
+  - Trial status persisted to localStorage
+  - Full Advanced access during trial period
+  - Services: `trialService.ts`, `entitlementService.ts`
+  
+- **Settings Subscription Display**: Shows trial status and subscription info
+  - Trial banner shows days remaining with urgency when ending (≤7 days)
+  - Subscription card shows tier (Standard/Advanced) and renewal info
+  - Hidden when not applicable
+
+### Changed
+- **CycleTypeSelector**: Advanced cycle types (Simple Progression, Mixed) now show as locked
+  - Visible but disabled with lock icon and "Advanced" badge
+  - Clicking opens paywall with contextual upgrade messaging
+  - Fully accessible during trial or with Advanced purchase
+  
+- **Settings App Mode**: Advanced mode toggle gated by entitlement
+  - Lock icon and "Upgrade" badge when not entitled
+  - Paywall opens on click if locked
+  - Free switching for users with Advanced access
+
+### Technical
+- New context: `EntitlementContext` with hooks `useEntitlement`, `useFeatureAccess`, `useGatedAction`
+- Feature gating: effective access = max(purchase tier, trial status)
+- Lock reasons: `trial_expired`, `standard_only`, `not_purchased`
+- Web PWA: full access during trial; ready for Capacitor IAP integration
+- New services: `trialService.ts`, `entitlementService.ts`
+- New components: `PaywallModal`, `TrialBanner`
+
+### Notes
+- This version prepares the app for iOS App Store deployment
+- IAP purchase flows are placeholders; will be implemented with Capacitor
+- See `docs/IOS_APP_STORE_DEPLOYMENT_PLAN.md` for full deployment roadmap
+
+### Fixed
+- **syncService.test.ts**: Added missing `userPreferences` mock to db mock factory
+  - Two tests were failing due to incomplete mock setup after userPreferences sync was added
+  - All 246 tests now pass
+
 ## [2.11.1] - 2026-01-13
 
 ### Added

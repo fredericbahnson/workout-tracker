@@ -1,6 +1,6 @@
-import { Calendar, Target, ArrowRight, TrendingUp, Layers } from 'lucide-react';
+import { Calendar, Target, ArrowRight, TrendingUp, Layers, Lock } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { useSyncedPreferences } from '@/contexts';
+import { useSyncedPreferences, useEntitlement } from '@/contexts';
 import type { ProgressionMode } from '@/types';
 
 interface CycleTypeSelectorProps {
@@ -15,7 +15,32 @@ export function CycleTypeSelector({
   onCancel,
 }: CycleTypeSelectorProps) {
   const { preferences } = useSyncedPreferences();
+  const { canAccessAdvanced, showPaywall, trial, purchase } = useEntitlement();
+
+  // User can access advanced features if:
+  // 1. They have an Advanced purchase, OR
+  // 2. They're in their free trial, OR
+  // 3. Their app mode preference is Advanced AND they have access
   const isAdvancedMode = preferences.appMode === 'advanced';
+  const canUseAdvancedCycles = canAccessAdvanced && isAdvancedMode;
+
+  // Handler for locked options
+  const handleLockedClick = () => {
+    if (!canAccessAdvanced) {
+      // User needs to purchase/subscribe
+      const reason =
+        purchase?.tier === 'standard'
+          ? 'standard_only'
+          : trial.hasExpired
+            ? 'trial_expired'
+            : 'not_purchased';
+      showPaywall('advanced', reason);
+    } else {
+      // User has access but is in Standard mode - they can switch in Settings
+      // For now, just show the paywall which explains the tiers
+      showPaywall('advanced', 'standard_only');
+    }
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -51,8 +76,8 @@ export function CycleTypeSelector({
           </div>
         </button>
 
-        {/* Simple Progression Cycle Option - Advanced mode only */}
-        {isAdvancedMode && (
+        {/* Simple Progression Cycle Option - Show locked if not advanced */}
+        {canUseAdvancedCycles ? (
           <button
             onClick={() => onSelectTraining('simple')}
             className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-emerald-500 dark:hover:border-emerald-500 bg-white dark:bg-dark-surface transition-colors text-left group"
@@ -75,10 +100,35 @@ export function CycleTypeSelector({
               </div>
             </div>
           </button>
+        ) : (
+          <button
+            onClick={handleLockedClick}
+            className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface transition-colors text-left group opacity-60 hover:opacity-80"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-500 dark:text-gray-400">
+                    Simple Progression Cycle
+                  </h3>
+                  <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">
+                    Advanced
+                  </span>
+                </div>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                  Set your own rep targets for each exercise. Optionally add reps each workout or
+                  week.
+                </p>
+              </div>
+            </div>
+          </button>
         )}
 
-        {/* Mixed Cycle Option - Advanced mode only */}
-        {isAdvancedMode && (
+        {/* Mixed Cycle Option - Show locked if not advanced */}
+        {canUseAdvancedCycles ? (
           <button
             onClick={() => onSelectTraining('mixed')}
             className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border hover:border-indigo-500 dark:hover:border-indigo-500 bg-white dark:bg-dark-surface transition-colors text-left group"
@@ -93,6 +143,29 @@ export function CycleTypeSelector({
                   <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Configure RFEM or simple progression individually for each exercise. Best for
+                  combining different training approaches.
+                </p>
+              </div>
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={handleLockedClick}
+            className="w-full p-4 rounded-xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface transition-colors text-left group opacity-60 hover:opacity-80"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-500 dark:text-gray-400">Mixed Cycle</h3>
+                  <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">
+                    Advanced
+                  </span>
+                </div>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                   Configure RFEM or simple progression individually for each exercise. Best for
                   combining different training approaches.
                 </p>
