@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Edit, Trash2, TrendingUp, History, AlertTriangle } from 'lucide-react';
+import { Edit, Trash2, TrendingUp, AlertTriangle } from 'lucide-react';
 import { ExerciseRepo, MaxRecordRepo, CompletedSetRepo, CycleRepo } from '@/data/repositories';
 import { useAppStore } from '@/stores/appStore';
 import { PageHeader } from '@/components/layout';
 import { Button, Card, CardContent, Badge, Modal, EmptyState } from '@/components/ui';
-import { ExerciseForm, MaxRecordForm } from '@/components/exercises';
+import {
+  ExerciseForm,
+  ExerciseHistorySection,
+  MaxRecordForm,
+  PriorMaxesSection,
+} from '@/components/exercises';
 import { formatWeightIncrement } from '@/constants';
 import { EXERCISE_TYPE_LABELS, formatTime, type ExerciseFormData } from '@/types';
 
@@ -249,50 +254,17 @@ export function ExerciseDetailPage() {
           </Button>
         )}
 
-        {/* Max History - only for standard exercises */}
+        {/* Prior Maxes - only for standard exercises */}
         {exercise.mode === 'standard' && maxRecords && maxRecords.length > 0 && (
-          <div>
-            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
-              <History className="w-4 h-4" />
-              Max History
-            </h2>
-            <div className="space-y-2">
-              {maxRecords.map((record, index) => (
-                <Card key={record.id} className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {exercise.measurementType === 'time'
-                          ? record.maxTime
-                            ? formatTime(record.maxTime)
-                            : '—'
-                          : `${record.maxReps} reps`}
-                      </span>
-                      {record.weight !== undefined && record.weight > 0 && (
-                        <span className="ml-2 text-sm text-purple-600 dark:text-purple-400">
-                          {formatWeightIncrement(record.weight)}
-                        </span>
-                      )}
-                      {index === 0 && (
-                        <Badge className="ml-2 text-2xs" variant="outline">
-                          Current
-                        </Badge>
-                      )}
-                      {record.notes && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                          {record.notes}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
-                      {new Date(record.recordedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+          <PriorMaxesSection maxRecords={maxRecords} exercise={exercise} />
         )}
+
+        {/* Exercise History - for all exercises */}
+        <ExerciseHistorySection
+          exerciseId={exercise.id}
+          measurementType={exercise.measurementType}
+          weightEnabled={exercise.weightEnabled}
+        />
       </div>
 
       {/* Edit Modal */}

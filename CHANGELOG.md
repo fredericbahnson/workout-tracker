@@ -5,6 +5,38 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2026-01-13
+
+### Added
+- **Exercise History View**: New collapsible section on Exercise Detail page showing all working sets
+  - Displays workout sessions grouped by date (newest first)
+  - Excludes warmup sets to show only meaningful training data
+  - Supports both rep-based and time-based exercises
+  - Shows weight when enabled for the exercise
+  - Expand/collapse toggle with session count indicator
+  - "Show More" pagination for exercises with extensive history
+  - Empty state for exercises without workout history
+
+- **Prior Maxes Section**: Redesigned max history display for standard exercises
+  - Renamed from "Max History" to "Prior Maxes"
+  - Date-first layout for better visual consistency with Exercise History
+  - Maintains all existing functionality (weight display, current badge, notes)
+
+- **Data Layer Enhancement**
+  - `CompletedSetRepo.getWorkingSetHistory()`: New method to retrieve non-warmup sets
+  - Efficiently filters warmup sets by looking up scheduled set metadata
+  - Groups completed sets by calendar day into workout sessions
+
+### Changed
+- Exercise Detail page now shows both Prior Maxes and Exercise History sections
+- Exercise History available for all exercise types (standard and conditioning)
+- Improved visual hierarchy on Exercise Detail page
+
+### Technical
+- New components: `ExerciseHistorySection`, `PriorMaxesSection`
+- 6 new repository tests for `getWorkingSetHistory()` method
+- Feature plan documented in `docs/FEATURE_PLAN_EXERCISE_HISTORY.md`
+
 ## [2.10.0] - 2026-01-13
 
 ### Added

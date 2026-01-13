@@ -278,4 +278,83 @@ export const CompletedSetRepo = {
     const weightedSet = sets.find(s => s.weight !== undefined && s.weight > 0);
     return weightedSet || null;
   },
+
+  /**
+   * Gets working set history for an exercise, excluding warmup sets.
+   * Groups sets by workout session (same calendar day).
+   * @param exerciseId - The exercise UUID
+   * @returns Promise resolving to array of session groups, newest first
+   */
+  async getWorkingSetHistory(exerciseId: string): Promise<
+    Array<{
+      date: Date;
+      workoutId: string | null;
+      sets: Array<{
+        actualReps: number;
+        weight?: number;
+        notes?: string;
+      }>;
+    }>
+  > {
+    // Get all completed sets for this exercise
+    const allSets = await this.getForExercise(exerciseId);
+
+    if (allSets.length === 0) {
+      return [];
+    }
+
+    // Build a set of warmup scheduledSetIds by checking all scheduled workouts
+    const warmupSetIds = new Set<string>();
+    const allWorkouts = await db.scheduledWorkouts.toArray();
+
+    for (const workout of allWorkouts) {
+      for (const scheduledSet of workout.scheduledSets) {
+        if (scheduledSet.isWarmup) {
+          warmupSetIds.add(scheduledSet.id);
+        }
+      }
+    }
+
+    // Filter out warmup sets
+    // Ad-hoc sets (scheduledSetId === null) are never warmups
+    const workingSets = allSets.filter(
+      cs => cs.scheduledSetId === null || !warmupSetIds.has(cs.scheduledSetId)
+    );
+
+    // Group by date (same calendar day = same session)
+    const sessionMap = new Map<
+      string,
+      {
+        date: Date;
+        workoutId: string | null;
+        sets: Array<{
+          actualReps: number;
+          weight?: number;
+          notes?: string;
+        }>;
+      }
+    >();
+
+    for (const set of workingSets) {
+      const dayStart = startOfDay(set.completedAt);
+      const dateKey = dayStart.toISOString();
+
+      if (!sessionMap.has(dateKey)) {
+        sessionMap.set(dateKey, {
+          date: dayStart,
+          workoutId: set.scheduledWorkoutId,
+          sets: [],
+        });
+      }
+
+      sessionMap.get(dateKey)!.sets.push({
+        actualReps: set.actualReps,
+        weight: set.weight,
+        notes: set.notes || undefined,
+      });
+    }
+
+    // Convert to array and sort by date descending (newest first)
+    return Array.from(sessionMap.values()).sort((a, b) => b.date.getTime() - a.date.getTime());
+  },
 };

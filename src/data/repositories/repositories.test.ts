@@ -80,7 +80,8 @@ import { db, generateId } from '../db';
 import { ExerciseRepo } from './ExerciseRepo';
 import { MaxRecordRepo } from './MaxRecordRepo';
 import { CycleRepo } from './CycleRepo';
-import type { Exercise, MaxRecord, Cycle } from '@/types';
+import { CompletedSetRepo } from './CompletedSetRepo';
+import type { Exercise, MaxRecord, Cycle, CompletedSet, ScheduledWorkout } from '@/types';
 
 // ============================================================================
 // Test Fixtures
@@ -129,6 +130,36 @@ function createMockCycle(overrides: Partial<Cycle> = {}): Cycle {
     conditioningWeeklyRepIncrement: 2,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
+    ...overrides,
+  };
+}
+
+function createMockCompletedSet(overrides: Partial<CompletedSet> = {}): CompletedSet {
+  return {
+    id: 'cs-1',
+    scheduledSetId: 'ss-1',
+    scheduledWorkoutId: 'sw-1',
+    exerciseId: 'ex-1',
+    targetReps: 15,
+    actualReps: 14,
+    completedAt: new Date('2024-01-10'),
+    notes: '',
+    parameters: {},
+    ...overrides,
+  };
+}
+
+function createMockScheduledWorkout(overrides: Partial<ScheduledWorkout> = {}): ScheduledWorkout {
+  return {
+    id: 'sw-1',
+    cycleId: 'cycle-1',
+    sequenceNumber: 1,
+    weekNumber: 1,
+    dayInWeek: 1,
+    groupId: 'group-1',
+    rfem: 3,
+    scheduledSets: [],
+    status: 'completed',
     ...overrides,
   };
 }
@@ -611,6 +642,211 @@ describe('CycleRepo', () => {
       expect(result.id).toBe('new-group-id');
       expect(result.name).toBe('Group A');
       expect(result.exerciseAssignments).toEqual([]);
+    });
+  });
+});
+
+// ============================================================================
+// CompletedSetRepo Tests
+// ============================================================================
+
+describe('CompletedSetRepo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('getWorkingSetHistory', () => {
+    it('returns empty array when no sets exist', async () => {
+      const mockWhere = vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      (db.completedSets.where as Mock).mockImplementation(mockWhere);
+      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+
+      const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
+
+      expect(result).toEqual([]);
+    });
+
+    it('excludes warmup sets from history', async () => {
+      const completedSets = [
+        createMockCompletedSet({
+          id: 'cs-1',
+          scheduledSetId: 'warmup-set-1',
+          actualReps: 5,
+          completedAt: new Date('2024-01-10T10:00:00'),
+        }),
+        createMockCompletedSet({
+          id: 'cs-2',
+          scheduledSetId: 'working-set-1',
+          actualReps: 15,
+          completedAt: new Date('2024-01-10T10:05:00'),
+        }),
+      ];
+
+      const scheduledWorkout = createMockScheduledWorkout({
+        scheduledSets: [
+          {
+            id: 'warmup-set-1',
+            exerciseId: 'ex-1',
+            exerciseType: 'push',
+            isConditioning: false,
+            setNumber: 1,
+            isWarmup: true,
+          },
+          {
+            id: 'working-set-1',
+            exerciseId: 'ex-1',
+            exerciseType: 'push',
+            isConditioning: false,
+            setNumber: 2,
+            isWarmup: false,
+          },
+        ],
+      });
+
+      const mockWhere = vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue(completedSets),
+        }),
+      });
+      (db.completedSets.where as Mock).mockImplementation(mockWhere);
+      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([scheduledWorkout]);
+
+      const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].sets).toHaveLength(1);
+      expect(result[0].sets[0].actualReps).toBe(15);
+    });
+
+    it('includes ad-hoc sets (no scheduledSetId)', async () => {
+      const completedSets = [
+        createMockCompletedSet({
+          id: 'cs-1',
+          scheduledSetId: null,
+          actualReps: 12,
+          completedAt: new Date('2024-01-10T10:00:00'),
+        }),
+      ];
+
+      const mockWhere = vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue(completedSets),
+        }),
+      });
+      (db.completedSets.where as Mock).mockImplementation(mockWhere);
+      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+
+      const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].sets).toHaveLength(1);
+      expect(result[0].sets[0].actualReps).toBe(12);
+    });
+
+    it('groups sets by same calendar day', async () => {
+      const completedSets = [
+        createMockCompletedSet({
+          id: 'cs-1',
+          scheduledSetId: null,
+          actualReps: 15,
+          completedAt: new Date('2024-01-10T10:00:00'),
+        }),
+        createMockCompletedSet({
+          id: 'cs-2',
+          scheduledSetId: null,
+          actualReps: 14,
+          completedAt: new Date('2024-01-10T10:05:00'),
+        }),
+        createMockCompletedSet({
+          id: 'cs-3',
+          scheduledSetId: null,
+          actualReps: 12,
+          completedAt: new Date('2024-01-08T09:00:00'),
+        }),
+      ];
+
+      const mockWhere = vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue(completedSets),
+        }),
+      });
+      (db.completedSets.where as Mock).mockImplementation(mockWhere);
+      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+
+      const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
+
+      expect(result).toHaveLength(2);
+      // First session (Jan 10) has 2 sets
+      expect(result[0].sets).toHaveLength(2);
+      // Second session (Jan 8) has 1 set
+      expect(result[1].sets).toHaveLength(1);
+    });
+
+    it('sorts sessions by date descending (newest first)', async () => {
+      const completedSets = [
+        createMockCompletedSet({
+          id: 'cs-1',
+          scheduledSetId: null,
+          actualReps: 10,
+          completedAt: new Date('2024-01-05T10:00:00'),
+        }),
+        createMockCompletedSet({
+          id: 'cs-2',
+          scheduledSetId: null,
+          actualReps: 15,
+          completedAt: new Date('2024-01-10T10:00:00'),
+        }),
+        createMockCompletedSet({
+          id: 'cs-3',
+          scheduledSetId: null,
+          actualReps: 12,
+          completedAt: new Date('2024-01-08T10:00:00'),
+        }),
+      ];
+
+      const mockWhere = vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue(completedSets),
+        }),
+      });
+      (db.completedSets.where as Mock).mockImplementation(mockWhere);
+      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+
+      const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
+
+      expect(result).toHaveLength(3);
+      // Newest first
+      expect(result[0].sets[0].actualReps).toBe(15); // Jan 10
+      expect(result[1].sets[0].actualReps).toBe(12); // Jan 8
+      expect(result[2].sets[0].actualReps).toBe(10); // Jan 5
+    });
+
+    it('includes weight when present', async () => {
+      const completedSets = [
+        createMockCompletedSet({
+          id: 'cs-1',
+          scheduledSetId: null,
+          actualReps: 15,
+          weight: 25,
+          completedAt: new Date('2024-01-10T10:00:00'),
+        }),
+      ];
+
+      const mockWhere = vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue(completedSets),
+        }),
+      });
+      (db.completedSets.where as Mock).mockImplementation(mockWhere);
+      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+
+      const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
+
+      expect(result[0].sets[0].weight).toBe(25);
     });
   });
 });
