@@ -1,11 +1,18 @@
 /**
  * WorkoutHistoryModal Component
- * 
+ *
  * Displays completed workout history with grouped sets by exercise type.
  */
 
 import { Modal, Badge } from '@/components/ui';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type Exercise, type CompletedSet } from '@/types';
+import {
+  EXERCISE_TYPES,
+  EXERCISE_TYPE_LABELS,
+  formatTime,
+  type ScheduledWorkout,
+  type Exercise,
+  type CompletedSet,
+} from '@/types';
 
 interface WorkoutHistoryModalProps {
   workout: ScheduledWorkout | null;
@@ -20,7 +27,7 @@ export function WorkoutHistoryModal({
   completedSets,
   exerciseMap,
   groupName,
-  onClose
+  onClose,
 }: WorkoutHistoryModalProps) {
   if (!workout) return null;
 
@@ -29,7 +36,7 @@ export function WorkoutHistoryModal({
     ? new Date(workout.completedAt).toLocaleDateString(undefined, {
         weekday: 'short',
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
       })
     : null;
 
@@ -47,7 +54,7 @@ export function WorkoutHistoryModal({
           const exA = exerciseMap.get(a.exerciseId);
           const exB = exerciseMap.get(b.exerciseId);
           return (exA?.name || '').localeCompare(exB?.name || '');
-        })
+        }),
     })).filter(group => group.sets.length > 0);
 
   const groupedScheduledSets = groupSetsByType(scheduledSets);
@@ -73,14 +80,20 @@ export function WorkoutHistoryModal({
     <Modal
       isOpen={true}
       onClose={onClose}
-      title={isAdHoc ? (workout.customName || 'Ad Hoc Workout') : `Workout #${workout.sequenceNumber}`}
+      title={
+        isAdHoc ? workout.customName || 'Ad Hoc Workout' : `Workout #${workout.sequenceNumber}`
+      }
       size="lg"
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-500 dark:text-gray-400">
             {isAdHoc ? (
-              completionDate ? `Completed ${completionDate}` : 'Ad-hoc workout'
+              completionDate ? (
+                `Completed ${completionDate}`
+              ) : (
+                'Ad-hoc workout'
+              )
             ) : (
               <>
                 {groupName || 'Workout'} • Week {workout.weekNumber}
@@ -88,9 +101,7 @@ export function WorkoutHistoryModal({
               </>
             )}
           </div>
-          <Badge className={getStatusBadgeClass()}>
-            {getStatusLabel()}
-          </Badge>
+          <Badge className={getStatusBadgeClass()}>{getStatusLabel()}</Badge>
         </div>
 
         {workout.status === 'skipped' ? (
@@ -100,9 +111,7 @@ export function WorkoutHistoryModal({
         ) : (
           <div className="space-y-4">
             {completedSets.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 py-2">
-                No set data recorded
-              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 py-2">No set data recorded</p>
             ) : (
               <div className="space-y-6">
                 {/* Scheduled Sets */}
@@ -143,11 +152,13 @@ interface SetGroupProps {
 function SetGroup({ title, groups, exerciseMap, variant }: SetGroupProps) {
   return (
     <div className="space-y-4">
-      <h4 className={`text-sm font-medium ${
-        variant === 'adhoc' 
-          ? 'text-blue-600 dark:text-blue-400' 
-          : 'text-gray-500 dark:text-gray-400'
-      }`}>
+      <h4
+        className={`text-sm font-medium ${
+          variant === 'adhoc'
+            ? 'text-blue-600 dark:text-blue-400'
+            : 'text-gray-500 dark:text-gray-400'
+        }`}
+      >
         {title}
       </h4>
       {groups.map(group => (
@@ -180,15 +191,23 @@ function SetGroup({ title, groups, exerciseMap, variant }: SetGroupProps) {
                       <span className="text-orange-600 dark:text-orange-400">Skipped</span>
                     ) : variant === 'adhoc' ? (
                       <span className="font-medium text-blue-600 dark:text-blue-400">
-                        {isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
+                        {isTimeBased
+                          ? formatTime(completedSet.actualReps)
+                          : completedSet.actualReps}
                       </span>
                     ) : (
                       <>
                         <span className="font-medium text-gray-900 dark:text-gray-100">
-                          {isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
+                          {isTimeBased
+                            ? formatTime(completedSet.actualReps)
+                            : completedSet.actualReps}
                         </span>
                         <span className="text-gray-500 dark:text-gray-400">
-                          {' '}/ {isTimeBased ? formatTime(completedSet.targetReps) : completedSet.targetReps}
+                          {' '}
+                          /{' '}
+                          {isTimeBased
+                            ? formatTime(completedSet.targetReps)
+                            : completedSet.targetReps}
                         </span>
                       </>
                     )}

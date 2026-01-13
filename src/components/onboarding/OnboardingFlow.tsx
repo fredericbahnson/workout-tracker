@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  Target, 
-  TrendingUp, 
-  Calendar, 
+import {
+  ArrowRight,
+  ArrowLeft,
+  Target,
+  TrendingUp,
+  Calendar,
   Dumbbell,
   CheckCircle,
   Plus,
   Home,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { ExerciseForm } from '@/components/exercises';
@@ -29,7 +29,8 @@ const SLIDES = [
     id: 'welcome',
     icon: null, // Use app icon image instead
     title: 'Welcome to Ascend',
-    description: 'Your personal progressive calisthenics coach. Track your workouts, follow RFEM-based programming, and watch your strength grow.',
+    description:
+      'Your personal progressive calisthenics coach. Track your workouts, follow RFEM-based programming, and watch your strength grow.',
     gradient: 'from-indigo-500 to-cyan-500',
     useAppIcon: true,
   },
@@ -37,21 +38,24 @@ const SLIDES = [
     id: 'rfem',
     icon: Target,
     title: 'RFEM Training',
-    description: 'Reps From Established Max (RFEM) is your secret weapon. Instead of grinding to failure every set, you\'ll train at strategic rep targets below your max—building strength while managing fatigue.',
+    description:
+      "Reps From Established Max (RFEM) is your secret weapon. Instead of grinding to failure every set, you'll train at strategic rep targets below your max—building strength while managing fatigue.",
     gradient: 'from-orange-500 to-red-500',
   },
   {
     id: 'progress',
     icon: TrendingUp,
     title: 'Progressive Overload',
-    description: 'Set new personal records and Ascend automatically adjusts your workout targets. Your training evolves as you get stronger.',
+    description:
+      'Set new personal records and Ascend automatically adjusts your workout targets. Your training evolves as you get stronger.',
     gradient: 'from-green-500 to-emerald-500',
   },
   {
     id: 'cycles',
     icon: Calendar,
     title: 'Training Cycles',
-    description: 'Plan multi-week training cycles with automatic scheduling. Group exercises, rotate through different RFEM intensities, and never wonder what to do next.',
+    description:
+      'Plan multi-week training cycles with automatic scheduling. Group exercises, rotate through different RFEM intensities, and never wonder what to do next.',
     gradient: 'from-purple-500 to-pink-500',
   },
 ];
@@ -86,28 +90,44 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   const handleCreateExercise = async (data: ExerciseFormData) => {
     setIsCreating(true);
     setError(null);
-    
+
     try {
       log.debug('Creating exercise:', data.name);
-      
+
       const { initialMax, initialMaxTime, startingReps, startingTime, ...exerciseData } = data;
-      
+
       // Add default conditioning values based on measurement type
       const exerciseToCreate = {
         ...exerciseData,
-        defaultConditioningReps: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps' ? startingReps : undefined,
-        defaultConditioningTime: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time' ? startingTime : undefined
+        defaultConditioningReps:
+          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps'
+            ? startingReps
+            : undefined,
+        defaultConditioningTime:
+          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time'
+            ? startingTime
+            : undefined,
       };
-      
+
       const exercise = await ExerciseRepo.create(exerciseToCreate);
       log.debug('Exercise created:', exercise.id);
 
       // Create initial max record if provided (standard exercises)
       if (exerciseData.measurementType === 'reps' && initialMax && initialMax > 0) {
-        await MaxRecordRepo.create(exercise.id, initialMax, undefined, 'Initial max during onboarding');
+        await MaxRecordRepo.create(
+          exercise.id,
+          initialMax,
+          undefined,
+          'Initial max during onboarding'
+        );
         log.debug('Initial max reps recorded:', initialMax);
       } else if (exerciseData.measurementType === 'time' && initialMaxTime && initialMaxTime > 0) {
-        await MaxRecordRepo.create(exercise.id, undefined, initialMaxTime, 'Initial max during onboarding');
+        await MaxRecordRepo.create(
+          exercise.id,
+          undefined,
+          initialMaxTime,
+          'Initial max during onboarding'
+        );
         log.debug('Initial max time recorded:', initialMaxTime);
       }
 
@@ -140,21 +160,14 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
           <p className="text-gray-600 dark:text-gray-400 mb-8">
             {createdExerciseName} has been added to your exercises.
           </p>
-          
+
           <div className="space-y-3">
-            <Button
-              onClick={handleAddAnother}
-              variant="secondary"
-              className="w-full py-3"
-            >
+            <Button onClick={handleAddAnother} variant="secondary" className="w-full py-3">
               <Plus className="w-5 h-5 mr-2" />
               Add Another Exercise
             </Button>
-            
-            <Button
-              onClick={onComplete}
-              className="w-full py-3"
-            >
+
+            <Button onClick={onComplete} className="w-full py-3">
               <Home className="w-5 h-5 mr-2" />
               Start Using Ascend
             </Button>
@@ -234,8 +247,8 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
                 index === currentSlide
                   ? 'w-6 bg-primary-500'
                   : index < currentSlide
-                  ? 'w-1.5 bg-primary-300 dark:bg-primary-700'
-                  : 'w-1.5 bg-gray-200 dark:bg-gray-700'
+                    ? 'w-1.5 bg-primary-300 dark:bg-primary-700'
+                    : 'w-1.5 bg-gray-200 dark:bg-gray-700'
               }`}
             />
           ))}
@@ -252,13 +265,15 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
       <div className="flex-1 flex flex-col items-center justify-center px-8 py-12">
         {/* Icon */}
         {'useAppIcon' in slide && slide.useAppIcon ? (
-          <img 
-            src="/pwa-192x192.png" 
-            alt="Ascend" 
+          <img
+            src="/pwa-192x192.png"
+            alt="Ascend"
             className="w-24 h-24 mb-8 rounded-3xl shadow-lg"
           />
         ) : Icon ? (
-          <div className={`w-24 h-24 mb-8 rounded-3xl bg-gradient-to-br ${slide.gradient} flex items-center justify-center shadow-lg`}>
+          <div
+            className={`w-24 h-24 mb-8 rounded-3xl bg-gradient-to-br ${slide.gradient} flex items-center justify-center shadow-lg`}
+          >
             <Icon className="w-12 h-12 text-white" />
           </div>
         ) : null}
@@ -277,18 +292,11 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
       {/* Navigation */}
       <div className="px-6 py-6 flex gap-3">
         {currentSlide > 0 && (
-          <Button
-            variant="secondary"
-            onClick={handlePrev}
-            className="px-4"
-          >
+          <Button variant="secondary" onClick={handlePrev} className="px-4">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         )}
-        <Button
-          onClick={handleNext}
-          className="flex-1 py-3 text-base font-medium"
-        >
+        <Button onClick={handleNext} className="flex-1 py-3 text-base font-medium">
           {isLastSlide ? (
             <>
               Create Your First Exercise

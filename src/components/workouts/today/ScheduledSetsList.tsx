@@ -1,7 +1,14 @@
 import { Circle, CheckCircle, Edit2 } from 'lucide-react';
 import { SwipeableSetCard } from '@/components/workouts/SwipeableSetCard';
 import { getWeightUnitLabel } from '@/constants';
-import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type ScheduledSet, type CompletedSet, type ExerciseType } from '@/types';
+import {
+  EXERCISE_TYPE_LABELS,
+  formatTime,
+  type Exercise,
+  type ScheduledSet,
+  type CompletedSet,
+  type ExerciseType,
+} from '@/types';
 
 interface SetGroup {
   type: ExerciseType;
@@ -87,18 +94,23 @@ export function ScheduledSetsList({
                       onSwipeLeft={() => onSkipSet(set)}
                       onTap={() => onSelectSet(set)}
                       ariaLabel={`${exercise.name}: ${
-                        isMaxTestSet 
-                          ? 'Max test, go all out' 
-                          : isTimeBased 
-                            ? `${formatTime(targetReps)} hold` 
+                        isMaxTestSet
+                          ? 'Max test, go all out'
+                          : isTimeBased
+                            ? `${formatTime(targetReps)} hold`
                             : `${targetReps} reps`
                       }${targetWeight ? ` at ${targetWeight} pounds` : ''}${isWarmupSet ? ', warmup set' : ''}. Press Enter for details, Right arrow to complete, Left arrow to skip.`}
                     >
-                      <div className={`flex items-center gap-4 p-4 text-left ${isWarmupSet ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}>
+                      <div
+                        className={`flex items-center gap-4 p-4 text-left ${isWarmupSet ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
+                      >
                         <div className="flex flex-col items-center w-8 flex-shrink-0">
                           <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600" />
-                          <span className={`text-xs mt-0.5 ${isWarmupSet ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {set.setNumber}{isWarmupSet ? 'w' : ''}
+                          <span
+                            className={`text-xs mt-0.5 ${isWarmupSet ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}
+                          >
+                            {set.setNumber}
+                            {isWarmupSet ? 'w' : ''}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -120,8 +132,14 @@ export function ScheduledSetsList({
                         </div>
                         <div className="flex flex-col items-end">
                           <div className="flex items-baseline gap-1">
-                            <span className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : isWarmupSet ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'}`}>
-                              {isMaxTestSet ? 'MAX' : isTimeBased ? formatTime(targetReps) : targetReps}
+                            <span
+                              className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : isWarmupSet ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'}`}
+                            >
+                              {isMaxTestSet
+                                ? 'MAX'
+                                : isTimeBased
+                                  ? formatTime(targetReps)
+                                  : targetReps}
                             </span>
                             {targetWeight !== undefined && targetWeight > 0 && (
                               <span className="text-gym-lg text-purple-600 dark:text-purple-400">
@@ -130,7 +148,17 @@ export function ScheduledSetsList({
                             )}
                           </div>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {isMaxTestSet ? 'go all out' : isWarmupSet ? 'warmup' : set.isConditioning ? 'cond' : isTimeBased ? 'hold' : targetWeight ? `reps @ ${getWeightUnitLabel()}` : 'reps'}
+                            {isMaxTestSet
+                              ? 'go all out'
+                              : isWarmupSet
+                                ? 'warmup'
+                                : set.isConditioning
+                                  ? 'cond'
+                                  : isTimeBased
+                                    ? 'hold'
+                                    : targetWeight
+                                      ? `reps @ ${getWeightUnitLabel()}`
+                                      : 'reps'}
                           </span>
                         </div>
                       </div>
@@ -145,7 +173,9 @@ export function ScheduledSetsList({
 
       {/* Completed sets */}
       {groupedSetsCompleted.length > 0 && (
-        <div className={`p-3 ${!isShowingCompletedWorkout && 'border-t border-gray-100 dark:border-gray-800'}`}>
+        <div
+          className={`p-3 ${!isShowingCompletedWorkout && 'border-t border-gray-100 dark:border-gray-800'}`}
+        >
           {!isShowingCompletedWorkout && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Completed (tap to edit)</p>
           )}
@@ -158,10 +188,13 @@ export function ScheduledSetsList({
                 <div className="space-y-2">
                   {group.sets.map(set => {
                     const exercise = exerciseMap.get(set.exerciseId);
-                    const completedSet = workoutCompletedSets.find(s => s.scheduledSetId === set.id);
+                    const completedSet = workoutCompletedSets.find(
+                      s => s.scheduledSetId === set.id
+                    );
                     if (!exercise || !completedSet) return null;
-                    
-                    const wasSkipped = completedSet.actualReps === 0 && completedSet.notes === 'Skipped';
+
+                    const wasSkipped =
+                      completedSet.actualReps === 0 && completedSet.notes === 'Skipped';
                     const hasWeight = completedSet.weight !== undefined && completedSet.weight > 0;
                     const isTimeBased = exercise.measurementType === 'time';
 
@@ -170,31 +203,39 @@ export function ScheduledSetsList({
                         key={set.id}
                         onClick={() => onEditCompletedSet(completedSet)}
                         aria-label={`Edit ${exercise.name}: ${
-                          wasSkipped 
-                            ? 'skipped' 
-                            : isTimeBased 
-                              ? formatTime(completedSet.actualReps) 
+                          wasSkipped
+                            ? 'skipped'
+                            : isTimeBased
+                              ? formatTime(completedSet.actualReps)
                               : `${completedSet.actualReps} reps`
                         }${hasWeight && !wasSkipped ? `, ${completedSet.weight} added weight` : ''}`}
                         className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left ${
-                          wasSkipped 
+                          wasSkipped
                             ? 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30'
                             : 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
                         }`}
                       >
-                        <CheckCircle className={`w-5 h-5 flex-shrink-0 ${
-                          wasSkipped ? 'text-orange-500' : 'text-green-500'
-                        }`} />
+                        <CheckCircle
+                          className={`w-5 h-5 flex-shrink-0 ${
+                            wasSkipped ? 'text-orange-500' : 'text-green-500'
+                          }`}
+                        />
                         <span className="text-base text-gray-700 dark:text-gray-300 flex-1">
                           {exercise.name}
                         </span>
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-gym-xl ${
-                            wasSkipped 
-                              ? 'text-orange-600 dark:text-orange-400'
-                              : 'text-green-600 dark:text-green-400'
-                          }`}>
-                            {wasSkipped ? '—' : isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
+                          <span
+                            className={`text-gym-xl ${
+                              wasSkipped
+                                ? 'text-orange-600 dark:text-orange-400'
+                                : 'text-green-600 dark:text-green-400'
+                            }`}
+                          >
+                            {wasSkipped
+                              ? '—'
+                              : isTimeBased
+                                ? formatTime(completedSet.actualReps)
+                                : completedSet.actualReps}
                           </span>
                           {hasWeight && !wasSkipped && (
                             <span className="text-sm text-purple-600 dark:text-purple-400">

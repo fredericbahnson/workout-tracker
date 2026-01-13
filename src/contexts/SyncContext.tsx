@@ -32,7 +32,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // Subscribe to sync status changes
   useEffect(() => {
-    const unsubscribe = SyncService.onStatusChange((newStatus) => {
+    const unsubscribe = SyncService.onStatusChange(newStatus => {
       setStatus(newStatus);
     });
     return unsubscribe;
@@ -49,7 +49,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           setLastError(null);
           updateQueueCount();
         })
-        .catch((err) => {
+        .catch(err => {
           log.error(err as Error);
           setLastError(err.message || 'Sync failed');
         });
@@ -68,7 +68,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             setLastError(null);
             updateQueueCount();
           })
-          .catch((err) => {
+          .catch(err => {
             log.error(err as Error);
             setLastError(err.message || 'Sync failed');
           });
@@ -85,7 +85,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
     const handleOnline = async () => {
       log.debug('Back online - processing sync queue...');
-      
+
       // Process queued operations first
       const { processed, failed } = await SyncService.processQueue(user.id);
       if (processed > 0) {
@@ -94,18 +94,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (failed > 0) {
         log.warn(`${failed} queued operations failed`);
       }
-      
+
       // Then do a full sync to pull any updates
       await SyncService.fullSync(user.id)
         .then(() => {
           setLastSyncTime(SyncService.getLastSyncTime());
           setLastError(null);
         })
-        .catch((err) => {
+        .catch(err => {
           log.error(err as Error);
           setLastError(err.message || 'Sync failed');
         });
-      
+
       updateQueueCount();
     };
 
@@ -117,20 +117,23 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user || !isConfigured) return;
 
-    const interval = setInterval(() => {
-      if (navigator.onLine && status !== 'syncing') {
-        SyncService.fullSync(user.id)
-          .then(() => {
-            setLastSyncTime(SyncService.getLastSyncTime());
-            setLastError(null);
-            updateQueueCount();
-          })
-          .catch((err) => {
-            log.error(err as Error);
-            setLastError(err.message || 'Sync failed');
-          });
-      }
-    }, 5 * 60 * 1000); // 5 minutes
+    const interval = setInterval(
+      () => {
+        if (navigator.onLine && status !== 'syncing') {
+          SyncService.fullSync(user.id)
+            .then(() => {
+              setLastSyncTime(SyncService.getLastSyncTime());
+              setLastError(null);
+              updateQueueCount();
+            })
+            .catch(err => {
+              log.error(err as Error);
+              setLastError(err.message || 'Sync failed');
+            });
+        }
+      },
+      5 * 60 * 1000
+    ); // 5 minutes
 
     return () => clearInterval(interval);
   }, [user, isConfigured, status, updateQueueCount]);
@@ -138,7 +141,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // Manual sync function
   const sync = useCallback(async () => {
     if (!user || !isConfigured || isSyncing) return;
-    
+
     setIsSyncing(true);
     setLastError(null);
     try {
@@ -177,7 +180,13 @@ export function useSyncItem() {
 
   const syncItem = useCallback(
     async (
-      table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences',
+      table:
+        | 'exercises'
+        | 'max_records'
+        | 'completed_sets'
+        | 'cycles'
+        | 'scheduled_workouts'
+        | 'user_preferences',
       item: unknown
     ) => {
       if (user && isConfigured) {

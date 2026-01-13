@@ -7,9 +7,9 @@ interface CompletedSetCardProps {
 }
 
 export function CompletedSetCard({ completedSet, exercise }: CompletedSetCardProps) {
-  const time = new Date(completedSet.completedAt).toLocaleTimeString([], { 
-    hour: 'numeric', 
-    minute: '2-digit' 
+  const time = new Date(completedSet.completedAt).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
   });
 
   const hasParameters = Object.keys(completedSet.parameters).length > 0;
@@ -29,19 +29,15 @@ export function CompletedSetCard({ completedSet, exercise }: CompletedSetCardPro
             )}
           </div>
           {exercise && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-              {exercise.name}
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{exercise.name}</p>
           )}
           {completedSet.notes && (
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-              {completedSet.notes}
-            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{completedSet.notes}</p>
           )}
           {hasParameters && (
             <div className="flex flex-wrap gap-1 mt-1">
               {Object.entries(completedSet.parameters).map(([key, value]) => (
-                <span 
+                <span
                   key={key}
                   className="text-xs text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded"
                 >
@@ -51,9 +47,7 @@ export function CompletedSetCard({ completedSet, exercise }: CompletedSetCardPro
             </div>
           )}
         </div>
-        <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
-          {time}
-        </span>
+        <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{time}</span>
       </div>
     </Card>
   );

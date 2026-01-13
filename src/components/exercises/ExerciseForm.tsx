@@ -4,15 +4,15 @@ import { Button, Input, NumberInput, Select } from '@/components/ui';
 import { useSyncedPreferences } from '@/contexts';
 import { createScopedLogger } from '@/utils/logger';
 import { getWeightUnitLabel } from '@/constants';
-import { 
-  EXERCISE_TYPES, 
-  EXERCISE_TYPE_LABELS, 
-  type ExerciseFormData, 
+import {
+  EXERCISE_TYPES,
+  EXERCISE_TYPE_LABELS,
+  type ExerciseFormData,
   type CustomParameter,
   type Exercise,
   type MeasurementType,
   parseTimeInput,
-  formatTime
+  formatTime,
 } from '@/types';
 
 const log = createScopedLogger('ExerciseForm');
@@ -29,7 +29,9 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   const [name, setName] = useState(initialData?.name || '');
   const [type, setType] = useState(initialData?.type || 'push');
   const [mode, setMode] = useState(initialData?.mode || 'standard');
-  const [measurementType, setMeasurementType] = useState<MeasurementType>(initialData?.measurementType || 'reps');
+  const [measurementType, setMeasurementType] = useState<MeasurementType>(
+    initialData?.measurementType || 'reps'
+  );
   const [notes, setNotes] = useState(initialData?.notes || '');
   const [customParameters, setCustomParameters] = useState<CustomParameter[]>(
     initialData?.customParameters || []
@@ -71,58 +73,79 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
       notes: notes.trim(),
       customParameters: customParameters.filter(p => p.name.trim()),
       // Rep-based initial values (for creating max record on new exercises)
-      initialMax: mode === 'standard' && measurementType === 'reps' && initialMax ? parseInt(initialMax) : undefined,
-      startingReps: mode === 'conditioning' && measurementType === 'reps' ? baselineReps : undefined,
+      initialMax:
+        mode === 'standard' && measurementType === 'reps' && initialMax
+          ? parseInt(initialMax)
+          : undefined,
+      startingReps:
+        mode === 'conditioning' && measurementType === 'reps' ? baselineReps : undefined,
       // Time-based initial values
-      initialMaxTime: mode === 'standard' && measurementType === 'time' && parsedInitialMaxTime ? parsedInitialMaxTime : undefined,
-      startingTime: mode === 'conditioning' && measurementType === 'time' && parsedBaselineTime ? parsedBaselineTime : undefined,
+      initialMaxTime:
+        mode === 'standard' && measurementType === 'time' && parsedInitialMaxTime
+          ? parsedInitialMaxTime
+          : undefined,
+      startingTime:
+        mode === 'conditioning' && measurementType === 'time' && parsedBaselineTime
+          ? parsedBaselineTime
+          : undefined,
       // Conditioning baseline values (stored on the exercise)
-      defaultConditioningReps: mode === 'conditioning' && measurementType === 'reps' ? baselineReps : undefined,
-      defaultConditioningTime: mode === 'conditioning' && measurementType === 'time' && parsedBaselineTime ? parsedBaselineTime : undefined,
+      defaultConditioningReps:
+        mode === 'conditioning' && measurementType === 'reps' ? baselineReps : undefined,
+      defaultConditioningTime:
+        mode === 'conditioning' && measurementType === 'time' && parsedBaselineTime
+          ? parsedBaselineTime
+          : undefined,
       weightEnabled,
-      defaultWeight: weightEnabled && defaultWeight ? parseFloat(defaultWeight) : undefined
+      defaultWeight: weightEnabled && defaultWeight ? parseFloat(defaultWeight) : undefined,
     };
-    
+
     log.debug('Submitting exercise form:', data);
     onSubmit(data);
   };
 
   const addParameter = () => {
-    setCustomParameters([
-      ...customParameters,
-      { name: '', type: 'text' }
-    ]);
+    setCustomParameters([...customParameters, { name: '', type: 'text' }]);
   };
 
   const updateParameter = (index: number, updates: Partial<CustomParameter>) => {
-    setCustomParameters(params => 
-      params.map((p, i) => i === index ? { ...p, ...updates } : p)
-    );
+    setCustomParameters(params => params.map((p, i) => (i === index ? { ...p, ...updates } : p)));
   };
 
   const removeParameter = (index: number) => {
     setCustomParameters(params => params.filter((_, i) => i !== index));
   };
 
-  const typeOptions = EXERCISE_TYPES.map(t => ({ 
-    value: t, 
-    label: EXERCISE_TYPE_LABELS[t] 
+  const typeOptions = EXERCISE_TYPES.map(t => ({
+    value: t,
+    label: EXERCISE_TYPE_LABELS[t],
   }));
 
   const modeOptions = [
-    { value: 'standard', label: measurementType === 'time' ? 'Progressive (% of max time)' : 'Standard (RFEM or simple progression)' },
-    { value: 'conditioning', label: measurementType === 'time' ? 'Fixed (set time + weekly increment)' : 'Conditioning (consistent reps)' }
+    {
+      value: 'standard',
+      label:
+        measurementType === 'time'
+          ? 'Progressive (% of max time)'
+          : 'Standard (RFEM or simple progression)',
+    },
+    {
+      value: 'conditioning',
+      label:
+        measurementType === 'time'
+          ? 'Fixed (set time + weekly increment)'
+          : 'Conditioning (consistent reps)',
+    },
   ];
 
   const measurementOptions = [
     { value: 'reps', label: 'Reps' },
-    { value: 'time', label: 'Time (seconds)' }
+    { value: 'time', label: 'Time (seconds)' },
   ];
 
   const paramTypeOptions = [
     { value: 'text', label: 'Text' },
     { value: 'number', label: 'Number' },
-    { value: 'select', label: 'Select (options)' }
+    { value: 'select', label: 'Select (options)' },
   ];
 
   return (
@@ -175,10 +198,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
             onClick={() => setWeightEnabled(!weightEnabled)}
             className={`
               relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-              ${weightEnabled 
-                ? 'bg-primary-600' 
-                : 'bg-gray-300 dark:bg-gray-600'
-              }
+              ${weightEnabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'}
             `}
           >
             <span
@@ -189,7 +209,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
             />
           </button>
         </div>
-        
+
         {weightEnabled && (
           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-border">
             <Input
@@ -229,12 +249,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
 
       {/* Base Reps - show for conditioning/reps mode (create or edit) */}
       {mode === 'conditioning' && measurementType === 'reps' && (
-        <NumberInput
-          label="Base Reps"
-          value={baselineReps}
-          onChange={setBaselineReps}
-          min={1}
-        />
+        <NumberInput label="Base Reps" value={baselineReps} onChange={setBaselineReps} min={1} />
       )}
 
       {/* Base Time - show for conditioning/time mode (create or edit) */}
@@ -278,10 +293,11 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
             Add
           </Button>
         </div>
-        
+
         {customParameters.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            No custom parameters. Add parameters to track things like strap length, band resistance, etc.
+            No custom parameters. Add parameters to track things like strap length, band resistance,
+            etc.
           </p>
         ) : (
           <div className="space-y-3">
@@ -296,13 +312,15 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
                     />
                     <Select
                       value={param.type}
-                      onChange={e => updateParameter(index, { type: e.target.value as CustomParameter['type'] })}
+                      onChange={e =>
+                        updateParameter(index, { type: e.target.value as CustomParameter['type'] })
+                      }
                       options={paramTypeOptions}
                     />
                   </div>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
+                  <Button
+                    type="button"
+                    variant="ghost"
                     size="sm"
                     onClick={() => removeParameter(index)}
                     className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -310,26 +328,33 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
-                
+
                 {/* Options input for select type */}
                 {param.type === 'select' && (
                   <Input
                     placeholder="Options (comma-separated, e.g.: 3 holes, 4 holes, 5 holes)"
                     value={param.options?.join(', ') || ''}
-                    onChange={e => updateParameter(index, { 
-                      options: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                    })}
+                    onChange={e =>
+                      updateParameter(index, {
+                        options: e.target.value
+                          .split(',')
+                          .map(s => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
                   />
                 )}
-                
+
                 {/* Default value input */}
                 {param.type === 'select' && param.options && param.options.length > 0 ? (
                   <Select
                     value={String(param.defaultValue || '')}
-                    onChange={e => updateParameter(index, { defaultValue: e.target.value || undefined })}
+                    onChange={e =>
+                      updateParameter(index, { defaultValue: e.target.value || undefined })
+                    }
                     options={[
                       { value: '', label: 'No default' },
-                      ...param.options.map(opt => ({ value: opt, label: opt }))
+                      ...param.options.map(opt => ({ value: opt, label: opt })),
                     ]}
                   />
                 ) : param.type === 'number' ? (
@@ -337,17 +362,21 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
                     type="number"
                     placeholder="Default value (optional)"
                     value={param.defaultValue !== undefined ? String(param.defaultValue) : ''}
-                    onChange={e => updateParameter(index, { 
-                      defaultValue: e.target.value ? parseFloat(e.target.value) : undefined 
-                    })}
+                    onChange={e =>
+                      updateParameter(index, {
+                        defaultValue: e.target.value ? parseFloat(e.target.value) : undefined,
+                      })
+                    }
                   />
                 ) : param.type === 'text' ? (
                   <Input
                     placeholder="Default value (optional)"
                     value={param.defaultValue !== undefined ? String(param.defaultValue) : ''}
-                    onChange={e => updateParameter(index, { 
-                      defaultValue: e.target.value || undefined 
-                    })}
+                    onChange={e =>
+                      updateParameter(index, {
+                        defaultValue: e.target.value || undefined,
+                      })
+                    }
                   />
                 ) : null}
               </div>
@@ -361,17 +390,17 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
           Cancel
         </Button>
-        <Button 
-          type="submit" 
-          disabled={!name.trim() || isLoading} 
+        <Button
+          type="submit"
+          disabled={!name.trim() || isLoading}
           className="flex-1"
-          onClick={(e) => {
+          onClick={e => {
             // Explicit click handler as mobile Safari fallback
             e.preventDefault();
             submitForm();
           }}
         >
-          {isLoading ? 'Saving...' : (initialData ? 'Save Changes' : 'Add Exercise')}
+          {isLoading ? 'Saving...' : initialData ? 'Save Changes' : 'Add Exercise'}
         </Button>
       </div>
     </form>

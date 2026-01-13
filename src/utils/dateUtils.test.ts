@@ -182,7 +182,9 @@ describe('dateUtils', () => {
     });
 
     it('works with mixed inputs', () => {
-      expect(isSameDay('2024-01-15T08:00:00.000Z', new Date('2024-01-15T20:00:00.000Z'))).toBe(true);
+      expect(isSameDay('2024-01-15T08:00:00.000Z', new Date('2024-01-15T20:00:00.000Z'))).toBe(
+        true
+      );
     });
   });
 
@@ -212,7 +214,7 @@ describe('dateUtils', () => {
       const before = Date.now();
       const result = now();
       const after = Date.now();
-      
+
       expect(result.getTime()).toBeGreaterThanOrEqual(before);
       expect(result.getTime()).toBeLessThanOrEqual(after);
     });

@@ -1,14 +1,14 @@
 import { generateId } from '@/data/db';
-import type { 
-  Cycle, 
-  ScheduledWorkout, 
-  ScheduledSet, 
-  Exercise, 
-  ExerciseType, 
+import type {
+  Cycle,
+  ScheduledWorkout,
+  ScheduledSet,
+  Exercise,
+  ExerciseType,
   MaxRecord,
   Group,
   ExerciseAssignment,
-  ProgressionInterval
+  ProgressionInterval,
 } from '@/types';
 import { getProgressionMode, getExerciseProgressionMode, getSetProgressionMode } from '@/types';
 import { WARMUP, RFEM, WEIGHT, CONDITIONING } from '@/constants/training';
@@ -44,18 +44,18 @@ interface DayAllocation {
 
 /**
  * Generates all scheduled workouts for a training cycle.
- * 
+ *
  * This is the main entry point for the scheduling engine. It creates a complete
  * workout plan based on the cycle configuration, distributing sets across weeks
  * and days according to the defined goals and rotation patterns.
- * 
+ *
  * @param input - The scheduler configuration
  * @param input.cycle - The cycle defining training parameters (weeks, days, goals)
  * @param input.exercises - Map of all exercises available for scheduling
  * @param input.maxRecords - Optional max records for RFEM-based progression
  * @param input.startFromWorkout - Optional starting point for partial regeneration
  * @returns Array of scheduled workouts (without IDs - caller should assign)
- * 
+ *
  * @example
  * ```ts
  * const workouts = generateSchedule({
@@ -73,7 +73,7 @@ export function generateSchedule(input: SchedulerInput): Omit<ScheduledWorkout, 
   // For each week in the cycle
   for (let week = 1; week <= cycle.numberOfWeeks; week++) {
     const weekWorkouts = generateWeekSchedule(cycle, week, exercises, sequenceNumber);
-    
+
     // Only add workouts at or after startFromWorkout
     for (const workout of weekWorkouts) {
       if (sequenceNumber >= startFromWorkout) {
@@ -99,15 +99,15 @@ function generateWeekSchedule(
 
   // Build day allocations
   const dayAllocations: DayAllocation[] = [];
-  
+
   for (let dayNum = 1; dayNum <= workoutDaysPerWeek; dayNum++) {
     // Determine group and RFEM for this day
     const groupIndex = (dayNum - 1) % groupRotation.length;
     const rfemIndex = (dayNum - 1) % rfemRotation.length;
-    
+
     const groupId = groupRotation[groupIndex];
     const group = groups.find(g => g.id === groupId);
-    
+
     if (!group) {
       log.warn(`Group ${groupId} not found in cycle`);
       continue;
@@ -121,7 +121,7 @@ function generateWeekSchedule(
       dayInWeek: dayNum,
       group,
       rfem,
-      setsByType: {} as Record<ExerciseType, number>
+      setsByType: {} as Record<ExerciseType, number>,
     });
   }
 
@@ -129,9 +129,7 @@ function generateWeekSchedule(
   distributeSets(dayAllocations, weeklySetGoals, exercises);
 
   // Convert allocations to scheduled workouts
-  return dayAllocations.map(day => 
-    createScheduledWorkout(day, cycle, exercises)
-  );
+  return dayAllocations.map(day => createScheduledWorkout(day, cycle, exercises));
 }
 
 /**
@@ -142,7 +140,15 @@ function distributeSets(
   weeklySetGoals: Record<ExerciseType, number>,
   exercises: Map<string, Exercise>
 ): void {
-  const exerciseTypes: ExerciseType[] = ['push', 'pull', 'legs', 'core', 'balance', 'mobility', 'other'];
+  const exerciseTypes: ExerciseType[] = [
+    'push',
+    'pull',
+    'legs',
+    'core',
+    'balance',
+    'mobility',
+    'other',
+  ];
 
   for (const type of exerciseTypes) {
     const totalSets = weeklySetGoals[type] || 0;
@@ -190,90 +196,103 @@ function createScheduledWorkout(
   const scheduledSets: ScheduledSet[] = [];
   const cycleMode = getProgressionMode(cycle);
   const isMixedMode = cycleMode === 'mixed';
-  
+
   // Group exercises by type for this day's group
-  const exercisesByType = new Map<ExerciseType, { 
-    exerciseId: string; 
-    assignment: ExerciseAssignment;
-  }[]>();
-  
+  const exercisesByType = new Map<
+    ExerciseType,
+    {
+      exerciseId: string;
+      assignment: ExerciseAssignment;
+    }[]
+  >();
+
   for (const assignment of day.group.exerciseAssignments) {
     const exercise = exercises.get(assignment.exerciseId);
     if (!exercise) continue;
-    
+
     if (!exercisesByType.has(exercise.type)) {
       exercisesByType.set(exercise.type, []);
     }
     exercisesByType.get(exercise.type)!.push({
       exerciseId: assignment.exerciseId,
-      assignment
+      assignment,
     });
   }
 
   // Track which exercises will appear in this workout and need warmups
   // We need to know how many working sets each exercise will have to determine targets
-  const exerciseWorkingSets = new Map<string, { 
-    count: number;
-    assignment: ExerciseAssignment;
-    exercise: Exercise;
-    hasWarmups: boolean;
-  }>();
-  
+  const exerciseWorkingSets = new Map<
+    string,
+    {
+      count: number;
+      assignment: ExerciseAssignment;
+      exercise: Exercise;
+      hasWarmups: boolean;
+    }
+  >();
+
   // First pass: count working sets per exercise and determine warmup eligibility
   for (const [type, setsNeeded] of Object.entries(day.setsByType)) {
     const exerciseType = type as ExerciseType;
     const availableExercises = exercisesByType.get(exerciseType) || [];
-    
+
     if (availableExercises.length === 0 || setsNeeded === 0) continue;
-    
+
     for (let setNum = 0; setNum < setsNeeded; setNum++) {
       const exIndex = setNum % availableExercises.length;
       const { exerciseId, assignment } = availableExercises[exIndex];
       const exercise = exercises.get(exerciseId)!;
-      
+
       if (!exerciseWorkingSets.has(exerciseId)) {
         const hasWarmups = shouldGenerateWarmups(exercise, assignment, cycle, cycleMode);
-        exerciseWorkingSets.set(exerciseId, { 
-          count: 0, 
-          assignment, 
+        exerciseWorkingSets.set(exerciseId, {
+          count: 0,
+          assignment,
           exercise,
-          hasWarmups
+          hasWarmups,
         });
       }
       exerciseWorkingSets.get(exerciseId)!.count++;
     }
   }
-  
+
   // Second pass: generate warmup sets for exercises that need them
   for (const [exerciseId, info] of exerciseWorkingSets) {
     if (!info.hasWarmups) continue;
-    
+
     const { exercise, assignment } = info;
     const exerciseMode = getExerciseProgressionMode(cycleMode, assignment);
     const isTimeBased = exercise.measurementType === 'time';
     const isWeighted = exercise.weightEnabled === true;
-    
+
     // Calculate the target value for working sets (needed for warmup calculation)
     let workoutTargetValue: number;
     let workoutTargetWeight: number | undefined;
     let progressionType: 'reps' | 'time' | 'weight' | undefined;
-    
+
     if (exerciseMode === 'simple') {
       // For simple mode, use base values
       if (isTimeBased) {
         workoutTargetValue = assignment.simpleBaseTime ?? 30;
-        progressionType = (assignment.simpleTimeProgressionType !== 'constant' && assignment.simpleTimeIncrement) 
-          ? 'time' : undefined;
+        progressionType =
+          assignment.simpleTimeProgressionType !== 'constant' && assignment.simpleTimeIncrement
+            ? 'time'
+            : undefined;
       } else {
         workoutTargetValue = assignment.simpleBaseReps ?? 10;
-        progressionType = (assignment.simpleRepProgressionType !== 'constant' && assignment.simpleRepIncrement)
-          ? 'reps' : undefined;
+        progressionType =
+          assignment.simpleRepProgressionType !== 'constant' && assignment.simpleRepIncrement
+            ? 'reps'
+            : undefined;
       }
-      
+
       if (isWeighted) {
         workoutTargetWeight = assignment.simpleBaseWeight;
         // Check if weight is the primary progression
-        if (assignment.simpleWeightProgressionType !== 'constant' && assignment.simpleWeightIncrement) {
+        if (
+          assignment.simpleWeightProgressionType !== 'constant' &&
+          assignment.simpleWeightIncrement
+        ) {
           progressionType = 'weight';
         }
       }
@@ -284,7 +303,7 @@ function createScheduledWorkout(
       workoutTargetValue = day.rfem * RFEM.ESTIMATION_MULTIPLIER;
       workoutTargetWeight = isWeighted ? (exercise.defaultWeight ?? 0) : undefined;
     }
-    
+
     const warmups = generateWarmupSets({
       exerciseId,
       exerciseType: exercise.type,
@@ -294,16 +313,16 @@ function createScheduledWorkout(
       workoutTargetWeight,
       effectiveMode: exerciseMode,
       progressionType,
-      weightIncrement: assignment.simpleWeightIncrement
+      weightIncrement: assignment.simpleWeightIncrement,
     });
-    
+
     // Copy mode-specific fields to warmup sets for display/calculation
     if (isMixedMode) {
       warmups.forEach(w => {
         w.progressionMode = exerciseMode;
       });
     }
-    
+
     // For RFEM mode warmups, we need to store info to calculate at workout time
     if (exerciseMode === 'rfem') {
       warmups.forEach(w => {
@@ -313,7 +332,7 @@ function createScheduledWorkout(
         w.simpleBaseWeight = undefined;
       });
     }
-    
+
     scheduledSets.push(...warmups);
   }
 
@@ -321,7 +340,7 @@ function createScheduledWorkout(
   for (const [type, setsNeeded] of Object.entries(day.setsByType)) {
     const exerciseType = type as ExerciseType;
     const availableExercises = exercisesByType.get(exerciseType) || [];
-    
+
     if (availableExercises.length === 0 || setsNeeded === 0) continue;
 
     // Round-robin through available exercises
@@ -331,11 +350,11 @@ function createScheduledWorkout(
       const exercise = exercises.get(exerciseId)!;
       const isConditioning = exercise.mode === 'conditioning';
       const isTimeBased = exercise.measurementType === 'time';
-      
+
       // Determine the effective mode for this specific exercise
       const exerciseMode = getExerciseProgressionMode(cycleMode, assignment);
       const usesSimple = exerciseMode === 'simple';
-      
+
       // Calculate set number, accounting for warmups
       const info = exerciseWorkingSets.get(exerciseId)!;
       const warmupOffset = info.hasWarmups ? WARMUP.SET_COUNT : 0;
@@ -348,13 +367,13 @@ function createScheduledWorkout(
         isConditioning,
         measurementType: exercise.measurementType || 'reps',
         setNumber: baseSetNumber + warmupOffset,
-        isWarmup: false
+        isWarmup: false,
       };
 
       // For mixed mode, denormalize the per-exercise progression mode
       if (isMixedMode) {
         scheduledSet.progressionMode = exerciseMode;
-        
+
         // Denormalize per-exercise conditioning increments
         if (isConditioning) {
           scheduledSet.conditioningRepIncrement = assignment.conditioningRepIncrement;
@@ -379,13 +398,15 @@ function createScheduledWorkout(
         scheduledSet.simpleWeightProgressionType = assignment.simpleWeightProgressionType;
         scheduledSet.simpleWeightIncrement = assignment.simpleWeightIncrement;
       }
-      
+
       // Conditioning base values (used in all modes)
       if (isConditioning) {
         if (isTimeBased) {
-          scheduledSet.conditioningBaseTime = assignment.conditioningBaseTime || CONDITIONING.DEFAULT_BASE_TIME;
+          scheduledSet.conditioningBaseTime =
+            assignment.conditioningBaseTime || CONDITIONING.DEFAULT_BASE_TIME;
         } else {
-          scheduledSet.conditioningBaseReps = assignment.conditioningBaseReps || CONDITIONING.DEFAULT_BASE_REPS;
+          scheduledSet.conditioningBaseReps =
+            assignment.conditioningBaseReps || CONDITIONING.DEFAULT_BASE_REPS;
         }
       }
 
@@ -401,21 +422,21 @@ function createScheduledWorkout(
     groupId: day.group.id,
     rfem: day.rfem,
     scheduledSets,
-    status: 'pending'
+    status: 'pending',
   };
 }
 
 /**
  * Calculates target reps or time for a scheduled set using Simple Progression mode.
- * 
+ *
  * Simple Progression uses a base value plus periodic increments, allowing for
  * predictable linear progression without the need for max testing.
- * 
+ *
  * @param set - The scheduled set to calculate targets for
  * @param workout - The workout containing the set (provides week/day context)
  * @param _cycle - The cycle (reserved for future use, maintains API consistency)
  * @returns Target reps for rep-based exercises, or seconds for time-based exercises
- * 
+ *
  * @example
  * ```ts
  * // For a set with simpleBaseReps: 10, simpleRepIncrement: 2, per_week progression
@@ -426,7 +447,7 @@ function createScheduledWorkout(
 export function calculateSimpleTargetReps(
   set: ScheduledSet,
   workout: ScheduledWorkout,
-  _cycle: Cycle  // Kept for API consistency, may be needed for future enhancements
+  _cycle: Cycle // Kept for API consistency, may be needed for future enhancements
 ): number {
   const isTimeBased = set.measurementType === 'time';
 
@@ -447,15 +468,15 @@ export function calculateSimpleTargetReps(
 
 /**
  * Calculates target weight for a scheduled set using Simple Progression mode.
- * 
+ *
  * Used for weighted exercises where the user wants to progress by adding weight
  * rather than increasing reps.
- * 
+ *
  * @param set - The scheduled set to calculate weight for
  * @param workout - The workout containing the set (provides week/day context)
  * @param _cycle - The cycle (reserved for future use, maintains API consistency)
  * @returns Target weight in the user's configured unit, or undefined if not weighted
- * 
+ *
  * @example
  * ```ts
  * // For a set with simpleBaseWeight: 20, simpleWeightIncrement: 2.5, per_week progression
@@ -466,7 +487,7 @@ export function calculateSimpleTargetReps(
 export function calculateSimpleTargetWeight(
   set: ScheduledSet,
   workout: ScheduledWorkout,
-  _cycle: Cycle  // Kept for API consistency
+  _cycle: Cycle // Kept for API consistency
 ): number | undefined {
   const baseWeight = set.simpleBaseWeight;
   if (baseWeight === undefined) return undefined;
@@ -505,7 +526,7 @@ function calculateProgressedValue(
 
 /**
  * Calculates target reps or time for a scheduled set dynamically at workout time.
- * 
+ *
  * This is the primary function for determining what targets to show the user.
  * It handles all progression modes:
  * - **RFEM**: max - RFEM offset (scaled for time-based exercises)
@@ -514,7 +535,7 @@ function calculateProgressedValue(
  * - **Conditioning**: base + weekly increment
  * - **Warmup**: Percentage of working intensity (20% or 40%)
  * - **Max Test**: Returns 0 (UI shows "Go to Max")
- * 
+ *
  * @param set - The scheduled set to calculate targets for
  * @param workout - The workout containing the set
  * @param maxRecord - The user's max record for this exercise (for RFEM calculation)
@@ -523,7 +544,7 @@ function calculateProgressedValue(
  * @param defaultMax - Default max to use if no max record exists
  * @param cycle - Optional cycle for mixed mode calculations
  * @returns Target reps for rep-based, seconds for time-based, or 0 for max tests
- * 
+ *
  * @example
  * ```ts
  * // RFEM mode with max of 30 reps, RFEM offset of 5
@@ -541,10 +562,10 @@ export function calculateTargetReps(
   cycle?: Cycle
 ): number {
   const cycleMode = cycle ? getProgressionMode(cycle) : 'rfem';
-  
+
   // Determine the effective mode for this set
   const effectiveMode = getSetProgressionMode(cycleMode, set);
-  
+
   // For non-conditioning exercises, check if this set uses simple progression
   if (!set.isConditioning && effectiveMode === 'simple') {
     return calculateSimpleTargetReps(set, workout, cycle!);
@@ -552,7 +573,7 @@ export function calculateTargetReps(
 
   // RFEM mode calculation (or conditioning exercises in any mode)
   const isTimeBased = set.measurementType === 'time';
-  
+
   // Handle warmup sets
   if (set.isWarmup) {
     // For simple mode warmups, the values are pre-calculated and stored on the set
@@ -562,7 +583,7 @@ export function calculateTargetReps(
     if (set.simpleBaseTime !== undefined) {
       return set.simpleBaseTime;
     }
-    
+
     // Max testing warmups: use previousMaxReps/Time with fixed 20% intensity
     if (set.previousMaxReps !== undefined || set.previousMaxTime !== undefined) {
       if (isTimeBased) {
@@ -573,14 +594,17 @@ export function calculateTargetReps(
         return Math.max(WARMUP.MIN_REPS, Math.round(prevMax * WARMUP.MAX_TEST_INTENSITY));
       }
     }
-    
+
     // Normal warmups: use warmupPercentage of working set target
     if (set.warmupPercentage) {
       const percentage = set.warmupPercentage / 100;
-      
+
       if (isTimeBased) {
         const max = maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
-        const workingTarget = Math.max(RFEM.MIN_TARGET_TIME_SECONDS, max - workout.rfem * RFEM.TIME_SCALE_FACTOR);
+        const workingTarget = Math.max(
+          RFEM.MIN_TARGET_TIME_SECONDS,
+          max - workout.rfem * RFEM.TIME_SCALE_FACTOR
+        );
         return Math.max(WARMUP.MIN_TIME_SECONDS, Math.round(workingTarget * percentage));
       } else {
         const max = maxRecord?.maxReps || defaultMax;
@@ -588,7 +612,7 @@ export function calculateTargetReps(
         return Math.max(WARMUP.MIN_REPS, Math.ceil(workingTarget * percentage));
       }
     }
-    
+
     // Fallback: if neither previousMax nor warmupPercentage is set, use 20% of max
     if (isTimeBased) {
       const max = maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
@@ -598,13 +622,13 @@ export function calculateTargetReps(
       return Math.max(WARMUP.MIN_REPS, Math.round(max * WARMUP.MAX_TEST_INTENSITY));
     }
   }
-  
+
   // Max testing: no target, user goes to max
   if (set.isMaxTest) {
     // Return 0 to indicate "go to max" - UI will handle this specially
     return 0;
   }
-  
+
   if (set.isConditioning) {
     // Conditioning: base + weekly increment
     // For mixed mode, use per-exercise increment if available, otherwise use cycle defaults
@@ -631,14 +655,14 @@ export function calculateTargetReps(
 
 /**
  * Validates a cycle configuration before generating a schedule.
- * 
+ *
  * Checks for common configuration errors and potential issues that could
  * cause problems during schedule generation or workout execution.
- * 
+ *
  * @param cycle - The cycle configuration to validate (without ID fields)
  * @param exercises - Map of all available exercises
  * @returns Validation result with arrays of errors (blocking) and warnings (informational)
- * 
+ *
  * @example
  * ```ts
  * const { valid, errors, warnings } = validateCycle(cycleConfig, exerciseMap);
@@ -649,14 +673,14 @@ export function calculateTargetReps(
  *   console.warn('Potential issues:', warnings);
  * }
  * ```
- * 
+ *
  * @remarks
  * Errors include:
  * - Missing required fields (name, groups, rotation)
  * - Invalid numeric ranges (weeks, days per week)
  * - Missing RFEM rotation in RFEM/mixed modes
  * - References to non-existent groups or exercises
- * 
+ *
  * Warnings include:
  * - Empty groups
  * - Missing base values for Simple mode exercises
@@ -688,7 +712,7 @@ export function validateCycle(
   if (cycle.groupRotation.length === 0) {
     errors.push('Group rotation is required');
   }
-  
+
   // RFEM rotation is required for RFEM and mixed modes (used by RFEM exercises)
   if (!isSimpleMode && cycle.rfemRotation.length === 0) {
     errors.push('RFEM rotation is required');
@@ -706,17 +730,17 @@ export function validateCycle(
     if (group.exerciseAssignments.length === 0) {
       warnings.push(`Group "${group.name}" has no exercises`);
     }
-    
+
     for (const assignment of group.exerciseAssignments) {
       const exercise = exercises.get(assignment.exerciseId);
       if (!exercise) continue;
-      
+
       const isTimeBased = exercise.measurementType === 'time';
       const isConditioning = exercise.mode === 'conditioning';
-      
+
       // Determine effective mode for this exercise
       const exerciseMode = getExerciseProgressionMode(cycleMode, assignment);
-      
+
       // For simple mode exercises (in simple or mixed cycles), check base values
       if (exerciseMode === 'simple' && !isConditioning) {
         if (isTimeBased && assignment.simpleBaseTime === undefined) {
@@ -725,7 +749,7 @@ export function validateCycle(
           warnings.push(`"${exercise.name}" in group "${group.name}" has no base reps set`);
         }
       }
-      
+
       // For conditioning exercises in mixed mode, check increments are set
       // (This is just a warning since we fall back to defaults)
       if (isMixedMode && isConditioning) {
@@ -739,8 +763,16 @@ export function validateCycle(
   }
 
   // Check that weekly set goals can be met
-  const exerciseTypes: ExerciseType[] = ['push', 'pull', 'legs', 'core', 'balance', 'mobility', 'other'];
-  
+  const exerciseTypes: ExerciseType[] = [
+    'push',
+    'pull',
+    'legs',
+    'core',
+    'balance',
+    'mobility',
+    'other',
+  ];
+
   for (const type of exerciseTypes) {
     const goalSets = cycle.weeklySetGoals[type] || 0;
     if (goalSets === 0) continue;
@@ -759,14 +791,16 @@ export function validateCycle(
     }
 
     if (!hasType) {
-      warnings.push(`Weekly goal of ${goalSets} ${type} sets cannot be met: no ${type} exercises in any group`);
+      warnings.push(
+        `Weekly goal of ${goalSets} ${type} sets cannot be met: no ${type} exercises in any group`
+      );
     }
   }
 
   return {
     valid: errors.length === 0,
     errors,
-    warnings
+    warnings,
   };
 }
 
@@ -775,7 +809,10 @@ export function validateCycle(
  * @param weight - The weight to round
  * @param increment - The increment to round to (default from WEIGHT.DEFAULT_INCREMENT)
  */
-function roundToWeightIncrement(weight: number, increment: number = WEIGHT.DEFAULT_INCREMENT): number {
+function roundToWeightIncrement(
+  weight: number,
+  increment: number = WEIGHT.DEFAULT_INCREMENT
+): number {
   if (increment <= 0) return Math.round(weight);
   return Math.round(weight / increment) * increment;
 }
@@ -791,16 +828,16 @@ function shouldGenerateWarmups(
 ): boolean {
   // Conditioning exercises never get warmups
   if (exercise.mode === 'conditioning') return false;
-  
+
   // Time-based exercises only get warmups if includeTimedWarmups is enabled
   const isTimeBased = exercise.measurementType === 'time';
   if (isTimeBased && !cycle.includeTimedWarmups) return false;
-  
+
   // For mixed mode, check per-exercise setting
   if (cycleMode === 'mixed') {
     return assignment.includeWarmup === true;
   }
-  
+
   // For RFEM/Simple modes, check global cycle setting
   return cycle.includeWarmupSets === true;
 }
@@ -810,11 +847,11 @@ interface WarmupParams {
   exerciseType: ExerciseType;
   measurementType: 'reps' | 'time';
   isWeighted: boolean;
-  workoutTargetValue: number;        // Target reps or time for working sets
-  workoutTargetWeight?: number;      // Weight for working sets (if applicable)
-  effectiveMode: 'rfem' | 'simple';  // The mode this exercise uses
-  progressionType?: 'reps' | 'time' | 'weight';  // For simple mode: what is progressing
-  weightIncrement?: number;          // For rounding weight
+  workoutTargetValue: number; // Target reps or time for working sets
+  workoutTargetWeight?: number; // Weight for working sets (if applicable)
+  effectiveMode: 'rfem' | 'simple'; // The mode this exercise uses
+  progressionType?: 'reps' | 'time' | 'weight'; // For simple mode: what is progressing
+  weightIncrement?: number; // For rounding weight
 }
 
 /**
@@ -831,12 +868,12 @@ function generateWarmupSets(params: WarmupParams): ScheduledSet[] {
     workoutTargetWeight,
     effectiveMode,
     progressionType,
-    weightIncrement
+    weightIncrement,
   } = params;
-  
+
   const isTimeBased = measurementType === 'time';
   const warmupSets: ScheduledSet[] = [];
-  
+
   if (effectiveMode === 'rfem') {
     // RFEM mode: warmups are at WARMUP.PERCENTAGES of target reps/time
     // The actual warmup values are calculated at display time based on current max
@@ -850,7 +887,7 @@ function generateWarmupSets(params: WarmupParams): ScheduledSet[] {
         measurementType,
         setNumber: warmupSets.length + 1,
         isWarmup: true,
-        warmupPercentage: percentage
+        warmupPercentage: percentage,
       });
     }
   } else {
@@ -858,7 +895,7 @@ function generateWarmupSets(params: WarmupParams): ScheduledSet[] {
     for (const percentage of WARMUP.PERCENTAGES) {
       let warmupReps: number;
       let warmupWeight: number | undefined;
-      
+
       if (progressionType === 'weight' && workoutTargetWeight !== undefined) {
         // Weight progression: reduced reps, percentage-based weight
         warmupReps = isTimeBased
@@ -871,22 +908,24 @@ function generateWarmupSets(params: WarmupParams): ScheduledSet[] {
       } else if (progressionType === 'time' && isTimeBased) {
         // Time progression: percentage of target time
         warmupReps = Math.round(workoutTargetValue * (percentage / 100));
-        warmupWeight = isWeighted && workoutTargetWeight
-          ? roundToWeightIncrement(workoutTargetWeight * WARMUP.REDUCED_INTENSITY_FACTOR)
-          : undefined;
+        warmupWeight =
+          isWeighted && workoutTargetWeight
+            ? roundToWeightIncrement(workoutTargetWeight * WARMUP.REDUCED_INTENSITY_FACTOR)
+            : undefined;
       } else {
         // Rep progression (default): percentage of target reps, reduced weight
         warmupReps = isTimeBased
           ? Math.round(workoutTargetValue * (percentage / 100))
           : Math.ceil(workoutTargetValue * (percentage / 100));
-        warmupWeight = isWeighted && workoutTargetWeight
-          ? roundToWeightIncrement(workoutTargetWeight * WARMUP.REDUCED_INTENSITY_FACTOR)
-          : undefined;
+        warmupWeight =
+          isWeighted && workoutTargetWeight
+            ? roundToWeightIncrement(workoutTargetWeight * WARMUP.REDUCED_INTENSITY_FACTOR)
+            : undefined;
       }
-      
+
       // Ensure minimum values
       warmupReps = Math.max(WARMUP.MIN_REPS, warmupReps);
-      
+
       warmupSets.push({
         id: generateId(),
         exerciseId,
@@ -899,11 +938,10 @@ function generateWarmupSets(params: WarmupParams): ScheduledSet[] {
         // Store computed warmup values for simple mode
         simpleBaseReps: isTimeBased ? undefined : warmupReps,
         simpleBaseTime: isTimeBased ? warmupReps : undefined,
-        simpleBaseWeight: warmupWeight
+        simpleBaseWeight: warmupWeight,
       });
     }
   }
-  
+
   return warmupSets;
 }
-

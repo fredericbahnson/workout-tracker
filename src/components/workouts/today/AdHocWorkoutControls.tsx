@@ -24,19 +24,12 @@ export function AdHocWorkoutControls({
 }: AdHocWorkoutControlsProps) {
   return (
     <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
-      <Button
-        variant="secondary"
-        className="w-full"
-        onClick={onLogSet}
-      >
+      <Button variant="secondary" className="w-full" onClick={onLogSet}>
         <Plus className="w-4 h-4 mr-1" />
         Log a Set
       </Button>
       {hasCompletedSets && (
-        <Button
-          className="w-full"
-          onClick={onComplete}
-        >
+        <Button className="w-full" onClick={onComplete}>
           <CheckCircle className="w-4 h-4 mr-1" />
           Complete Workout
         </Button>

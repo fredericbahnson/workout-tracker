@@ -1,32 +1,74 @@
 import { useState, useRef } from 'react';
-import { Sun, Moon, Monitor, Download, Upload, Trash2, CheckCircle, AlertCircle, Timer, Cloud, CloudOff, RefreshCw, User, LogOut, UserX, Key, Type, Wrench, Layers } from 'lucide-react';
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Download,
+  Upload,
+  Trash2,
+  CheckCircle,
+  AlertCircle,
+  Timer,
+  Cloud,
+  CloudOff,
+  RefreshCw,
+  User,
+  LogOut,
+  UserX,
+  Key,
+  Type,
+  Wrench,
+  Layers,
+} from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
 import { ScheduledWorkoutRepo } from '@/data/repositories';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
 import { useAuth, useSync, useSyncedPreferences, useSyncItem } from '@/contexts';
 import { PageHeader } from '@/components/layout';
-import { Card, CardContent, Button, NumberInput, Badge, Select, TimeDurationInput } from '@/components/ui';
-import { AuthModal, DeleteAccountModal, ChangePasswordModal, ClearDataModal } from '@/components/settings';
+import {
+  Card,
+  CardContent,
+  Button,
+  NumberInput,
+  Badge,
+  Select,
+  TimeDurationInput,
+} from '@/components/ui';
+import {
+  AuthModal,
+  DeleteAccountModal,
+  ChangePasswordModal,
+  ClearDataModal,
+} from '@/components/settings';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
-import { APP_VERSION } from '@/constants/version';
+import { APP_VERSION } from '@/constants';
 
 export function SettingsPage() {
   const { theme, setTheme, applyTheme } = useTheme();
   const { repDisplayMode, setRepDisplayMode, fontSize, setFontSize } = useAppStore();
-  const { 
-    preferences, 
+  const {
+    preferences,
     setAppMode,
-    setDefaultMaxReps, 
-    setDefaultConditioningReps, 
-    setConditioningWeeklyIncrement, 
-    setWeeklySetGoal, 
-    setRestTimer, 
-    setMaxTestRestTimer 
+    setDefaultMaxReps,
+    setDefaultConditioningReps,
+    setConditioningWeeklyIncrement,
+    setWeeklySetGoal,
+    setRestTimer,
+    setMaxTestRestTimer,
   } = useSyncedPreferences();
-  const { user, isLoading: authLoading, isConfigured, signIn, signUp, signOut, deleteAccount, updatePassword } = useAuth();
+  const {
+    user,
+    isLoading: authLoading,
+    isConfigured,
+    signIn,
+    signUp,
+    signOut,
+    deleteAccount,
+    updatePassword,
+  } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
   const { deleteItem, hardDeleteItem } = useSyncItem();
-  
+
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -34,7 +76,7 @@ export function SettingsPage() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
-  
+
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -51,12 +93,11 @@ export function SettingsPage() {
   const handleAuthSubmit = async () => {
     setAuthError(null);
     setIsAuthSubmitting(true);
-    
+
     try {
-      const result = authMode === 'signin' 
-        ? await signIn(email, password)
-        : await signUp(email, password);
-      
+      const result =
+        authMode === 'signin' ? await signIn(email, password) : await signUp(email, password);
+
       if (result.error) {
         setAuthError(result.error.message);
       } else {
@@ -106,7 +147,7 @@ export function SettingsPage() {
       setMessage({ type: 'error', text: 'Passwords do not match.' });
       return;
     }
-    
+
     setIsChangingPassword(true);
     try {
       const result = await updatePassword(newPassword);
@@ -186,7 +227,7 @@ export function SettingsPage() {
     setMessage(null);
     try {
       const deletedIds = await ScheduledWorkoutRepo.cleanupDuplicates();
-      
+
       if (deletedIds.length > 0) {
         // Hard delete from cloud so they don't come back
         let successCount = 0;
@@ -207,14 +248,17 @@ export function SettingsPage() {
             failCount++;
           }
         }
-        
+
         if (failCount > 0) {
-          setMessage({ 
-            type: 'success', 
-            text: `Removed ${deletedIds.length} duplicate(s). ${successCount} synced to cloud, ${failCount} may return on next sync.` 
+          setMessage({
+            type: 'success',
+            text: `Removed ${deletedIds.length} duplicate(s). ${successCount} synced to cloud, ${failCount} may return on next sync.`,
           });
         } else {
-          setMessage({ type: 'success', text: `Removed ${deletedIds.length} duplicate workout(s) and synced to cloud.` });
+          setMessage({
+            type: 'success',
+            text: `Removed ${deletedIds.length} duplicate workout(s) and synced to cloud.`,
+          });
         }
       } else {
         setMessage({ type: 'success', text: 'No duplicate workouts found.' });
@@ -230,13 +274,17 @@ export function SettingsPage() {
     setIsClearing(true);
     try {
       // Clear all tables instead of deleting database (which can cause issues)
-      await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
-        await db.exercises.clear();
-        await db.maxRecords.clear();
-        await db.completedSets.clear();
-        await db.cycles.clear();
-        await db.scheduledWorkouts.clear();
-      });
+      await db.transaction(
+        'rw',
+        [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts],
+        async () => {
+          await db.exercises.clear();
+          await db.maxRecords.clear();
+          await db.completedSets.clear();
+          await db.cycles.clear();
+          await db.scheduledWorkouts.clear();
+        }
+      );
       setShowClearConfirm(false);
       setMessage({ type: 'success', text: 'All data cleared.' });
     } catch (error) {
@@ -266,13 +314,16 @@ export function SettingsPage() {
       <div className="px-4 py-4 space-y-4">
         {/* Message */}
         {message && (
-          <div className={`
+          <div
+            className={`
             flex items-center gap-2 px-4 py-3 rounded-lg
-            ${message.type === 'success' 
-              ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+            ${
+              message.type === 'success'
+                ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
             }
-          `}>
+          `}
+          >
             {message.type === 'success' ? (
               <CheckCircle className="w-5 h-5 flex-shrink-0" />
             ) : (
@@ -291,7 +342,7 @@ export function SettingsPage() {
                 Account & Sync
               </h3>
             </div>
-            
+
             {!isConfigured ? (
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                 <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -310,7 +361,12 @@ export function SettingsPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => setShowChangePassword(true)} className="text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowChangePassword(true)}
+                      className="text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
                       <Key className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleSignOut}>
@@ -318,7 +374,7 @@ export function SettingsPage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {syncStatus === 'syncing' || isSyncing ? (
@@ -331,15 +387,20 @@ export function SettingsPage() {
                       <Cloud className="w-4 h-4 text-green-500" />
                     )}
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {syncStatus === 'syncing' || isSyncing ? 'Syncing...' :
-                       syncStatus === 'offline' ? 'Offline' :
-                       syncStatus === 'error' ? 'Sync error' :
-                       lastSyncTime ? `Last sync: ${lastSyncTime.toLocaleTimeString()}` : 'Ready to sync'}
+                      {syncStatus === 'syncing' || isSyncing
+                        ? 'Syncing...'
+                        : syncStatus === 'offline'
+                          ? 'Offline'
+                          : syncStatus === 'error'
+                            ? 'Sync error'
+                            : lastSyncTime
+                              ? `Last sync: ${lastSyncTime.toLocaleTimeString()}`
+                              : 'Ready to sync'}
                     </span>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={sync}
                     disabled={isSyncing || syncStatus === 'syncing'}
                   >
@@ -348,11 +409,9 @@ export function SettingsPage() {
                 </div>
 
                 {syncError && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                    {syncError}
-                  </p>
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">{syncError}</p>
                 )}
-                
+
                 <div className="pt-3 border-t border-gray-200 dark:border-dark-border">
                   <button
                     onClick={() => setShowDeleteAccountConfirm(true)}
@@ -369,16 +428,22 @@ export function SettingsPage() {
                   Sign in to sync your data across devices
                 </p>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
-                    onClick={() => { setAuthMode('signin'); setShowAuthModal(true); }}
+                    onClick={() => {
+                      setAuthMode('signin');
+                      setShowAuthModal(true);
+                    }}
                   >
                     Sign In
                   </Button>
-                  <Button 
+                  <Button
                     className="flex-1"
-                    onClick={() => { setAuthMode('signup'); setShowAuthModal(true); }}
+                    onClick={() => {
+                      setAuthMode('signup');
+                      setShowAuthModal(true);
+                    }}
                   >
                     Sign Up
                   </Button>
@@ -401,14 +466,19 @@ export function SettingsPage() {
                   onClick={() => handleThemeChange(value)}
                   className={`
                     flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors
-                    ${theme === value
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+                    ${
+                      theme === value
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                        : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 ${theme === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500'}`} />
-                  <span className={`text-sm font-medium ${theme === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                  <Icon
+                    className={`w-5 h-5 ${theme === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500'}`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${theme === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}
+                  >
                     {label}
                   </span>
                 </button>
@@ -422,9 +492,7 @@ export function SettingsPage() {
           <CardContent>
             <div className="flex items-center gap-2 mb-2">
               <Layers className="w-4 h-4 text-gray-500" />
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                App Mode
-              </h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">App Mode</h3>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
               Choose between a simplified interface or full feature access.
@@ -434,30 +502,36 @@ export function SettingsPage() {
                 onClick={() => setAppMode('standard')}
                 className={`
                   w-full p-3 rounded-lg border-2 transition-colors text-left
-                  ${preferences.appMode === 'standard'
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+                  ${
+                    preferences.appMode === 'standard'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`
+                  <div
+                    className={`
                     w-4 h-4 rounded-full border-2 flex items-center justify-center
-                    ${preferences.appMode === 'standard'
-                      ? 'border-primary-500 bg-primary-500'
-                      : 'border-gray-300 dark:border-gray-600'
+                    ${
+                      preferences.appMode === 'standard'
+                        ? 'border-primary-500 bg-primary-500'
+                        : 'border-gray-300 dark:border-gray-600'
                     }
-                  `}>
+                  `}
+                  >
                     {preferences.appMode === 'standard' && (
                       <div className="w-2 h-2 rounded-full bg-white" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <span className={`text-sm font-medium ${
-                      preferences.appMode === 'standard' 
-                        ? 'text-primary-600 dark:text-primary-400' 
-                        : 'text-gray-700 dark:text-gray-300'
-                    }`}>
+                    <span
+                      className={`text-sm font-medium ${
+                        preferences.appMode === 'standard'
+                          ? 'text-primary-600 dark:text-primary-400'
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
                       Standard
                     </span>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -466,35 +540,41 @@ export function SettingsPage() {
                   </div>
                 </div>
               </button>
-              
+
               <button
                 onClick={() => setAppMode('advanced')}
                 className={`
                   w-full p-3 rounded-lg border-2 transition-colors text-left
-                  ${preferences.appMode === 'advanced'
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+                  ${
+                    preferences.appMode === 'advanced'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`
+                  <div
+                    className={`
                     w-4 h-4 rounded-full border-2 flex items-center justify-center
-                    ${preferences.appMode === 'advanced'
-                      ? 'border-primary-500 bg-primary-500'
-                      : 'border-gray-300 dark:border-gray-600'
+                    ${
+                      preferences.appMode === 'advanced'
+                        ? 'border-primary-500 bg-primary-500'
+                        : 'border-gray-300 dark:border-gray-600'
                     }
-                  `}>
+                  `}
+                  >
                     {preferences.appMode === 'advanced' && (
                       <div className="w-2 h-2 rounded-full bg-white" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <span className={`text-sm font-medium ${
-                      preferences.appMode === 'advanced' 
-                        ? 'text-primary-600 dark:text-primary-400' 
-                        : 'text-gray-700 dark:text-gray-300'
-                    }`}>
+                    <span
+                      className={`text-sm font-medium ${
+                        preferences.appMode === 'advanced'
+                          ? 'text-primary-600 dark:text-primary-400'
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
                       Advanced
                     </span>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -512,9 +592,7 @@ export function SettingsPage() {
           <CardContent>
             <div className="flex items-center gap-2 mb-3">
               <Type className="w-4 h-4 text-gray-500" />
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Font Size
-              </h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Font Size</h3>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {fontSizeOptions.map(({ value, label }) => (
@@ -523,21 +601,29 @@ export function SettingsPage() {
                   onClick={() => setFontSize(value)}
                   className={`
                     flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors
-                    ${fontSize === value
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+                    ${
+                      fontSize === value
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                        : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
                     }
                   `}
                 >
-                  <span className={`font-medium ${
-                    value === 'small' ? 'text-xs' : 
-                    value === 'default' ? 'text-sm' : 
-                    value === 'large' ? 'text-base' : 
-                    'text-lg'
-                  } ${fontSize === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                  <span
+                    className={`font-medium ${
+                      value === 'small'
+                        ? 'text-xs'
+                        : value === 'default'
+                          ? 'text-sm'
+                          : value === 'large'
+                            ? 'text-base'
+                            : 'text-lg'
+                    } ${fontSize === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'}`}
+                  >
                     Aa
                   </span>
-                  <span className={`text-xs ${fontSize === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500'}`}>
+                  <span
+                    className={`text-xs ${fontSize === value ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500'}`}
+                  >
                     {label}
                   </span>
                 </button>
@@ -549,10 +635,8 @@ export function SettingsPage() {
         {/* Defaults */}
         <Card>
           <CardContent className="space-y-4">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Default Values
-            </h3>
-            
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Default Values</h3>
+
             <div className="grid grid-cols-2 gap-4">
               <NumberInput
                 label="Default Max (RFEM)"
@@ -592,7 +676,9 @@ export function SettingsPage() {
                         min={0}
                         className="w-16 flex-shrink-0"
                       />
-                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">/wk</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                        /wk
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -607,7 +693,7 @@ export function SettingsPage() {
             <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
               Display Settings
             </h3>
-            
+
             <Select
               label="Progress Totals Timeframe"
               value={repDisplayMode}
@@ -615,7 +701,7 @@ export function SettingsPage() {
               options={[
                 { value: 'week', label: 'This Week' },
                 { value: 'cycle', label: 'This Cycle' },
-                { value: 'allTime', label: 'All Time' }
+                { value: 'allTime', label: 'All Time' },
               ]}
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -629,11 +715,9 @@ export function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
               <Timer className="w-4 h-4 text-gray-500" />
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Rest Timer
-              </h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Rest Timer</h3>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">Enable rest timer</p>
@@ -645,9 +729,10 @@ export function SettingsPage() {
                 onClick={() => setRestTimer({ enabled: !preferences.restTimer.enabled })}
                 className={`
                   relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                  ${preferences.restTimer.enabled 
-                    ? 'bg-primary-600' 
-                    : 'bg-gray-200 dark:bg-gray-700'
+                  ${
+                    preferences.restTimer.enabled
+                      ? 'bg-primary-600'
+                      : 'bg-gray-200 dark:bg-gray-700'
                   }
                 `}
               >
@@ -682,12 +767,15 @@ export function SettingsPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setMaxTestRestTimer({ enabled: !preferences.maxTestRestTimer.enabled })}
+                  onClick={() =>
+                    setMaxTestRestTimer({ enabled: !preferences.maxTestRestTimer.enabled })
+                  }
                   className={`
                     relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                    ${preferences.maxTestRestTimer.enabled 
-                      ? 'bg-primary-600' 
-                      : 'bg-gray-200 dark:bg-gray-700'
+                    ${
+                      preferences.maxTestRestTimer.enabled
+                        ? 'bg-primary-600'
+                        : 'bg-gray-200 dark:bg-gray-700'
                     }
                   `}
                 >
@@ -721,9 +809,9 @@ export function SettingsPage() {
             <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
               Data Management
             </h3>
-            
-            <Button 
-              variant="secondary" 
+
+            <Button
+              variant="secondary"
               className="w-full justify-start"
               onClick={handleExport}
               disabled={isExporting}
@@ -732,8 +820,8 @@ export function SettingsPage() {
               {isExporting ? 'Exporting...' : 'Export Backup'}
             </Button>
 
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="w-full justify-start"
               onClick={handleImportClick}
               disabled={isImporting}
@@ -751,12 +839,10 @@ export function SettingsPage() {
 
             <hr className="border-gray-200 dark:border-dark-border" />
 
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Troubleshooting
-            </p>
-            
-            <Button 
-              variant="secondary" 
+            <p className="text-xs text-gray-500 dark:text-gray-400">Troubleshooting</p>
+
+            <Button
+              variant="secondary"
               className="w-full justify-start"
               onClick={handleCleanupDuplicates}
               disabled={isCleaningDuplicates}
@@ -767,8 +853,8 @@ export function SettingsPage() {
 
             <hr className="border-gray-200 dark:border-dark-border" />
 
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
               onClick={() => setShowClearConfirm(true)}
             >
@@ -781,12 +867,8 @@ export function SettingsPage() {
         {/* About */}
         <Card>
           <CardContent>
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-              About
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ascend v{APP_VERSION}
-            </p>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">About</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Ascend v{APP_VERSION}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Progressive calisthenics strength training
             </p>
@@ -810,9 +892,15 @@ export function SettingsPage() {
         isSubmitting={isAuthSubmitting}
         onEmailChange={setEmail}
         onPasswordChange={setPassword}
-        onModeChange={(mode) => { setAuthMode(mode); setAuthError(null); }}
+        onModeChange={mode => {
+          setAuthMode(mode);
+          setAuthError(null);
+        }}
         onSubmit={handleAuthSubmit}
-        onClose={() => { setShowAuthModal(false); setAuthError(null); }}
+        onClose={() => {
+          setShowAuthModal(false);
+          setAuthError(null);
+        }}
       />
 
       <DeleteAccountModal

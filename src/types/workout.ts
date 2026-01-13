@@ -1,14 +1,14 @@
 /**
  * Workout Types
- * 
+ *
  * Types related to scheduled workouts, sets, and completed tracking.
  */
 
-import type { 
-  ExerciseType, 
-  MeasurementType, 
-  ExerciseProgressionMode, 
-  ProgressionInterval 
+import type {
+  ExerciseType,
+  MeasurementType,
+  ExerciseProgressionMode,
+  ProgressionInterval,
 } from './exercise';
 
 /**
@@ -36,23 +36,23 @@ export interface ScheduledSet {
   previousMaxTime?: number;
   /** Cached from exercise for display */
   measurementType?: MeasurementType;
-  
+
   /**
    * Per-exercise mode (denormalized for mixed cycles).
    * For pure RFEM/simple cycles, this is undefined and cycle's mode is used.
    */
   progressionMode?: ExerciseProgressionMode;
-  
+
   /**
    * Per-exercise conditioning increments (for mixed mode conditioning exercises).
    * Falls back to cycle-level values if undefined.
    */
   conditioningRepIncrement?: number;
   conditioningTimeIncrement?: number;
-  
+
   /**
    * Simple mode progression settings (denormalized from ExerciseAssignment).
-   * Populated when cycle.progressionMode === 'simple' OR 
+   * Populated when cycle.progressionMode === 'simple' OR
    * (cycle is 'mixed' AND exercise uses 'simple').
    */
   simpleBaseReps?: number;
@@ -64,7 +64,7 @@ export interface ScheduledSet {
   simpleTimeIncrement?: number;
   simpleWeightProgressionType?: ProgressionInterval;
   simpleWeightIncrement?: number;
-  
+
   /**
    * Note: target is calculated dynamically based on mode:
    * - RFEM mode: current max × RFEM percentage (using workout's rfemValue from cycle rotation)

@@ -1,9 +1,9 @@
 /**
  * CycleWizard Component
- * 
+ *
  * Multi-step wizard for creating and editing training cycles.
  * Supports three progression modes: RFEM, Simple, and Mixed.
- * 
+ *
  * This component orchestrates the wizard flow while delegating
  * state management to useCycleWizardState and UI to step components.
  */
@@ -19,7 +19,7 @@ import {
   GroupsStep,
   ProgressionStep,
   GoalsStep,
-  ReviewStep
+  ReviewStep,
 } from './wizard';
 
 interface CycleWizardProps {
@@ -29,11 +29,11 @@ interface CycleWizardProps {
   initialProgressionMode?: ProgressionMode;
 }
 
-export function CycleWizard({ 
-  onComplete, 
-  onCancel, 
-  editCycle, 
-  initialProgressionMode 
+export function CycleWizard({
+  onComplete,
+  onCancel,
+  editCycle,
+  initialProgressionMode,
 }: CycleWizardProps) {
   const {
     // State
@@ -100,9 +100,7 @@ export function CycleWizard({
   return (
     <div className="flex flex-col h-full">
       {/* Progress indicator - hide on start step */}
-      {currentStep !== 'start' && (
-        <WizardProgress steps={displaySteps} currentStep={currentStep} />
-      )}
+      {currentStep !== 'start' && <WizardProgress steps={displaySteps} currentStep={currentStep} />}
 
       {/* Step content */}
       <div className="flex-1 overflow-y-auto p-4">

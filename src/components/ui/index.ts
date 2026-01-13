@@ -6,13 +6,13 @@ export { Modal } from './Modal';
 export { Badge } from './Badge';
 export { EmptyState } from './EmptyState';
 export { OfflineIndicator } from './OfflineIndicator';
-export { 
-  Skeleton, 
-  SkeletonText, 
-  WorkoutCardSkeleton, 
-  SetListSkeleton, 
-  ScheduleListSkeleton, 
-  ExerciseListSkeleton, 
-  StatsCardSkeleton, 
-  PageSkeleton 
+export {
+  Skeleton,
+  SkeletonText,
+  WorkoutCardSkeleton,
+  SetListSkeleton,
+  ScheduleListSkeleton,
+  ExerciseListSkeleton,
+  StatsCardSkeleton,
+  PageSkeleton,
 } from './Skeleton';

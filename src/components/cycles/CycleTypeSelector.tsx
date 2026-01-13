@@ -9,10 +9,10 @@ interface CycleTypeSelectorProps {
   onCancel: () => void;
 }
 
-export function CycleTypeSelector({ 
-  onSelectTraining, 
-  onSelectMaxTesting, 
-  onCancel 
+export function CycleTypeSelector({
+  onSelectTraining,
+  onSelectMaxTesting,
+  onCancel,
 }: CycleTypeSelectorProps) {
   const { preferences } = useSyncedPreferences();
   const isAdvancedMode = preferences.appMode === 'advanced';
@@ -23,9 +23,7 @@ export function CycleTypeSelector({
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           What would you like to create?
         </h2>
-        <p className="text-gray-500 dark:text-gray-400">
-          Choose the type of cycle to set up
-        </p>
+        <p className="text-gray-500 dark:text-gray-400">Choose the type of cycle to set up</p>
       </div>
 
       <div className="space-y-3">
@@ -46,8 +44,8 @@ export function CycleTypeSelector({
                 <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Periodized progression based on your max reps. 
-                Targets calculated automatically using RFEM percentages.
+                Periodized progression based on your max reps. Targets calculated automatically
+                using RFEM percentages.
               </p>
             </div>
           </div>
@@ -71,8 +69,8 @@ export function CycleTypeSelector({
                   <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 transition-colors" />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Set your own rep targets for each exercise. 
-                  Optionally add reps each workout or week.
+                  Set your own rep targets for each exercise. Optionally add reps each workout or
+                  week.
                 </p>
               </div>
             </div>
@@ -91,14 +89,12 @@ export function CycleTypeSelector({
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Mixed Cycle
-                  </h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Mixed Cycle</h3>
                   <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Configure RFEM or simple progression individually for each exercise. 
-                  Best for combining different training approaches.
+                  Configure RFEM or simple progression individually for each exercise. Best for
+                  combining different training approaches.
                 </p>
               </div>
             </div>
@@ -116,14 +112,12 @@ export function CycleTypeSelector({
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Max Rep Testing
-                </h3>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Max Rep Testing</h3>
                 <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-purple-500 transition-colors" />
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Establish or re-test your maximum reps for exercises. 
-                Includes warmup sets and records new maxes automatically.
+                Establish or re-test your maximum reps for exercises. Includes warmup sets and
+                records new maxes automatically.
               </p>
             </div>
           </div>

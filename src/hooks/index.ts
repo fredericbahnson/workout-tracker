@@ -5,7 +5,7 @@ export { useAdHocWorkout } from './useAdHocWorkout';
 
 // Page-specific hooks
 export { useTodayModals } from './today';
-export type { 
+export type {
   TodayModalType,
   ScheduledSetModalData,
   SkipSetModalData,

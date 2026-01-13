@@ -1,6 +1,6 @@
 /**
  * GoalsStep Component
- * 
+ *
  * Step for configuring weekly set goals, rotations, and warmup settings.
  */
 
@@ -24,7 +24,7 @@ export function GoalsStep({
   includeWarmupSets,
   setIncludeWarmupSets,
   includeTimedWarmups,
-  setIncludeTimedWarmups
+  setIncludeTimedWarmups,
 }: GoalsStepProps) {
   const isSimpleMode = progressionMode === 'simple';
   const isMixedMode = progressionMode === 'mixed';
@@ -99,7 +99,11 @@ export function GoalsStep({
               className="w-28"
             />
           ))}
-          <Button variant="ghost" size="sm" onClick={() => setGroupRotation([...groupRotation, groups[0]?.id || ''])}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setGroupRotation([...groupRotation, groups[0]?.id || ''])}
+          >
             <Plus className="w-4 h-4" />
           </Button>
         </div>
@@ -114,8 +118,7 @@ export function GoalsStep({
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
             {isMixedMode
               ? 'Reps From Established Max: applies to all RFEM-mode exercises'
-              : 'Reps From Established Max: subtracted from your max for target reps'
-            }
+              : 'Reps From Established Max: subtracted from your max for target reps'}
           </p>
 
           <div className="flex flex-wrap gap-2">
@@ -181,7 +184,7 @@ export function GoalsStep({
               <input
                 type="checkbox"
                 checked={includeWarmupSets}
-                onChange={(e) => {
+                onChange={e => {
                   setIncludeWarmupSets(e.target.checked);
                   if (!e.target.checked) {
                     setIncludeTimedWarmups(false);
@@ -190,7 +193,9 @@ export function GoalsStep({
                 className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
               />
               <div>
-                <span className="font-medium text-gray-900 dark:text-gray-100">Include warmup sets</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  Include warmup sets
+                </span>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   2 warmup sets at 20% and 40% intensity before working sets
                 </p>
@@ -202,11 +207,13 @@ export function GoalsStep({
                 <input
                   type="checkbox"
                   checked={includeTimedWarmups}
-                  onChange={(e) => setIncludeTimedWarmups(e.target.checked)}
+                  onChange={e => setIncludeTimedWarmups(e.target.checked)}
                   className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                 />
                 <div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">Include time-based warmups</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    Include time-based warmups
+                  </span>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Generate warmups for time-based exercises as well
                   </p>

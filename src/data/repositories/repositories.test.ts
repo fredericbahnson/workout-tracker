@@ -23,12 +23,12 @@ vi.mock('../db', () => ({
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
-      where: vi.fn(() => ({ 
-        equals: vi.fn(() => ({ 
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
           toArray: vi.fn(),
           first: vi.fn(),
           delete: vi.fn(),
-        })) 
+        })),
       })),
     },
     completedSets: {
@@ -37,8 +37,8 @@ vi.mock('../db', () => ({
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
-      where: vi.fn(() => ({ 
-        equals: vi.fn(() => ({ 
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
           toArray: vi.fn(),
           delete: vi.fn(),
         })),
@@ -51,11 +51,11 @@ vi.mock('../db', () => ({
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
-      where: vi.fn(() => ({ 
-        equals: vi.fn(() => ({ 
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
           first: vi.fn(),
           toArray: vi.fn(),
-        })) 
+        })),
       })),
     },
     scheduledWorkouts: {
@@ -64,11 +64,11 @@ vi.mock('../db', () => ({
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
-      where: vi.fn(() => ({ 
-        equals: vi.fn(() => ({ 
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({
           toArray: vi.fn(),
           delete: vi.fn(),
-        })) 
+        })),
       })),
     },
   },
@@ -148,7 +148,7 @@ describe('ExerciseRepo', () => {
         createMockExercise({ id: 'ex-1', name: 'Dips' }),
         createMockExercise({ id: 'ex-2', name: 'Push-ups' }),
       ];
-      
+
       const mockOrderBy = vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue(exercises),
       });
@@ -199,7 +199,7 @@ describe('ExerciseRepo', () => {
         createMockExercise({ id: 'ex-1', type: 'push' }),
         createMockExercise({ id: 'ex-2', type: 'push', name: 'Dips' }),
       ];
-      
+
       const mockWhere = vi.fn().mockReturnValue({
         equals: vi.fn().mockReturnValue({
           toArray: vi.fn().mockResolvedValue(pushExercises),
@@ -224,18 +224,20 @@ describe('ExerciseRepo', () => {
         notes: '',
         customParameters: [],
       };
-      
+
       (generateId as Mock).mockReturnValue('new-id');
       (db.exercises.add as Mock).mockResolvedValue(undefined);
 
       const result = await ExerciseRepo.create(formData);
 
       expect(generateId).toHaveBeenCalled();
-      expect(db.exercises.add).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'new-id',
-        name: 'New Exercise',
-        type: 'pull',
-      }));
+      expect(db.exercises.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'new-id',
+          name: 'New Exercise',
+          type: 'pull',
+        })
+      );
       expect(result.id).toBe('new-id');
       expect(result.createdAt).toBeDefined();
       expect(result.updatedAt).toBeDefined();
@@ -250,10 +252,12 @@ describe('ExerciseRepo', () => {
 
       const result = await ExerciseRepo.update('ex-1', { name: 'Updated Name' });
 
-      expect(db.exercises.put).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'ex-1',
-        name: 'Updated Name',
-      }));
+      expect(db.exercises.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'ex-1',
+          name: 'Updated Name',
+        })
+      );
       expect(result?.name).toBe('Updated Name');
     });
 
@@ -294,7 +298,7 @@ describe('ExerciseRepo', () => {
         createMockExercise({ name: 'Push-ups' }),
         createMockExercise({ id: 'ex-2', name: 'Diamond Push-ups' }),
       ];
-      
+
       const mockFilter = vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue(exercises),
       });
@@ -323,7 +327,7 @@ describe('MaxRecordRepo', () => {
         createMockMaxRecord({ maxReps: 25, recordedAt: new Date('2024-01-01') }),
         createMockMaxRecord({ id: 'max-2', maxReps: 30, recordedAt: new Date('2024-02-01') }),
       ];
-      
+
       const mockWhere = vi.fn().mockReturnValue({
         equals: vi.fn().mockReturnValue({
           toArray: vi.fn().mockResolvedValue(records),
@@ -346,7 +350,7 @@ describe('MaxRecordRepo', () => {
         createMockMaxRecord({ maxReps: 30, recordedAt: new Date('2024-02-01') }),
         createMockMaxRecord({ maxReps: 25, recordedAt: new Date('2024-01-01') }),
       ];
-      
+
       const mockWhere = vi.fn().mockReturnValue({
         equals: vi.fn().mockReturnValue({
           toArray: vi.fn().mockResolvedValue(records),
@@ -380,11 +384,13 @@ describe('MaxRecordRepo', () => {
 
       const result = await MaxRecordRepo.create('ex-1', 35);
 
-      expect(db.maxRecords.add).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'new-max-id',
-        exerciseId: 'ex-1',
-        maxReps: 35,
-      }));
+      expect(db.maxRecords.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'new-max-id',
+          exerciseId: 'ex-1',
+          maxReps: 35,
+        })
+      );
       expect(result.maxReps).toBe(35);
     });
 
@@ -394,10 +400,12 @@ describe('MaxRecordRepo', () => {
 
       const result = await MaxRecordRepo.create('ex-1', undefined, 60);
 
-      expect(db.maxRecords.add).toHaveBeenCalledWith(expect.objectContaining({
-        exerciseId: 'ex-1',
-        maxTime: 60,
-      }));
+      expect(db.maxRecords.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          exerciseId: 'ex-1',
+          maxTime: 60,
+        })
+      );
       expect(result.maxTime).toBe(60);
     });
   });
@@ -405,11 +413,25 @@ describe('MaxRecordRepo', () => {
   describe('getLatestForAllExercises', () => {
     it('returns map of latest records per exercise', async () => {
       const records = [
-        createMockMaxRecord({ exerciseId: 'ex-1', maxReps: 30, recordedAt: new Date('2024-02-01') }),
-        createMockMaxRecord({ id: 'max-2', exerciseId: 'ex-1', maxReps: 25, recordedAt: new Date('2024-01-01') }),
-        createMockMaxRecord({ id: 'max-3', exerciseId: 'ex-2', maxReps: 15, recordedAt: new Date('2024-01-15') }),
+        createMockMaxRecord({
+          exerciseId: 'ex-1',
+          maxReps: 30,
+          recordedAt: new Date('2024-02-01'),
+        }),
+        createMockMaxRecord({
+          id: 'max-2',
+          exerciseId: 'ex-1',
+          maxReps: 25,
+          recordedAt: new Date('2024-01-01'),
+        }),
+        createMockMaxRecord({
+          id: 'max-3',
+          exerciseId: 'ex-2',
+          maxReps: 15,
+          recordedAt: new Date('2024-01-15'),
+        }),
       ];
-      
+
       (db.maxRecords.toArray as Mock).mockResolvedValue(records);
 
       const result = await MaxRecordRepo.getLatestForAllExercises();
@@ -453,7 +475,7 @@ describe('CycleRepo', () => {
   describe('getActive', () => {
     it('returns active cycle', async () => {
       const activeCycle = createMockCycle({ status: 'active' });
-      
+
       const mockWhere = vi.fn().mockReturnValue({
         equals: vi.fn().mockReturnValue({
           first: vi.fn().mockResolvedValue(activeCycle),
@@ -487,7 +509,7 @@ describe('CycleRepo', () => {
         createMockCycle({ id: 'cycle-1', startDate: new Date('2024-01-01') }),
         createMockCycle({ id: 'cycle-2', startDate: new Date('2024-02-01') }),
       ];
-      
+
       (db.cycles.toArray as Mock).mockResolvedValue(cycles);
 
       const result = await CycleRepo.getAll();
@@ -508,14 +530,22 @@ describe('CycleRepo', () => {
         numberOfWeeks: 4,
         workoutDaysPerWeek: 3,
         setsPerExercise: 3,
-        weeklySetGoals: { push: 10, pull: 10, legs: 10, core: 5, balance: 0, mobility: 0, other: 0 },
+        weeklySetGoals: {
+          push: 10,
+          pull: 10,
+          legs: 10,
+          core: 5,
+          balance: 0,
+          mobility: 0,
+          other: 0,
+        },
         groups: [],
         groupRotation: [],
         includeWarmupSets: true,
         includeTimedWarmups: false,
         conditioningWeeklyRepIncrement: 2,
       };
-      
+
       (generateId as Mock).mockReturnValue('new-cycle-id');
       (db.cycles.add as Mock).mockResolvedValue(undefined);
 
@@ -531,7 +561,7 @@ describe('CycleRepo', () => {
     it('updates existing cycle', async () => {
       const existing = createMockCycle();
       (db.cycles.get as Mock).mockResolvedValue(existing);
-      
+
       // Mock getActive for setActive call path
       const mockWhere = vi.fn().mockReturnValue({
         equals: vi.fn().mockReturnValue({
@@ -543,9 +573,11 @@ describe('CycleRepo', () => {
 
       const result = await CycleRepo.update('cycle-1', { name: 'Updated Cycle' });
 
-      expect(db.cycles.put).toHaveBeenCalledWith(expect.objectContaining({
-        name: 'Updated Cycle',
-      }));
+      expect(db.cycles.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Updated Cycle',
+        })
+      );
       expect(result?.name).toBe('Updated Cycle');
     });
   });

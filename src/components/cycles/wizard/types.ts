@@ -1,16 +1,16 @@
 /**
  * CycleWizard Types
- * 
+ *
  * Shared type definitions for the cycle wizard components.
  */
 
-import type { 
-  Cycle, 
-  Group, 
-  Exercise, 
-  ExerciseAssignment, 
-  ExerciseType, 
-  ProgressionMode 
+import type {
+  Cycle,
+  Group,
+  Exercise,
+  ExerciseAssignment,
+  ExerciseType,
+  ProgressionMode,
 } from '@/types';
 
 // Wizard step definitions
@@ -27,7 +27,7 @@ export const RFEM_STEPS: StepDefinition[] = [
   { key: 'basics', label: 'Basics' },
   { key: 'groups', label: 'Groups' },
   { key: 'goals', label: 'Goals' },
-  { key: 'review', label: 'Review' }
+  { key: 'review', label: 'Review' },
 ];
 
 export const SIMPLE_STEPS: StepDefinition[] = [
@@ -36,7 +36,7 @@ export const SIMPLE_STEPS: StepDefinition[] = [
   { key: 'groups', label: 'Groups' },
   { key: 'progression', label: 'Targets' },
   { key: 'goals', label: 'Goals' },
-  { key: 'review', label: 'Review' }
+  { key: 'review', label: 'Review' },
 ];
 
 export const MIXED_STEPS: StepDefinition[] = [
@@ -44,7 +44,7 @@ export const MIXED_STEPS: StepDefinition[] = [
   { key: 'basics', label: 'Basics' },
   { key: 'groups', label: 'Exercises' },
   { key: 'goals', label: 'Goals' },
-  { key: 'review', label: 'Review' }
+  { key: 'review', label: 'Review' },
 ];
 
 /**
@@ -52,9 +52,12 @@ export const MIXED_STEPS: StepDefinition[] = [
  */
 export function getStepsForMode(mode: ProgressionMode): StepDefinition[] {
   switch (mode) {
-    case 'simple': return SIMPLE_STEPS;
-    case 'mixed': return MIXED_STEPS;
-    default: return RFEM_STEPS;
+    case 'simple':
+      return SIMPLE_STEPS;
+    case 'mixed':
+      return MIXED_STEPS;
+    default:
+      return RFEM_STEPS;
   }
 }
 
@@ -113,13 +116,21 @@ export interface GroupsStepProps {
   onUpdateGroupName: (id: string, name: string) => void;
   onAddExercise: (groupId: string, exerciseId: string) => void;
   onRemoveExercise: (groupId: string, exerciseId: string) => void;
-  onUpdateAssignment: (groupId: string, exerciseId: string, updates: Partial<ExerciseAssignment>) => void;
+  onUpdateAssignment: (
+    groupId: string,
+    exerciseId: string,
+    updates: Partial<ExerciseAssignment>
+  ) => void;
 }
 
 export interface ProgressionStepProps {
   groups: Group[];
   exerciseMap: Map<string, Exercise>;
-  onUpdateProgression: (groupId: string, exerciseId: string, updates: Partial<ExerciseAssignment>) => void;
+  onUpdateProgression: (
+    groupId: string,
+    exerciseId: string,
+    updates: Partial<ExerciseAssignment>
+  ) => void;
 }
 
 export interface GoalsStepProps {

@@ -56,7 +56,7 @@ interface UseWorkoutDisplayResult {
 /**
  * Manages which workout to display on the Today page.
  * Handles completion view state and persistence across navigation.
- * 
+ *
  * Display priority:
  * 1. In-progress ad-hoc workout
  * 2. Just-completed workout (completion view)
@@ -76,13 +76,13 @@ export function useWorkoutDisplay({
   const shouldShowCompletedWorkout = useCallback((): boolean => {
     // If there's an in-progress ad-hoc workout, don't show completed view
     if (inProgressAdHocWorkout) return false;
-    
+
     // If user dismissed the completion view (in this session), don't show it
     if (completionDismissed) return false;
-    
+
     // If user just completed a workout this session
     if (showCompletionView && justCompletedWorkoutId) return true;
-    
+
     // If workout was completed today (on app reopen), check if it was dismissed
     if (lastCompletedWorkout?.completedAt && isToday(new Date(lastCompletedWorkout.completedAt))) {
       // Check if this specific workout was already dismissed (persisted across navigation)
@@ -92,18 +92,24 @@ export function useWorkoutDisplay({
       }
       return true;
     }
-    
+
     return false;
-  }, [inProgressAdHocWorkout, completionDismissed, showCompletionView, justCompletedWorkoutId, lastCompletedWorkout]);
+  }, [
+    inProgressAdHocWorkout,
+    completionDismissed,
+    showCompletionView,
+    justCompletedWorkoutId,
+    lastCompletedWorkout,
+  ]);
 
   // The workout to display in the UI
   // Priority: in-progress ad-hoc > completed view > next pending
-  const displayWorkout = inProgressAdHocWorkout 
-    ? inProgressAdHocWorkout 
-    : shouldShowCompletedWorkout() 
-      ? lastCompletedWorkout 
+  const displayWorkout = inProgressAdHocWorkout
+    ? inProgressAdHocWorkout
+    : shouldShowCompletedWorkout()
+      ? lastCompletedWorkout
       : nextPendingWorkout;
-  
+
   const isShowingCompletedWorkout = !inProgressAdHocWorkout && shouldShowCompletedWorkout();
   const isShowingAdHocWorkout = displayWorkout?.isAdHoc === true;
 

@@ -1,6 +1,6 @@
 /**
  * Form Types
- * 
+ *
  * Types used for form inputs and data submission.
  */
 

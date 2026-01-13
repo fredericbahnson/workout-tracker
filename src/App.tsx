@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { 
-  TodayPage, 
-  ExercisesPage, 
-  ExerciseDetailPage, 
-  ProgressPage, 
+import {
+  TodayPage,
+  ExercisesPage,
+  ExerciseDetailPage,
+  ProgressPage,
   SettingsPage,
-  SchedulePage 
+  SchedulePage,
 } from './pages';
 import { useAppStore } from './stores/appStore';
 import { AuthProvider, SyncProvider, useAuth, SyncedPreferencesProvider } from './contexts';
@@ -72,10 +72,7 @@ function AppContent() {
   if (showOnboarding) {
     return (
       <ErrorBoundary level="page">
-        <OnboardingFlow 
-          onComplete={handleOnboardingComplete} 
-          onSkip={handleOnboardingSkip}
-        />
+        <OnboardingFlow onComplete={handleOnboardingComplete} onSkip={handleOnboardingSkip} />
       </ErrorBoundary>
     );
   }
@@ -104,7 +101,7 @@ function App() {
   // Apply theme on mount and when it changes
   useEffect(() => {
     const root = document.documentElement;
-    
+
     const applyTheme = () => {
       if (theme === 'system') {
         const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -123,7 +120,7 @@ function App() {
         applyTheme();
       }
     };
-    
+
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
@@ -131,10 +128,10 @@ function App() {
   // Apply font size on mount and when it changes
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // Remove all font size classes
     root.classList.remove('font-small', 'font-default', 'font-large', 'font-xl');
-    
+
     // Add current font size class
     root.classList.add(`font-${fontSize}`);
   }, [fontSize]);

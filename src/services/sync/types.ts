@@ -1,36 +1,36 @@
 /**
  * Sync Remote Types
- * 
+ *
  * Type definitions for data structures stored in Supabase.
  * These mirror the database schema with snake_case naming.
- * 
+ *
  * ## Generating Types from Supabase
- * 
+ *
  * These types can be auto-generated using the Supabase CLI:
- * 
+ *
  * ```bash
  * # Option 1: Using project ID (requires access token)
  * npx supabase gen types typescript --project-id rlnkzatitmkivekjxvzi > src/types/supabase.ts
- * 
+ *
  * # Option 2: Using local linked project
  * npx supabase link --project-ref rlnkzatitmkivekjxvzi
  * npx supabase gen types typescript --local > src/types/supabase.ts
- * 
+ *
  * # Option 3: Using Supabase Dashboard
  * # Go to: Project Settings > API > Generate types
  * ```
- * 
+ *
  * ## Current Status
- * 
+ *
  * Types are manually maintained to match the database schema.
  * When the schema changes (new migration), update these types accordingly:
- * 
+ *
  * 1. Add/modify the interface to match new columns
  * 2. Update the corresponding transformer in transformers.ts
  * 3. Run tests to verify sync still works
- * 
+ *
  * ## Schema Reference
- * 
+ *
  * See `supabase/migrations/` for the authoritative schema definitions.
  */
 
@@ -162,21 +162,21 @@ export interface RemoteUserPreferences {
 /**
  * Table names in the Supabase database.
  */
-export type SyncTableName = 
-  | 'exercises' 
-  | 'max_records' 
-  | 'completed_sets' 
-  | 'cycles' 
+export type SyncTableName =
+  | 'exercises'
+  | 'max_records'
+  | 'completed_sets'
+  | 'cycles'
   | 'scheduled_workouts'
   | 'user_preferences';
 
 /**
  * Union type of all remote record types.
  */
-export type RemoteRecord = 
-  | RemoteExercise 
-  | RemoteMaxRecord 
-  | RemoteCompletedSet 
-  | RemoteCycle 
+export type RemoteRecord =
+  | RemoteExercise
+  | RemoteMaxRecord
+  | RemoteCompletedSet
+  | RemoteCycle
   | RemoteScheduledWorkout
   | RemoteUserPreferences;

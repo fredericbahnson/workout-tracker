@@ -76,15 +76,15 @@ export function useAdHocWorkout({
   // Start a new ad-hoc workout
   const handleStartAdHocWorkout = useCallback(async () => {
     if (!activeCycle) return;
-    
+
     // Count existing ad-hoc workouts in this cycle
     const adHocCount = await ScheduledWorkoutRepo.countAdHocWorkouts(activeCycle.id);
     const workoutName = `Ad Hoc Workout ${adHocCount + 1}`;
-    
+
     // Get the max sequence number to place this workout in order
     const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
     const maxSequence = Math.max(...allWorkouts.map(w => w.sequenceNumber), 0);
-    
+
     // Create ad-hoc workout
     const adHocWorkout = await ScheduledWorkoutRepo.create({
       cycleId: activeCycle.id,
@@ -96,12 +96,12 @@ export function useAdHocWorkout({
       scheduledSets: [],
       status: 'partial',
       isAdHoc: true,
-      customName: workoutName
+      customName: workoutName,
     });
-    
+
     // Sync the new workout
     await syncItem('scheduled_workouts', adHocWorkout);
-    
+
     // Reset completion view state so we show the ad-hoc workout
     dismissCompletionView();
   }, [activeCycle, cycleProgressPassed, syncItem, dismissCompletionView]);
@@ -109,38 +109,41 @@ export function useAdHocWorkout({
   // Complete the current ad-hoc workout
   const handleCompleteAdHocWorkout = useCallback(async () => {
     if (!displayWorkout?.isAdHoc) return;
-    
+
     await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-    
+
     // Show completion celebration
     markWorkoutCompleted(displayWorkout.id);
   }, [displayWorkout, markWorkoutCompleted]);
 
   // Rename the current ad-hoc workout
-  const handleRenameAdHocWorkout = useCallback(async (name: string) => {
-    if (!displayWorkout?.isAdHoc || !name.trim()) return;
-    
-    await ScheduledWorkoutRepo.updateName(displayWorkout.id, name.trim());
-  }, [displayWorkout]);
+  const handleRenameAdHocWorkout = useCallback(
+    async (name: string) => {
+      if (!displayWorkout?.isAdHoc || !name.trim()) return;
+
+      await ScheduledWorkoutRepo.updateName(displayWorkout.id, name.trim());
+    },
+    [displayWorkout]
+  );
 
   // Cancel/delete the current ad-hoc workout
   const handleCancelAdHocWorkout = useCallback(async () => {
     if (!displayWorkout?.isAdHoc) return;
-    
+
     setIsCancellingAdHoc(true);
     try {
       // Delete all completed sets associated with this workout
       const deletedSetIds = await CompletedSetRepo.deleteByScheduledWorkoutId(displayWorkout.id);
-      
+
       // Sync deletions for completed sets
       for (const setId of deletedSetIds) {
         await deleteItem('completed_sets', setId);
       }
-      
+
       // Delete the ad-hoc workout
       await ScheduledWorkoutRepo.delete(displayWorkout.id);
       await deleteItem('scheduled_workouts', displayWorkout.id);
-      
+
       // Reset state to show previous workout state
       setShowCancelAdHocConfirm(false);
       resetCompletionState();

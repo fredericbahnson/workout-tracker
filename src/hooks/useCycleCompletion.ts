@@ -57,11 +57,23 @@ export function useCycleCompletion({
 
   // Show cycle completion modal when cycle finishes
   useEffect(() => {
-    if (isCycleComplete && activeCycle && !showCycleCompletionModal && !showMaxTestingWizard && !showCycleWizard) {
+    if (
+      isCycleComplete &&
+      activeCycle &&
+      !showCycleCompletionModal &&
+      !showMaxTestingWizard &&
+      !showCycleWizard
+    ) {
       setCompletedCycleForModal(activeCycle);
       setShowCycleCompletionModal(true);
     }
-  }, [isCycleComplete, activeCycle?.id, showCycleCompletionModal, showMaxTestingWizard, showCycleWizard]);
+  }, [
+    isCycleComplete,
+    activeCycle?.id,
+    showCycleCompletionModal,
+    showMaxTestingWizard,
+    showCycleWizard,
+  ]);
 
   // Start max testing after cycle completion
   const handleStartMaxTesting = useCallback(async () => {

@@ -1,6 +1,6 @@
 /**
  * Skeleton Loading Components
- * 
+ *
  * Placeholder components shown during data loading to improve perceived performance.
  */
 
@@ -21,11 +21,13 @@ export const Skeleton = memo(function Skeleton({ className = '' }: SkeletonProps
 /**
  * Text line skeleton
  */
-export const SkeletonText = memo(function SkeletonText({ 
-  className = '', 
-  width = 'w-full' 
+export const SkeletonText = memo(function SkeletonText({
+  className = '',
+  width = 'w-full',
 }: SkeletonProps & { width?: string }) {
-  return <div className={`${skeletonClasses.base} ${skeletonClasses.text} ${width} ${className}`} />;
+  return (
+    <div className={`${skeletonClasses.base} ${skeletonClasses.text} ${width} ${className}`} />
+  );
 });
 
 /**
@@ -42,10 +44,10 @@ export const WorkoutCardSkeleton = memo(function WorkoutCardSkeleton() {
         </div>
         <Skeleton className="h-8 w-8 rounded-full" />
       </div>
-      
+
       {/* Progress bar */}
       <Skeleton className="h-2 w-full rounded-full" />
-      
+
       {/* Stats */}
       <div className="flex gap-4">
         <Skeleton className="h-4 w-20" />
@@ -62,8 +64,8 @@ export const SetListSkeleton = memo(function SetListSkeleton({ count = 3 }: { co
   return (
     <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
-        <div 
-          key={i} 
+        <div
+          key={i}
           className="rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border p-3 flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
@@ -83,17 +85,21 @@ export const SetListSkeleton = memo(function SetListSkeleton({ count = 3 }: { co
 /**
  * Skeleton for the schedule page workout list
  */
-export const ScheduleListSkeleton = memo(function ScheduleListSkeleton({ count = 5 }: { count?: number }) {
+export const ScheduleListSkeleton = memo(function ScheduleListSkeleton({
+  count = 5,
+}: {
+  count?: number;
+}) {
   return (
     <div className="space-y-4">
       {/* Section header */}
       <Skeleton className="h-4 w-24" />
-      
+
       {/* Workout cards */}
       <div className="space-y-2">
         {Array.from({ length: count }).map((_, i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className="rounded-xl bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border p-3"
           >
             <div className="flex items-start gap-3">
@@ -118,12 +124,16 @@ export const ScheduleListSkeleton = memo(function ScheduleListSkeleton({ count =
 /**
  * Skeleton for exercise list in exercises page
  */
-export const ExerciseListSkeleton = memo(function ExerciseListSkeleton({ count = 6 }: { count?: number }) {
+export const ExerciseListSkeleton = memo(function ExerciseListSkeleton({
+  count = 6,
+}: {
+  count?: number;
+}) {
   return (
     <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
-        <div 
-          key={i} 
+        <div
+          key={i}
           className="rounded-xl bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border p-4 flex items-center justify-between"
         >
           <div className="space-y-1">
@@ -167,7 +177,7 @@ export const PageSkeleton = memo(function PageSkeleton() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64" />
       </div>
-      
+
       {/* Content cards */}
       <div className="space-y-4">
         <WorkoutCardSkeleton />

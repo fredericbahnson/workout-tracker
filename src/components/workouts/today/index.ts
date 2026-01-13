@@ -8,6 +8,11 @@ export { TodayStats } from './TodayStats';
 export { AdHocCompletedSetsList } from './AdHocCompletedSetsList';
 export { WorkoutActionButtons } from './WorkoutActionButtons';
 export { CycleProgressHeader } from './CycleProgressHeader';
-export { SkipWorkoutConfirmModal, EndWorkoutConfirmModal, SkipSetConfirmModal, CancelAdHocConfirmModal } from './ConfirmationModals';
+export {
+  SkipWorkoutConfirmModal,
+  EndWorkoutConfirmModal,
+  SkipSetConfirmModal,
+  CancelAdHocConfirmModal,
+} from './ConfirmationModals';
 export { ExercisePickerModal } from './ExercisePickerModal';
 export { RenameWorkoutModal } from './RenameWorkoutModal';

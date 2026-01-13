@@ -1,6 +1,6 @@
 /**
  * Exercise Types
- * 
+ *
  * Types related to exercise definitions and personal records.
  */
 
@@ -50,11 +50,11 @@ export type ProgressionInterval = 'constant' | 'per_workout' | 'per_week';
 export interface ExerciseCycleDefaults {
   /** Which mode was last used for this exercise */
   progressionMode: ExerciseProgressionMode;
-  
+
   /** Conditioning increments (for conditioning exercises in mixed mode) */
   conditioningRepIncrement?: number;
   conditioningTimeIncrement?: number;
-  
+
   /** Simple progression settings */
   simpleBaseReps?: number;
   simpleBaseTime?: number;

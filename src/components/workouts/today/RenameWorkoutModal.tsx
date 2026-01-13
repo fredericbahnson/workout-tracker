@@ -43,22 +43,14 @@ export function RenameWorkoutModal({
         <Input
           label="Workout Name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={e => setName(e.target.value)}
           placeholder="Enter workout name"
         />
         <div className="flex gap-2">
-          <Button 
-            variant="secondary" 
-            onClick={onClose} 
-            className="flex-1"
-          >
+          <Button variant="secondary" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave}
-            className="flex-1"
-            disabled={!name.trim()}
-          >
+          <Button onClick={handleSave} className="flex-1" disabled={!name.trim()}>
             Save
           </Button>
         </div>

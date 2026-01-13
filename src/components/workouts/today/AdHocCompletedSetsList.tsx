@@ -1,5 +1,11 @@
 import { Plus, Edit2 } from 'lucide-react';
-import { EXERCISE_TYPE_LABELS, formatTime, type Exercise, type CompletedSet, type ExerciseType } from '@/types';
+import {
+  EXERCISE_TYPE_LABELS,
+  formatTime,
+  type Exercise,
+  type CompletedSet,
+  type ExerciseType,
+} from '@/types';
 
 interface SetGroup {
   type: ExerciseType;
@@ -32,7 +38,7 @@ export function AdHocCompletedSetsList({
 }: AdHocCompletedSetsListProps) {
   // Check if there are any sets to display
   const hasSets = groupedSets.some(group => group.sets.length > 0);
-  
+
   if (!hasSets) {
     return null;
   }
@@ -45,7 +51,7 @@ export function AdHocCompletedSetsList({
       <div className="space-y-4">
         {groupedSets.map(group => {
           if (group.sets.length === 0) return null;
-          
+
           return (
             <div key={group.type}>
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
@@ -55,7 +61,7 @@ export function AdHocCompletedSetsList({
                 {group.sets.map(completedSet => {
                   const exercise = exerciseMap.get(completedSet.exerciseId);
                   if (!exercise) return null;
-                  
+
                   const hasWeight = completedSet.weight !== undefined && completedSet.weight > 0;
                   const isTimeBased = exercise.measurementType === 'time';
 
@@ -71,7 +77,9 @@ export function AdHocCompletedSetsList({
                       </span>
                       <div className="flex items-baseline gap-1">
                         <span className="text-gym-xl text-blue-600 dark:text-blue-400">
-                          {isTimeBased ? formatTime(completedSet.actualReps) : completedSet.actualReps}
+                          {isTimeBased
+                            ? formatTime(completedSet.actualReps)
+                            : completedSet.actualReps}
                         </span>
                         {hasWeight && (
                           <span className="text-sm text-purple-600 dark:text-purple-400">

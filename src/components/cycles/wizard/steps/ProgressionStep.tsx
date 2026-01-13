@@ -1,6 +1,6 @@
 /**
  * ProgressionStep Component
- * 
+ *
  * Step for configuring exercise progression targets in Simple mode.
  * Shows base values and increment settings for each exercise.
  */
@@ -14,16 +14,19 @@ import type { ProgressionStepProps } from '../types';
 export function ProgressionStep({
   groups,
   exerciseMap,
-  onUpdateProgression
+  onUpdateProgression,
 }: ProgressionStepProps) {
   // Get all unique exercise IDs from groups
-  const exerciseIds = Array.from(new Set(
-    groups.flatMap(g => g.exerciseAssignments.map(a => a.exerciseId))
-  ));
+  const exerciseIds = Array.from(
+    new Set(groups.flatMap(g => g.exerciseAssignments.map(a => a.exerciseId)))
+  );
 
   // Load last completed sets for all exercises
   const lastCompletedSets = useLiveQuery(async () => {
-    const results = new Map<string, Awaited<ReturnType<typeof CompletedSetRepo.getLastForExercise>>>();
+    const results = new Map<
+      string,
+      Awaited<ReturnType<typeof CompletedSetRepo.getLastForExercise>>
+    >();
     for (const exerciseId of exerciseIds) {
       const lastSet = await CompletedSetRepo.getLastForExercise(exerciseId);
       results.set(exerciseId, lastSet);
@@ -66,7 +69,9 @@ export function ProgressionStep({
                     assignment={assignment}
                     isTimeBased={isTimeBased}
                     lastCompletedSet={lastSet}
-                    onUpdate={(updates) => onUpdateProgression(group.id, assignment.exerciseId, updates)}
+                    onUpdate={updates =>
+                      onUpdateProgression(group.id, assignment.exerciseId, updates)
+                    }
                   />
                 );
               })}

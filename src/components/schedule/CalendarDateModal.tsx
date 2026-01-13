@@ -1,6 +1,6 @@
 /**
  * CalendarDateModal Component
- * 
+ *
  * Modal showing workouts completed on a specific calendar date.
  */
 
@@ -23,7 +23,7 @@ export function CalendarDateModal({
   allCycles,
   activeCycle,
   onWorkoutClick,
-  onClose
+  onClose,
 }: CalendarDateModalProps) {
   if (!date) return null;
 
@@ -48,7 +48,7 @@ export function CalendarDateModal({
       title={date.toLocaleDateString(undefined, {
         weekday: 'long',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       })}
     >
       <div className="space-y-2">
@@ -70,15 +70,16 @@ export function CalendarDateModal({
               onClick={() => onWorkoutClick(workout)}
             >
               <div className="flex items-center gap-3">
-                <CheckCircle className={`w-5 h-5 ${isAdHoc ? 'text-blue-500' : 'text-green-500'} flex-shrink-0`} />
+                <CheckCircle
+                  className={`w-5 h-5 ${isAdHoc ? 'text-blue-500' : 'text-green-500'} flex-shrink-0`}
+                />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900 dark:text-gray-100">
                       {isAdHoc
                         ? workout.customName || 'Ad Hoc Workout'
-                        : `#${workout.sequenceNumber} ${groupName || 'Workout'}`
-                      }
+                        : `#${workout.sequenceNumber} ${groupName || 'Workout'}`}
                     </span>
                     {isAdHoc && (
                       <Badge className="text-2xs bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
@@ -89,8 +90,7 @@ export function CalendarDateModal({
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {isAdHoc
                       ? 'Logged sets'
-                      : `Week ${workout.weekNumber} • ${workout.scheduledSets.length} sets`
-                    }
+                      : `Week ${workout.weekNumber} • ${workout.scheduledSets.length} sets`}
                   </p>
                 </div>
 

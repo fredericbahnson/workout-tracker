@@ -5,6 +5,31 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-01-12
+
+### Added
+- **ESLint configuration**: Added comprehensive linting for TypeScript and React
+  - TypeScript-ESLint for type-aware linting
+  - React Hooks plugin for hooks rules enforcement
+  - React Refresh plugin for Vite HMR compatibility
+  - Custom rules for unused variables, console statements, and more
+- **Prettier configuration**: Added consistent code formatting
+  - Single quotes, 2-space indentation, trailing commas
+  - 100 character line width
+  - Format scripts: `npm run format` and `npm run format:check`
+- **Pre-commit hooks**: Added Husky + lint-staged for automated quality checks
+  - Runs ESLint and Prettier on staged files before commit
+  - Prevents committing code that doesn't meet quality standards
+
+### Changed
+- Formatted entire codebase with Prettier for consistency
+- Added new npm scripts: `lint`, `lint:fix`, `format`, `format:check`, `prepare`
+
+### Technical
+- Phase 1 items verified complete (date utils, constants exports, timer defaults, migrations)
+- Phase 2 code quality infrastructure fully implemented
+- 0 linting errors, 17 warnings (intentional - warnings don't block commits)
+
 ## [2.7.7] - 2026-01-12
 
 ### Fixed

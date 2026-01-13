@@ -1,6 +1,6 @@
 /**
  * SimpleProgressionFields Component
- * 
+ *
  * Reusable simple progression input fields.
  * Used by both MixedExerciseConfig and ExerciseProgressionEditor.
  */
@@ -16,16 +16,14 @@ export function SimpleProgressionFields({
   assignment,
   isTimeBased,
   isWeighted,
-  onUpdate
+  onUpdate,
 }: SimpleProgressionFieldsProps) {
   // Get default values
   const getDefaultValue = () => {
     if (isTimeBased) {
-      return exercise.lastCycleSettings?.simpleBaseTime
-        || exercise.defaultConditioningTime || 30;
+      return exercise.lastCycleSettings?.simpleBaseTime || exercise.defaultConditioningTime || 30;
     }
-    return exercise.lastCycleSettings?.simpleBaseReps
-      || exercise.defaultConditioningReps || 10;
+    return exercise.lastCycleSettings?.simpleBaseReps || exercise.defaultConditioningReps || 10;
   };
 
   const baseValue = isTimeBased
@@ -33,8 +31,8 @@ export function SimpleProgressionFields({
     : (assignment.simpleBaseReps ?? getDefaultValue());
 
   const progressionType = isTimeBased
-    ? (assignment.simpleTimeProgressionType || 'constant')
-    : (assignment.simpleRepProgressionType || 'constant');
+    ? assignment.simpleTimeProgressionType || 'constant'
+    : assignment.simpleRepProgressionType || 'constant';
 
   const increment = isTimeBased
     ? (assignment.simpleTimeIncrement ?? 0)
@@ -73,26 +71,26 @@ export function SimpleProgressionFields({
           </label>
           <NumberInput
             value={baseValue}
-            onChange={v => onUpdate(isTimeBased
-              ? { simpleBaseTime: v }
-              : { simpleBaseReps: v })}
+            onChange={v => onUpdate(isTimeBased ? { simpleBaseTime: v } : { simpleBaseReps: v })}
             min={1}
             className="w-full"
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-            Progress
-          </label>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Progress</label>
           <Select
             value={progressionType}
-            onChange={e => onUpdate(isTimeBased
-              ? { simpleTimeProgressionType: e.target.value as ProgressionInterval }
-              : { simpleRepProgressionType: e.target.value as ProgressionInterval })}
+            onChange={e =>
+              onUpdate(
+                isTimeBased
+                  ? { simpleTimeProgressionType: e.target.value as ProgressionInterval }
+                  : { simpleRepProgressionType: e.target.value as ProgressionInterval }
+              )
+            }
             options={[
               { value: 'constant', label: 'None' },
               { value: 'per_workout', label: '/workout' },
-              { value: 'per_week', label: '/week' }
+              { value: 'per_week', label: '/week' },
             ]}
             className="w-full text-xs"
           />
@@ -103,9 +101,9 @@ export function SimpleProgressionFields({
           </label>
           <NumberInput
             value={increment}
-            onChange={v => onUpdate(isTimeBased
-              ? { simpleTimeIncrement: v }
-              : { simpleRepIncrement: v })}
+            onChange={v =>
+              onUpdate(isTimeBased ? { simpleTimeIncrement: v } : { simpleRepIncrement: v })
+            }
             min={0}
             disabled={progressionType === 'constant'}
             className="w-full"
@@ -128,16 +126,16 @@ export function SimpleProgressionFields({
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-              Progress
-            </label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Progress</label>
             <Select
               value={weightProgressionType}
-              onChange={e => onUpdate({ simpleWeightProgressionType: e.target.value as ProgressionInterval })}
+              onChange={e =>
+                onUpdate({ simpleWeightProgressionType: e.target.value as ProgressionInterval })
+              }
               options={[
                 { value: 'constant', label: 'None' },
                 { value: 'per_workout', label: '/workout' },
-                { value: 'per_week', label: '/week' }
+                { value: 'per_week', label: '/week' },
               ]}
               className="w-full text-xs"
             />

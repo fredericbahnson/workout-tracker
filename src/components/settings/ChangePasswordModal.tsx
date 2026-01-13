@@ -1,6 +1,6 @@
 /**
  * ChangePasswordModal Component
- * 
+ *
  * Modal for changing user password.
  */
 
@@ -25,7 +25,7 @@ export function ChangePasswordModal({
   onNewPasswordChange,
   onConfirmPasswordChange,
   onConfirm,
-  onClose
+  onClose,
 }: ChangePasswordModalProps) {
   const handleClose = () => {
     onNewPasswordChange('');
@@ -34,11 +34,7 @@ export function ChangePasswordModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Change Password"
-    >
+    <Modal isOpen={isOpen} onClose={handleClose} title="Change Password">
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -47,7 +43,7 @@ export function ChangePasswordModal({
           <Input
             type="password"
             value={newPassword}
-            onChange={(e) => onNewPasswordChange(e.target.value)}
+            onChange={e => onNewPasswordChange(e.target.value)}
             placeholder="Enter new password (6+ characters)"
           />
         </div>
@@ -58,16 +54,12 @@ export function ChangePasswordModal({
           <Input
             type="password"
             value={confirmPassword}
-            onChange={(e) => onConfirmPasswordChange(e.target.value)}
+            onChange={e => onConfirmPasswordChange(e.target.value)}
             placeholder="Confirm new password"
           />
         </div>
         <div className="flex gap-3">
-          <Button
-            variant="secondary"
-            onClick={handleClose}
-            className="flex-1"
-          >
+          <Button variant="secondary" onClick={handleClose} className="flex-1">
             Cancel
           </Button>
           <Button

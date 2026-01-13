@@ -1,6 +1,6 @@
 /**
  * useScheduleData Hook
- * 
+ *
  * Manages data fetching and computed values for the Schedule page.
  * Extracts live queries and helper functions from Schedule.tsx.
  */
@@ -17,16 +17,14 @@ export function useScheduleData() {
 
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
-  
+
   const allWorkouts = useLiveQuery(async () => {
     if (!activeCycle) return [];
     return ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
   }, [activeCycle?.id]);
 
   // All-time completed workouts for calendar view
-  const allCompletedWorkouts = useLiveQuery(() => 
-    ScheduledWorkoutRepo.getAllCompleted()
-  , []);
+  const allCompletedWorkouts = useLiveQuery(() => ScheduledWorkoutRepo.getAllCompleted(), []);
 
   // All cycles for looking up group names from past cycles
   const allCycles = useLiveQuery(() => CycleRepo.getAll(), []);
@@ -43,11 +41,13 @@ export function useScheduleData() {
 
   // Workout categorization
   const workoutCategories = useMemo(() => {
-    const pending = allWorkouts?.filter(w => w.status === 'pending' || w.status === 'partial') || [];
+    const pending =
+      allWorkouts?.filter(w => w.status === 'pending' || w.status === 'partial') || [];
     const done = allWorkouts?.filter(w => w.status === 'completed') || [];
     const skipped = allWorkouts?.filter(w => w.status === 'skipped') || [];
-    const passed = allWorkouts?.filter(w => w.status === 'completed' || w.status === 'skipped') || [];
-    
+    const passed =
+      allWorkouts?.filter(w => w.status === 'completed' || w.status === 'skipped') || [];
+
     return { pending, done, skipped, passed };
   }, [allWorkouts]);
 
@@ -79,9 +79,9 @@ export function useScheduleData() {
     if (!activeCycle) return 0;
     const maxRecord = maxRecords?.get(set.exerciseId);
     return calculateTargetReps(
-      set, 
-      workout, 
-      maxRecord, 
+      set,
+      workout,
+      maxRecord,
       activeCycle.conditioningWeeklyRepIncrement,
       activeCycle.conditioningWeeklyTimeIncrement || 5,
       preferences.defaultMaxReps

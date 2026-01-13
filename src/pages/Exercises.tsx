@@ -6,11 +6,11 @@ import { PageHeader } from '@/components/layout';
 import { Button, Input, Modal, EmptyState } from '@/components/ui';
 import { ExerciseCard, ExerciseForm } from '@/components/exercises';
 import { createScopedLogger } from '@/utils/logger';
-import { 
-  EXERCISE_TYPES, 
-  EXERCISE_TYPE_LABELS, 
-  type ExerciseType, 
-  type ExerciseFormData 
+import {
+  EXERCISE_TYPES,
+  EXERCISE_TYPE_LABELS,
+  type ExerciseType,
+  type ExerciseFormData,
 } from '@/types';
 
 const log = createScopedLogger('Exercises');
@@ -32,17 +32,23 @@ export function ExercisesPage() {
     try {
       log.debug('Creating exercise:', data.name);
       const { initialMax, initialMaxTime, startingReps, startingTime, ...exerciseData } = data;
-      
+
       // Add default conditioning values based on measurement type
       const exerciseToCreate = {
         ...exerciseData,
-        defaultConditioningReps: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps' ? startingReps : undefined,
-        defaultConditioningTime: exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time' ? startingTime : undefined
+        defaultConditioningReps:
+          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps'
+            ? startingReps
+            : undefined,
+        defaultConditioningTime:
+          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time'
+            ? startingTime
+            : undefined,
       };
-      
+
       const created = await ExerciseRepo.create(exerciseToCreate);
       log.debug('Exercise created:', created.id);
-      
+
       // Create initial max record if provided (standard exercises)
       if (exerciseData.measurementType === 'reps' && initialMax && initialMax > 0) {
         await MaxRecordRepo.create(created.id, initialMax, undefined, 'Initial max');
@@ -51,7 +57,7 @@ export function ExercisesPage() {
         await MaxRecordRepo.create(created.id, undefined, initialMaxTime, 'Initial max');
         log.debug('Initial max time recorded:', initialMaxTime);
       }
-      
+
       setShowForm(false);
     } catch (err) {
       log.error(err as Error);
@@ -63,8 +69,7 @@ export function ExercisesPage() {
 
   // Filter exercises
   const filteredExercises = exercises?.filter(ex => {
-    const matchesSearch = !searchQuery || 
-      ex.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !searchQuery || ex.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || ex.type === filterType;
     return matchesSearch && matchesType;
   });
@@ -74,19 +79,23 @@ export function ExercisesPage() {
     type,
     exercises: (filteredExercises || [])
       .filter(ex => ex.type === type)
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => a.name.localeCompare(b.name)),
   })).filter(group => group.exercises.length > 0);
 
   // Count by type
-  const typeCounts = exercises?.reduce((acc, ex) => {
-    acc[ex.type] = (acc[ex.type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
+  const typeCounts =
+    exercises?.reduce(
+      (acc, ex) => {
+        acc[ex.type] = (acc[ex.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    ) || {};
 
   return (
     <>
-      <PageHeader 
-        title="Exercises" 
+      <PageHeader
+        title="Exercises"
         subtitle={exercises ? `${exercises.length} exercises` : undefined}
         action={
           <Button onClick={() => setShowForm(true)}>
@@ -114,9 +123,10 @@ export function ExercisesPage() {
             onClick={() => setFilterType('all')}
             className={`
               px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-              ${filterType === 'all'
-                ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+              ${
+                filterType === 'all'
+                  ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
               }
             `}
           >
@@ -128,9 +138,10 @@ export function ExercisesPage() {
               onClick={() => setFilterType(type)}
               className={`
                 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-                ${filterType === type
-                  ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                ${
+                  filterType === type
+                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                 }
               `}
             >
@@ -199,7 +210,10 @@ export function ExercisesPage() {
       {/* Add Exercise Modal */}
       <Modal
         isOpen={showForm}
-        onClose={() => { setShowForm(false); setError(null); }}
+        onClose={() => {
+          setShowForm(false);
+          setError(null);
+        }}
         title="Add Exercise"
         size="lg"
       >
@@ -210,7 +224,10 @@ export function ExercisesPage() {
         )}
         <ExerciseForm
           onSubmit={handleCreateExercise}
-          onCancel={() => { setShowForm(false); setError(null); }}
+          onCancel={() => {
+            setShowForm(false);
+            setError(null);
+          }}
           isLoading={isCreating}
         />
       </Modal>

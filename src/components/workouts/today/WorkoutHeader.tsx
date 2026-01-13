@@ -32,7 +32,7 @@ export function WorkoutHeader({
 }: WorkoutHeaderProps) {
   const isCompleted = mode === 'completed';
   const isAdHoc = mode === 'adHoc';
-  
+
   // Background and border colors based on mode
   const containerClasses = isCompleted
     ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-dark-border'
@@ -66,17 +66,14 @@ export function WorkoutHeader({
                   </button>
                 )}
               </div>
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                Log any exercises you want
-              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">Log any exercises you want</p>
             </>
           ) : (
             <>
               <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-                {workout.isAdHoc 
+                {workout.isAdHoc
                   ? workout.customName || 'Ad Hoc Workout'
-                  : `${groupName || 'Workout'}`
-                }
+                  : `${groupName || 'Workout'}`}
                 {!workout.isAdHoc && (
                   <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
                     #{workout.sequenceNumber}
@@ -94,9 +91,7 @@ export function WorkoutHeader({
         <div className="text-right">
           {workout.isAdHoc ? (
             <>
-              <p className={`text-gym-xl ${progressColorClasses}`}>
-                {adHocSetsCount}
-              </p>
+              <p className={`text-gym-xl ${progressColorClasses}`}>{adHocSetsCount}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">sets logged</p>
             </>
           ) : (

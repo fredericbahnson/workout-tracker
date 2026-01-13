@@ -1,6 +1,6 @@
 /**
  * ExerciseProgressionEditor Component
- * 
+ *
  * Editor for exercise progression settings in Simple mode.
  * Shows base values, progression type, and increment settings.
  */
@@ -16,7 +16,7 @@ export function ExerciseProgressionEditor({
   assignment,
   isTimeBased,
   lastCompletedSet,
-  onUpdate
+  onUpdate,
 }: ExerciseProgressionEditorProps) {
   const isWeighted = exercise.weightEnabled === true;
 
@@ -46,8 +46,8 @@ export function ExerciseProgressionEditor({
   const baseWeight = assignment.simpleBaseWeight ?? getDefaultWeight();
 
   const progressionType = isTimeBased
-    ? (assignment.simpleTimeProgressionType || 'constant')
-    : (assignment.simpleRepProgressionType || 'constant');
+    ? assignment.simpleTimeProgressionType || 'constant'
+    : assignment.simpleRepProgressionType || 'constant';
   const increment = isTimeBased ? assignment.simpleTimeIncrement : assignment.simpleRepIncrement;
 
   const weightProgressionType = assignment.simpleWeightProgressionType || 'constant';
@@ -116,7 +116,9 @@ export function ExerciseProgressionEditor({
             {EXERCISE_TYPE_LABELS[exercise.type]}
           </Badge>
           {isWeighted && (
-            <Badge variant="other" className="text-2xs">Wt</Badge>
+            <Badge variant="other" className="text-2xs">
+              Wt
+            </Badge>
           )}
         </div>
         <span className="font-medium text-gray-900 dark:text-gray-100 pt-0.5">{exercise.name}</span>
@@ -129,12 +131,7 @@ export function ExerciseProgressionEditor({
           <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
             Base {isTimeBased ? 'Time (sec)' : 'Reps'}
           </label>
-          <NumberInput
-            value={baseValue}
-            onChange={handleBaseChange}
-            min={1}
-            className="w-full"
-          />
+          <NumberInput value={baseValue} onChange={handleBaseChange} min={1} className="w-full" />
         </div>
 
         {/* Progression Type */}
@@ -144,11 +141,11 @@ export function ExerciseProgressionEditor({
           </label>
           <Select
             value={progressionType}
-            onChange={(e) => handleProgressionTypeChange(e.target.value as ProgressionInterval)}
+            onChange={e => handleProgressionTypeChange(e.target.value as ProgressionInterval)}
             options={[
               { value: 'constant', label: 'Constant' },
               { value: 'per_workout', label: 'Each workout' },
-              { value: 'per_week', label: 'Each week' }
+              { value: 'per_week', label: 'Each week' },
             ]}
             className="w-full"
           />
@@ -192,11 +189,13 @@ export function ExerciseProgressionEditor({
             </label>
             <Select
               value={weightProgressionType}
-              onChange={(e) => handleWeightProgressionTypeChange(e.target.value as ProgressionInterval)}
+              onChange={e =>
+                handleWeightProgressionTypeChange(e.target.value as ProgressionInterval)
+              }
               options={[
                 { value: 'constant', label: 'Constant' },
                 { value: 'per_workout', label: 'Each workout' },
-                { value: 'per_week', label: 'Each week' }
+                { value: 'per_week', label: 'Each week' },
               ]}
               className="w-full"
             />
@@ -220,18 +219,25 @@ export function ExerciseProgressionEditor({
 
       {/* Preview */}
       {(progressionType !== 'constant' && increment && increment > 0) ||
-       (isWeighted && weightProgressionType !== 'constant' && weightIncrement && weightIncrement > 0) ? (
+      (isWeighted &&
+        weightProgressionType !== 'constant' &&
+        weightIncrement &&
+        weightIncrement > 0) ? (
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          Week 1: {baseValue}{isTimeBased ? ' sec' : ' reps'}
+          Week 1: {baseValue}
+          {isTimeBased ? ' sec' : ' reps'}
           {isWeighted && baseWeight > 0 && ` ${formatWeightAt(baseWeight)}`}
           {' → '}
-          Week 4: {progressionType !== 'constant' && increment
+          Week 4:{' '}
+          {progressionType !== 'constant' && increment
             ? baseValue + (progressionType === 'per_week' ? 3 : 11) * increment
             : baseValue}
           {isTimeBased ? ' sec' : ' reps'}
           {isWeighted && baseWeight > 0 && weightProgressionType !== 'constant' && weightIncrement
             ? ` ${formatWeightAt(baseWeight + (weightProgressionType === 'per_week' ? 3 : 11) * weightIncrement)}`
-            : isWeighted && baseWeight > 0 ? ` ${formatWeightAt(baseWeight)}` : ''}
+            : isWeighted && baseWeight > 0
+              ? ` ${formatWeightAt(baseWeight)}`
+              : ''}
         </div>
       ) : null}
     </div>

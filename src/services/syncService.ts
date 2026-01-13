@@ -1,6 +1,14 @@
 import { supabase, isSupabaseConfigured } from '@/data/supabase';
 import { db, generateId } from '@/data/db';
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, ScheduledSet, UserPreferences } from '@/types';
+import type {
+  Exercise,
+  MaxRecord,
+  CompletedSet,
+  Cycle,
+  ScheduledWorkout,
+  ScheduledSet,
+  UserPreferences,
+} from '@/types';
 import { now, toISOString, isAfter } from '@/utils/dateUtils';
 import { createScopedLogger } from '@/utils/logger';
 import type {
@@ -78,10 +86,10 @@ export const SyncService = {
     try {
       // Pull from cloud first
       await this.pullFromCloud(userId);
-      
+
       // Then push local changes
       await this.pushToCloud(userId);
-      
+
       lastSyncTime = now();
       this.setStatus('idle');
       return { success: true };
@@ -101,7 +109,7 @@ export const SyncService = {
       { data: completedSets },
       { data: cycles },
       { data: scheduledWorkouts },
-      { data: userPreferences }
+      { data: userPreferences },
     ] = await Promise.all([
       supabase.from('exercises').select('*').eq('user_id', userId).is('deleted_at', null),
       supabase.from('max_records').select('*').eq('user_id', userId).is('deleted_at', null),
@@ -157,43 +165,48 @@ export const SyncService = {
       // Map stores the local workout ID for each key, so we can compare
       const localWorkouts = await db.scheduledWorkouts.toArray();
       const existingWorkoutsByKey = new Map<string, ScheduledWorkout>();
-      
+
       for (const w of localWorkouts) {
         // Skip ad-hoc workouts - they don't have sequence conflicts
         if (w.isAdHoc) continue;
         // Skip workouts without a valid sequence number
         if (w.sequenceNumber === undefined || w.sequenceNumber === null) continue;
-        
+
         const key = `${w.cycleId}:${w.sequenceNumber}`;
         existingWorkoutsByKey.set(key, w);
       }
-      
+
       for (const remote of scheduledWorkouts as RemoteScheduledWorkout[]) {
         const local = await db.scheduledWorkouts.get(remote.id);
-        
+
         // Skip if remote has no sequence number (shouldn't happen but be defensive)
         if (remote.sequence_number === undefined || remote.sequence_number === null) {
           continue;
         }
-        
+
         // Check if this would create a duplicate (same cycle + sequence but different ID)
         const remoteKey = `${remote.cycle_id}:${remote.sequence_number}`;
         const existingLocal = existingWorkoutsByKey.get(remoteKey);
         const wouldCreateDuplicate = !local && existingLocal !== undefined;
-        
+
         if (wouldCreateDuplicate && existingLocal) {
           // We have a local workout with the same cycle/sequence but different ID
           // Compare and decide which to keep
           const localHasWarmups = existingLocal.scheduledSets.some(s => s.isWarmup);
-          const remoteHasWarmups = (remote.scheduled_sets as ScheduledSet[])?.some(s => s.isWarmup) ?? false;
-          
+          const remoteHasWarmups =
+            (remote.scheduled_sets as ScheduledSet[])?.some(s => s.isWarmup) ?? false;
+
           if (localHasWarmups && !remoteHasWarmups) {
             // Local has warmups, remote doesn't - skip remote, keep local
-            log.debug(`Skipping remote workout ${remote.id} - local ${existingLocal.id} has warmups`);
+            log.debug(
+              `Skipping remote workout ${remote.id} - local ${existingLocal.id} has warmups`
+            );
             continue;
           } else if (!localHasWarmups && remoteHasWarmups) {
             // Remote has warmups, local doesn't - replace local with remote
-            log.debug(`Replacing local workout ${existingLocal.id} with remote ${remote.id} - remote has warmups`);
+            log.debug(
+              `Replacing local workout ${existingLocal.id} with remote ${remote.id} - remote has warmups`
+            );
             await db.scheduledWorkouts.delete(existingLocal.id);
             await db.scheduledWorkouts.put(remoteToLocalScheduledWorkout(remote));
             existingWorkoutsByKey.set(remoteKey, remoteToLocalScheduledWorkout(remote));
@@ -204,8 +217,12 @@ export const SyncService = {
             continue;
           }
         }
-        
-        if (!local || (remote.completed_at && (!local.completedAt || isAfter(remote.completed_at, local.completedAt)))) {
+
+        if (
+          !local ||
+          (remote.completed_at &&
+            (!local.completedAt || isAfter(remote.completed_at, local.completedAt)))
+        ) {
           const converted = remoteToLocalScheduledWorkout(remote);
           await db.scheduledWorkouts.put(converted);
           // Track this workout
@@ -219,7 +236,7 @@ export const SyncService = {
       const remote = userPreferences[0] as RemoteUserPreferences;
       const localPrefs = await db.userPreferences.toArray();
       const local = localPrefs.length > 0 ? localPrefs[0] : null;
-      
+
       if (!local || isAfter(remote.updated_at, local.updatedAt)) {
         // Clear existing preferences and put the cloud version
         await db.userPreferences.clear();
@@ -235,13 +252,21 @@ export const SyncService = {
       { data: deletedMaxRecords },
       { data: deletedCompletedSets },
       { data: deletedCycles },
-      { data: deletedWorkouts }
+      { data: deletedWorkouts },
     ] = await Promise.all([
       supabase.from('exercises').select('id').eq('user_id', userId).not('deleted_at', 'is', null),
       supabase.from('max_records').select('id').eq('user_id', userId).not('deleted_at', 'is', null),
-      supabase.from('completed_sets').select('id').eq('user_id', userId).not('deleted_at', 'is', null),
+      supabase
+        .from('completed_sets')
+        .select('id')
+        .eq('user_id', userId)
+        .not('deleted_at', 'is', null),
       supabase.from('cycles').select('id').eq('user_id', userId).not('deleted_at', 'is', null),
-      supabase.from('scheduled_workouts').select('id').eq('user_id', userId).not('deleted_at', 'is', null),
+      supabase
+        .from('scheduled_workouts')
+        .select('id')
+        .eq('user_id', userId)
+        .not('deleted_at', 'is', null),
     ]);
 
     if (deletedExercises) {
@@ -273,14 +298,15 @@ export const SyncService = {
 
   // Push local data to Supabase
   async pushToCloud(userId: string) {
-    const [exercises, maxRecords, completedSets, cycles, scheduledWorkouts, userPreferences] = await Promise.all([
-      db.exercises.toArray(),
-      db.maxRecords.toArray(),
-      db.completedSets.toArray(),
-      db.cycles.toArray(),
-      db.scheduledWorkouts.toArray(),
-      db.userPreferences.toArray(),
-    ]);
+    const [exercises, maxRecords, completedSets, cycles, scheduledWorkouts, userPreferences] =
+      await Promise.all([
+        db.exercises.toArray(),
+        db.maxRecords.toArray(),
+        db.completedSets.toArray(),
+        db.cycles.toArray(),
+        db.scheduledWorkouts.toArray(),
+        db.userPreferences.toArray(),
+      ]);
 
     // Upsert exercises
     if (exercises.length > 0) {
@@ -329,10 +355,9 @@ export const SyncService = {
 
     // Upsert user preferences (singleton record)
     if (userPreferences.length > 0) {
-      const { error } = await supabase.from('user_preferences').upsert(
-        localToRemoteUserPreferences(userPreferences[0], userId),
-        { onConflict: 'id' }
-      );
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert(localToRemoteUserPreferences(userPreferences[0], userId), { onConflict: 'id' });
       if (error) log.error(error as Error);
     }
   },
@@ -340,12 +365,18 @@ export const SyncService = {
   // Sync a single item immediately (called after local writes)
   // If offline, queues the operation for later
   async syncItem(
-    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences',
+    table:
+      | 'exercises'
+      | 'max_records'
+      | 'completed_sets'
+      | 'cycles'
+      | 'scheduled_workouts'
+      | 'user_preferences',
     item: unknown,
     userId: string
   ) {
     if (!isSupabaseConfigured()) return;
-    
+
     // If offline, queue for later
     if (!this.isOnline()) {
       await this.queueOperation(table, 'upsert', item);
@@ -392,7 +423,7 @@ export const SyncService = {
     userId: string
   ): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
-    
+
     // If offline, queue for later
     if (!this.isOnline()) {
       await this.queueOperation(table, 'delete', { id });
@@ -406,17 +437,17 @@ export const SyncService = {
         .eq('id', id)
         .eq('user_id', userId)
         .select('id');
-      
+
       if (error) {
         log.error(error as unknown as Error, { operation: 'delete', table, id });
         return false;
       }
-      
+
       // Log if no rows were updated (item might not exist in cloud)
       if (!data || data.length === 0) {
         log.debug(`No rows updated for delete ${table}:${id} - item may not exist in cloud`);
       }
-      
+
       return true;
     } catch (error) {
       log.error(error as Error, { operation: 'delete', table, id });
@@ -436,7 +467,7 @@ export const SyncService = {
     userId: string
   ): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
-    
+
     if (!this.isOnline()) {
       // Can't hard delete while offline - soft delete instead
       await this.queueOperation(table, 'delete', { id });
@@ -444,17 +475,13 @@ export const SyncService = {
     }
 
     try {
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId);
-      
+      const { error } = await supabase.from(table).delete().eq('id', id).eq('user_id', userId);
+
       if (error) {
         log.error(error as unknown as Error, { operation: 'hardDelete', table, id });
         return false;
       }
-      
+
       return true;
     } catch (error) {
       log.error(error as Error, { operation: 'hardDelete', table, id });
@@ -465,34 +492,39 @@ export const SyncService = {
   // Check if error is a network error
   isNetworkError(error: unknown): boolean {
     if (error instanceof Error) {
-      return error.message.includes('fetch') || 
-             error.message.includes('network') ||
-             error.message.includes('Failed to fetch') ||
-             error.name === 'TypeError';
+      return (
+        error.message.includes('fetch') ||
+        error.message.includes('network') ||
+        error.message.includes('Failed to fetch') ||
+        error.name === 'TypeError'
+      );
     }
     return false;
   },
 
   // Queue an operation for later sync
   async queueOperation(
-    table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences',
+    table:
+      | 'exercises'
+      | 'max_records'
+      | 'completed_sets'
+      | 'cycles'
+      | 'scheduled_workouts'
+      | 'user_preferences',
     operation: 'upsert' | 'delete',
     item: unknown
   ) {
     const itemId = (item as { id: string }).id;
-    
+
     // Check if already queued - update existing instead of duplicating
-    const existing = await db.syncQueue
-      .where(['table', 'itemId'])
-      .equals([table, itemId])
-      .first();
-    
+    const existing = await db.syncQueue.where(['table', 'itemId']).equals([table, itemId]).first();
+
     if (existing) {
       // Update existing queue item with latest data
       await db.syncQueue.update(existing.id, {
         data: item,
         operation,
-        createdAt: now()
+        createdAt: now(),
       });
     } else {
       // Add new queue item
@@ -503,15 +535,17 @@ export const SyncService = {
         itemId,
         data: item,
         createdAt: now(),
-        retryCount: 0
+        retryCount: 0,
       });
     }
-    
+
     log.debug(`Queued ${operation} for ${table}:${itemId}`);
   },
 
   // Process queued operations (call when back online)
-  async processQueue(userId: string): Promise<{ processed: number; failed: number; skipped: number }> {
+  async processQueue(
+    userId: string
+  ): Promise<{ processed: number; failed: number; skipped: number }> {
     if (!isSupabaseConfigured() || !this.isOnline()) {
       return { processed: 0, failed: 0, skipped: 0 };
     }
@@ -546,7 +580,10 @@ export const SyncService = {
               remoteItem = localToRemoteCycle(queueItem.data as Cycle, userId);
               break;
             case 'scheduled_workouts':
-              remoteItem = localToRemoteScheduledWorkout(queueItem.data as ScheduledWorkout, userId);
+              remoteItem = localToRemoteScheduledWorkout(
+                queueItem.data as ScheduledWorkout,
+                userId
+              );
               break;
             case 'user_preferences':
               remoteItem = localToRemoteUserPreferences(queueItem.data as UserPreferences, userId);
@@ -566,7 +603,7 @@ export const SyncService = {
         processed++;
       } catch (error) {
         log.error(error as Error, { queueItemId: queueItem.id });
-        
+
         // Increment retry count and calculate exponential backoff
         const newRetryCount = queueItem.retryCount + 1;
         if (newRetryCount >= 5) {
@@ -577,18 +614,22 @@ export const SyncService = {
           // Exponential backoff: 1s, 2s, 4s, 8s (capped at 30s)
           const delayMs = Math.min(1000 * Math.pow(2, newRetryCount - 1), 30000);
           const nextRetryAt = new Date(currentTime.getTime() + delayMs);
-          await db.syncQueue.update(queueItem.id, { 
+          await db.syncQueue.update(queueItem.id, {
             retryCount: newRetryCount,
-            nextRetryAt 
+            nextRetryAt,
           });
-          log.debug(`Queue item ${queueItem.id} will retry in ${delayMs / 1000}s (attempt ${newRetryCount}/5)`);
+          log.debug(
+            `Queue item ${queueItem.id} will retry in ${delayMs / 1000}s (attempt ${newRetryCount}/5)`
+          );
         }
         failed++;
       }
     }
 
     if (processed > 0 || failed > 0) {
-      log.debug(`Queue processed: ${processed} successful, ${failed} failed, ${skipped} waiting for retry`);
+      log.debug(
+        `Queue processed: ${processed} successful, ${failed} failed, ${skipped} waiting for retry`
+      );
     }
     return { processed, failed, skipped };
   },

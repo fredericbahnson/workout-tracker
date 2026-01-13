@@ -19,7 +19,10 @@ let audioContext: AudioContext | null = null;
 
 function getAudioContext(): AudioContext {
   if (!audioContext) {
-    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    audioContext = new (
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    )();
   }
   return audioContext;
 }
@@ -28,23 +31,23 @@ function playStopSound() {
   // Single confirmation tone
   try {
     const ctx = getAudioContext();
-    
+
     if (ctx.state === 'suspended') {
       ctx.resume();
     }
-    
+
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
-    
+
     oscillator.frequency.value = 660; // E5
     oscillator.type = 'sine';
-    
+
     gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    
+
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + 0.3);
   } catch (e) {
@@ -56,13 +59,13 @@ function playNewRecordSound() {
   // Celebratory ascending tones for new record
   try {
     const ctx = getAudioContext();
-    
+
     if (ctx.state === 'suspended') {
       ctx.resume();
     }
-    
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-    
+
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -70,7 +73,7 @@ function playNewRecordSound() {
       gain.connect(ctx.destination);
       osc.frequency.value = freq;
       osc.type = 'sine';
-      const startTime = ctx.currentTime + (i * 0.12);
+      const startTime = ctx.currentTime + i * 0.12;
       gain.gain.setValueAtTime(0.35, startTime);
       gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
       osc.start(startTime);
@@ -81,12 +84,12 @@ function playNewRecordSound() {
   }
 }
 
-export function ExerciseStopwatch({ 
-  exerciseName, 
+export function ExerciseStopwatch({
+  exerciseName,
   previousMax,
-  onRecordMax, 
+  onRecordMax,
   onCancel,
-  onSkipToLog 
+  onSkipToLog,
 }: ExerciseStopwatchProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -109,11 +112,11 @@ export function ExerciseStopwatch({
   const startStopwatch = useCallback(() => {
     // Initialize audio context on user interaction
     getAudioContext();
-    
+
     setIsRunning(true);
     setIsStopped(false);
     startTimeRef.current = Date.now();
-    
+
     intervalRef.current = window.setInterval(() => {
       if (startTimeRef.current) {
         const now = Date.now();
@@ -126,7 +129,7 @@ export function ExerciseStopwatch({
   const pauseStopwatch = useCallback(() => {
     setIsRunning(false);
     elapsedBeforeRef.current = elapsedSeconds;
-    
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -136,7 +139,7 @@ export function ExerciseStopwatch({
   const stopStopwatch = useCallback(() => {
     pauseStopwatch();
     setIsStopped(true);
-    
+
     if (isNewRecord) {
       playNewRecordSound();
     } else {
@@ -168,14 +171,13 @@ export function ExerciseStopwatch({
     <div className="flex flex-col items-center">
       {/* Exercise name and max test indicator */}
       <div className="text-center mb-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-          {exerciseName}
-        </h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{exerciseName}</h3>
         <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
           Max Test
           {previousMax !== undefined && (
             <span className="text-gray-500 dark:text-gray-400 font-normal">
-              {' '}• Previous: {formatTime(previousMax)}
+              {' '}
+              • Previous: {formatTime(previousMax)}
             </span>
           )}
         </p>
@@ -211,14 +213,16 @@ export function ExerciseStopwatch({
             />
           )}
         </svg>
-        
+
         {/* Time display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-5xl font-bold tabular-nums ${
-            isStopped && isNewRecord 
-              ? 'text-green-600 dark:text-green-400' 
-              : 'text-gray-900 dark:text-gray-100'
-          }`}>
+          <span
+            className={`text-5xl font-bold tabular-nums ${
+              isStopped && isNewRecord
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-gray-900 dark:text-gray-100'
+            }`}
+          >
             {formatTime(elapsedSeconds)}
           </span>
           {isStopped && isNewRecord && (
@@ -228,15 +232,16 @@ export function ExerciseStopwatch({
             </div>
           )}
           {!isStopped && previousMax !== undefined && elapsedSeconds > 0 && (
-            <span className={`text-sm mt-2 ${
-              elapsedSeconds >= previousMax 
-                ? 'text-green-600 dark:text-green-400 font-medium' 
-                : 'text-gray-500 dark:text-gray-400'
-            }`}>
-              {elapsedSeconds >= previousMax 
+            <span
+              className={`text-sm mt-2 ${
+                elapsedSeconds >= previousMax
+                  ? 'text-green-600 dark:text-green-400 font-medium'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              {elapsedSeconds >= previousMax
                 ? `+${formatTime(elapsedSeconds - previousMax)} over!`
-                : `${formatTime(previousMax - elapsedSeconds)} to beat`
-              }
+                : `${formatTime(previousMax - elapsedSeconds)} to beat`}
             </span>
           )}
         </div>
@@ -261,7 +266,7 @@ export function ExerciseStopwatch({
               <Pause className="w-8 h-8" />
             </Button>
           )}
-          
+
           {elapsedSeconds > 0 && !isRunning && (
             <Button
               onClick={resetStopwatch}
@@ -274,18 +279,14 @@ export function ExerciseStopwatch({
         </div>
       ) : (
         <div className="flex flex-col gap-3 w-full max-w-xs mb-6">
-          <Button 
-            onClick={handleRecordMax} 
+          <Button
+            onClick={handleRecordMax}
             className={`w-full ${isNewRecord ? 'bg-green-600 hover:bg-green-700' : ''}`}
           >
             <Check className="w-5 h-5 mr-2" />
             Record {formatTime(elapsedSeconds)} as Max
           </Button>
-          <Button
-            onClick={resetStopwatch}
-            variant="secondary"
-            className="w-full"
-          >
+          <Button onClick={resetStopwatch} variant="secondary" className="w-full">
             <RotateCcw className="w-4 h-4 mr-2" />
             Try Again
           </Button>
@@ -294,19 +295,11 @@ export function ExerciseStopwatch({
 
       {/* Bottom actions */}
       <div className="flex gap-3 w-full max-w-xs">
-        <Button
-          onClick={onCancel}
-          variant="ghost"
-          className="flex-1"
-        >
+        <Button onClick={onCancel} variant="ghost" className="flex-1">
           <X className="w-4 h-4 mr-2" />
           Cancel
         </Button>
-        <Button
-          onClick={onSkipToLog}
-          variant="secondary"
-          className="flex-1"
-        >
+        <Button onClick={onSkipToLog} variant="secondary" className="flex-1">
           Enter Time
         </Button>
       </div>

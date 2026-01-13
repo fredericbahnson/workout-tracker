@@ -1,13 +1,22 @@
 /**
  * Sync Transformers
- * 
+ *
  * Functions for converting between local (Dexie) and remote (Supabase) data formats.
- * 
+ *
  * Local format: camelCase, Date objects
  * Remote format: snake_case, ISO string dates
  */
 
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences, WeeklySetGoals, AppMode } from '@/types';
+import type {
+  Exercise,
+  MaxRecord,
+  CompletedSet,
+  Cycle,
+  ScheduledWorkout,
+  UserPreferences,
+  WeeklySetGoals,
+  AppMode,
+} from '@/types';
 import type {
   RemoteExercise,
   RemoteMaxRecord,

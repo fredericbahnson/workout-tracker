@@ -19,9 +19,9 @@ export function PageHeader({ title, subtitle, backTo, action }: PageHeaderProps)
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {backTo && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate(backTo)}
                 className="p-1.5 -ml-1.5"
               >
@@ -29,14 +29,8 @@ export function PageHeader({ title, subtitle, backTo, action }: PageHeaderProps)
               </Button>
             )}
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                {title}
-              </h1>
-              {subtitle && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {subtitle}
-                </p>
-              )}
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h1>
+              {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
             </div>
           </div>
           {action}

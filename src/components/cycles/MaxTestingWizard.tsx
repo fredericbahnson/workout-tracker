@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  Target, 
+import {
+  ArrowRight,
+  ArrowLeft,
+  Target,
   CheckCircle,
   X,
   Plus,
   Minus,
   Dumbbell,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 import { Button, Card, CardContent, Modal } from '@/components/ui';
 import { CycleRepo, ExerciseRepo, MaxRecordRepo, ScheduledWorkoutRepo } from '@/data/repositories';
@@ -20,7 +20,7 @@ import type { Cycle, Exercise, Group, ScheduledSet, ScheduledWorkout, ExerciseTy
 const log = createScopedLogger('MaxTestingWizard');
 
 interface MaxTestingWizardProps {
-  completedCycle?: Cycle;  // Optional - if not provided, user selects all exercises
+  completedCycle?: Cycle; // Optional - if not provided, user selects all exercises
   onComplete: () => void;
   onCancel: () => void;
 }
@@ -56,17 +56,17 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
       setExercises(allExercises);
 
       const toTest: ExerciseToTest[] = [];
-      
+
       if (completedCycle) {
         // Get unique exercises from all groups in the completed cycle
         const exerciseMap = new Map<string, { groupName: string; conditioningBaseReps?: number }>();
-        
+
         for (const group of completedCycle.groups) {
           for (const assignment of group.exerciseAssignments) {
             if (!exerciseMap.has(assignment.exerciseId)) {
               exerciseMap.set(assignment.exerciseId, {
                 groupName: group.name,
-                conditioningBaseReps: assignment.conditioningBaseReps
+                conditioningBaseReps: assignment.conditioningBaseReps,
               });
             }
           }
@@ -94,7 +94,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             conditioningBaseReps: info.conditioningBaseReps,
             newConditioningBaseReps: info.conditioningBaseReps,
             included: true,
-            groupName: info.groupName
+            groupName: info.groupName,
           });
         }
 
@@ -103,8 +103,8 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
         // Find exercises not in the cycle for "add more" option
         const cycleExerciseIds = new Set(exerciseMap.keys());
-        const additional = allExercises.filter(e => 
-          !cycleExerciseIds.has(e.id) && e.mode === 'standard'
+        const additional = allExercises.filter(
+          e => !cycleExerciseIds.has(e.id) && e.mode === 'standard'
         );
         setAdditionalExercises(additional);
       } else {
@@ -124,41 +124,33 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
               isConditioning: false,
               previousMaxReps,
               included: false, // Start with none selected
-              groupName: exercise.type.charAt(0).toUpperCase() + exercise.type.slice(1) // Use type as group
+              groupName: exercise.type.charAt(0).toUpperCase() + exercise.type.slice(1), // Use type as group
             });
           }
         }
 
         // Sort by type/group name
         toTest.sort((a, b) => a.groupName.localeCompare(b.groupName));
-        
+
         // No additional exercises when starting fresh
         setAdditionalExercises([]);
       }
 
       setExercisesToTest(toTest);
     }
-    
+
     loadData();
   }, [completedCycle]);
 
   const toggleExercise = (exerciseId: string) => {
-    setExercisesToTest(prev => 
-      prev.map(e => 
-        e.exerciseId === exerciseId 
-          ? { ...e, included: !e.included }
-          : e
-      )
+    setExercisesToTest(prev =>
+      prev.map(e => (e.exerciseId === exerciseId ? { ...e, included: !e.included } : e))
     );
   };
 
   const updateConditioningReps = (exerciseId: string, reps: number) => {
     setExercisesToTest(prev =>
-      prev.map(e =>
-        e.exerciseId === exerciseId
-          ? { ...e, newConditioningBaseReps: reps }
-          : e
-      )
+      prev.map(e => (e.exerciseId === exerciseId ? { ...e, newConditioningBaseReps: reps } : e))
     );
   };
 
@@ -180,8 +172,8 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
         isConditioning: exercise.mode === 'conditioning',
         previousMaxReps,
         included: true,
-        groupName: 'Added'
-      }
+        groupName: 'Added',
+      },
     ]);
 
     setAdditionalExercises(prev => prev.filter(e => e.id !== exercise.id));
@@ -190,7 +182,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
   const handleNext = () => {
     const hasConditioning = exercisesToTest.some(e => e.included && e.isConditioning);
-    
+
     if (step === 'select_exercises') {
       if (hasConditioning) {
         setStep('conditioning_baselines');
@@ -204,7 +196,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
   const handleBack = () => {
     const hasConditioning = exercisesToTest.some(e => e.included && e.isConditioning);
-    
+
     if (step === 'review') {
       if (hasConditioning) {
         setStep('conditioning_baselines');
@@ -223,7 +215,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
     try {
       const includedExercises = exercisesToTest.filter(e => e.included);
       const standardExercises = includedExercises.filter(e => !e.isConditioning);
-      
+
       if (standardExercises.length === 0) {
         setError('Please select at least one standard exercise to test.');
         setIsCreating(false);
@@ -258,8 +250,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
       }
 
       // Sort types by count descending (distribute largest groups first for better balance)
-      const sortedTypes = [...exercisesByType.entries()]
-        .sort((a, b) => b[1].length - a[1].length);
+      const sortedTypes = [...exercisesByType.entries()].sort((a, b) => b[1].length - a[1].length);
 
       // Distribute exercises: for each exercise, find the day with fewest exercises
       // that doesn't already have this type
@@ -268,14 +259,14 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
           // Find the day with fewest exercises that doesn't have this type yet
           let bestDay = -1;
           let minCount = Infinity;
-          
+
           for (let d = 0; d < dayBuckets.length; d++) {
             if (!dayBuckets[d].typesUsed.has(type) && dayBuckets[d].exercises.length < minCount) {
               bestDay = d;
               minCount = dayBuckets[d].exercises.length;
             }
           }
-          
+
           if (bestDay >= 0) {
             dayBuckets[bestDay].exercises.push(ex);
             dayBuckets[bestDay].typesUsed.add(type);
@@ -297,18 +288,16 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
         const groupId = generateId();
         groupIds.push(groupId);
-        
+
         // Create descriptive name based on day number
-        const dayName = dayExercises.length === 1 
-          ? 'Max Test' 
-          : `Max Test Day ${dayIndex + 1}`;
-        
+        const dayName = dayExercises.length === 1 ? 'Max Test' : `Max Test Day ${dayIndex + 1}`;
+
         groups.push({
           id: groupId,
           name: dayName,
           exerciseAssignments: dayEx.map(ex => ({
-            exerciseId: ex.exerciseId
-          }))
+            exerciseId: ex.exerciseId,
+          })),
         });
       }
 
@@ -366,7 +355,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
               setNumber: setNumber++,
               isWarmup: true,
               isMaxTest: false,
-              previousMaxReps: exerciseInfo.previousMaxReps
+              previousMaxReps: exerciseInfo.previousMaxReps,
             });
           }
 
@@ -379,19 +368,19 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             setNumber: setNumber++,
             isWarmup: false,
             isMaxTest: true,
-            previousMaxReps: exerciseInfo.previousMaxReps ?? undefined
+            previousMaxReps: exerciseInfo.previousMaxReps ?? undefined,
           });
         }
 
         const workoutData: Omit<ScheduledWorkout, 'id'> = {
-          cycleId: savedCycle.id,  // Use the saved cycle's actual ID
+          cycleId: savedCycle.id, // Use the saved cycle's actual ID
           sequenceNumber: dayIndex + 1,
           weekNumber: 1,
           dayInWeek: dayIndex + 1,
           groupId: group.id,
           rfem: 0,
           scheduledSets,
-          status: 'pending'
+          status: 'pending',
         };
 
         const savedWorkout = await ScheduledWorkoutRepo.create(workoutData);
@@ -405,7 +394,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
           const exercise = exercises.find(e => e.id === ex.exerciseId);
           if (exercise) {
             const updated = await ExerciseRepo.update(exercise.id, {
-              defaultConditioningReps: ex.newConditioningBaseReps
+              defaultConditioningReps: ex.newConditioningBaseReps,
             });
             if (updated) {
               await syncItem('exercises', updated);
@@ -448,30 +437,38 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
         <button onClick={onCancel} className="p-2 -ml-2">
           <X className="w-5 h-5 text-gray-500" />
         </button>
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-          Max Testing Setup
-        </h2>
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Max Testing Setup</h2>
         <div className="w-9" /> {/* Spacer for centering */}
       </div>
 
       {/* Progress indicator */}
       <div className="px-4 py-3 bg-gray-100 dark:bg-dark-surface">
         <div className="flex items-center gap-2 text-sm">
-          <div className={`flex items-center gap-1 ${step === 'select_exercises' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}>
-            <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">1</span>
+          <div
+            className={`flex items-center gap-1 ${step === 'select_exercises' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}
+          >
+            <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">
+              1
+            </span>
             Select
           </div>
           <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
           {exercisesToTest.some(e => e.included && e.isConditioning) && (
             <>
-              <div className={`flex items-center gap-1 ${step === 'conditioning_baselines' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}>
-                <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">2</span>
+              <div
+                className={`flex items-center gap-1 ${step === 'conditioning_baselines' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}
+              >
+                <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">
+                  2
+                </span>
                 Conditioning
               </div>
               <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
             </>
           )}
-          <div className={`flex items-center gap-1 ${step === 'review' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}>
+          <div
+            className={`flex items-center gap-1 ${step === 'review' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}
+          >
             <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">
               {exercisesToTest.some(e => e.included && e.isConditioning) ? '3' : '2'}
             </span>
@@ -494,10 +491,9 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             <div className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
               <Target className="w-6 h-6 text-primary-600 dark:text-primary-400 flex-shrink-0" />
               <p className="text-sm text-primary-700 dark:text-primary-300">
-                {completedCycle 
+                {completedCycle
                   ? 'Select the exercises you want to test new maxes for. Standard exercises will have a warmup set at 20% of your previous max, then a max attempt.'
-                  : 'Select the exercises you want to establish or re-test maxes for. Each exercise will have a warmup set (if you have a previous max) followed by a max attempt.'
-                }
+                  : 'Select the exercises you want to establish or re-test maxes for. Each exercise will have a warmup set (if you have a previous max) followed by a max attempt.'}
               </p>
             </div>
 
@@ -505,13 +501,13 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {completedCycle ? `Exercises from ${completedCycle.name}` : 'Available Exercises'}
               </h3>
-              
+
               {exercisesToTest.length === 0 && (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-8">
                   No standard exercises found. Create some exercises first from the Exercises page.
                 </p>
               )}
-              
+
               {exercisesToTest.map(ex => (
                 <button
                   key={ex.exerciseId}
@@ -523,11 +519,13 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${
-                      ex.included 
-                        ? 'bg-primary-500 border-primary-500' 
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}>
+                    <div
+                      className={`w-5 h-5 rounded border flex items-center justify-center ${
+                        ex.included
+                          ? 'bg-primary-500 border-primary-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
                       {ex.included && <CheckCircle className="w-4 h-4 text-white" />}
                     </div>
                     <div className="text-left">
@@ -535,7 +533,10 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                         {ex.exerciseName}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {ex.groupName} • {ex.isConditioning ? 'Conditioning' : `Max: ${ex.previousMaxReps ?? 'Not set'}`}
+                        {ex.groupName} •{' '}
+                        {ex.isConditioning
+                          ? 'Conditioning'
+                          : `Max: ${ex.previousMaxReps ?? 'Not set'}`}
                       </p>
                     </div>
                   </div>
@@ -568,7 +569,8 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
               <Dumbbell className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0" />
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                Update the baseline reps for your conditioning exercises. These will be used as the starting point for your next training cycle.
+                Update the baseline reps for your conditioning exercises. These will be used as the
+                starting point for your next training cycle.
               </p>
             </div>
 
@@ -587,7 +589,12 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => updateConditioningReps(ex.exerciseId, Math.max(1, (ex.newConditioningBaseReps ?? 1) - 1))}
+                          onClick={() =>
+                            updateConditioningReps(
+                              ex.exerciseId,
+                              Math.max(1, (ex.newConditioningBaseReps ?? 1) - 1)
+                            )
+                          }
                           className="p-1 rounded bg-gray-100 dark:bg-gray-800"
                         >
                           <Minus className="w-4 h-4" />
@@ -595,11 +602,18 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                         <input
                           type="number"
                           value={ex.newConditioningBaseReps ?? ''}
-                          onChange={(e) => updateConditioningReps(ex.exerciseId, parseInt(e.target.value) || 1)}
+                          onChange={e =>
+                            updateConditioningReps(ex.exerciseId, parseInt(e.target.value) || 1)
+                          }
                           className="w-16 text-center py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100"
                         />
                         <button
-                          onClick={() => updateConditioningReps(ex.exerciseId, (ex.newConditioningBaseReps ?? 1) + 1)}
+                          onClick={() =>
+                            updateConditioningReps(
+                              ex.exerciseId,
+                              (ex.newConditioningBaseReps ?? 1) + 1
+                            )
+                          }
                           className="p-1 rounded bg-gray-100 dark:bg-gray-800"
                         >
                           <Plus className="w-4 h-4" />
@@ -618,7 +632,9 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
               <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
               <p className="text-sm text-green-700 dark:text-green-300">
-                Ready to create your max testing cycle. You'll test {includedStandard.length} exercise{includedStandard.length !== 1 ? 's' : ''} over {numberOfDays} day{numberOfDays !== 1 ? 's' : ''}.
+                Ready to create your max testing cycle. You'll test {includedStandard.length}{' '}
+                exercise{includedStandard.length !== 1 ? 's' : ''} over {numberOfDays} day
+                {numberOfDays !== 1 ? 's' : ''}.
               </p>
             </div>
 
@@ -632,7 +648,8 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                     <div key={ex.exerciseId} className="flex items-center justify-between text-sm">
                       <span className="text-gray-700 dark:text-gray-300">{ex.exerciseName}</span>
                       <span className="text-gray-500 dark:text-gray-400">
-                        Warmup: {ex.previousMaxReps ? Math.round(ex.previousMaxReps * 0.2) : '—'} → Max attempt
+                        Warmup: {ex.previousMaxReps ? Math.round(ex.previousMaxReps * 0.2) : '—'} →
+                        Max attempt
                       </span>
                     </div>
                   ))}
@@ -648,7 +665,10 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
                   </h3>
                   <div className="space-y-2">
                     {includedConditioning.map(ex => (
-                      <div key={ex.exerciseId} className="flex items-center justify-between text-sm">
+                      <div
+                        key={ex.exerciseId}
+                        className="flex items-center justify-between text-sm"
+                      >
                         <span className="text-gray-700 dark:text-gray-300">{ex.exerciseName}</span>
                         <span className="text-gray-500 dark:text-gray-400">
                           {ex.conditioningBaseReps} → {ex.newConditioningBaseReps} reps
@@ -670,10 +690,10 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             <ArrowLeft className="w-5 h-5" />
           </Button>
         )}
-        
+
         {step === 'review' ? (
-          <Button 
-            onClick={createMaxTestingCycle} 
+          <Button
+            onClick={createMaxTestingCycle}
             disabled={isCreating || includedStandard.length === 0}
             className="flex-1"
           >
@@ -690,8 +710,8 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
             )}
           </Button>
         ) : (
-          <Button 
-            onClick={handleNext} 
+          <Button
+            onClick={handleNext}
             disabled={includedStandard.length === 0 && includedConditioning.length === 0}
             className="flex-1"
           >

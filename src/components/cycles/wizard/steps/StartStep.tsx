@@ -1,6 +1,6 @@
 /**
  * StartStep Component
- * 
+ *
  * Initial step for creating a new cycle.
  * Allows starting fresh or cloning from a previous cycle.
  */
@@ -13,7 +13,7 @@ export function StartStep({
   cloneableCycles,
   onStartFresh,
   onCloneFromCycle,
-  onCancel
+  onCancel,
 }: StartStepProps) {
   return (
     <div className="space-y-6">
@@ -37,9 +37,7 @@ export function StartStep({
               <Plus className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100">
-                Start Fresh
-              </div>
+              <div className="font-semibold text-gray-900 dark:text-gray-100">Start Fresh</div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Create a new cycle from scratch with default settings
               </p>
@@ -77,7 +75,8 @@ export function StartStep({
                         {cycle.name}
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {cycle.numberOfWeeks} weeks • {cycle.workoutDaysPerWeek} days/week • {cycle.groups.length} groups
+                        {cycle.numberOfWeeks} weeks • {cycle.workoutDaysPerWeek} days/week •{' '}
+                        {cycle.groups.length} groups
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                         {new Date(cycle.startDate).toLocaleDateString()}

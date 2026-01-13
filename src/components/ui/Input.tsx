@@ -9,11 +9,11 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 const InputComponent = forwardRef<HTMLInputElement, InputProps>(
   ({ className = '', label, error, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
-    
+
     return (
       <div className="w-full">
         {label && (
-          <label 
+          <label
             htmlFor={inputId}
             className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
           >
@@ -31,9 +31,7 @@ const InputComponent = forwardRef<HTMLInputElement, InputProps>(
           `}
           {...props}
         />
-        {error && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
-        )}
+        {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
     );
   }
@@ -54,15 +52,15 @@ interface NumberInputProps {
   disabled?: boolean;
 }
 
-export const NumberInput = memo(function NumberInput({ 
-  label, 
-  value, 
-  onChange, 
-  min = 0, 
+export const NumberInput = memo(function NumberInput({
+  label,
+  value,
+  onChange,
+  min = 0,
   max,
   className = '',
   placeholder,
-  disabled = false
+  disabled = false,
 }: NumberInputProps) {
   const [displayValue, setDisplayValue] = useState(value.toString());
 
@@ -73,18 +71,18 @@ export const NumberInput = memo(function NumberInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
-    
+
     // Allow empty string during editing
     if (rawValue === '') {
       setDisplayValue('');
       return;
     }
-    
+
     // Only allow digits
     if (!/^\d*$/.test(rawValue)) return;
-    
+
     setDisplayValue(rawValue);
-    
+
     const parsed = parseInt(rawValue, 10);
     if (!isNaN(parsed)) {
       const bounded = max !== undefined ? Math.min(parsed, max) : parsed;
@@ -122,7 +120,7 @@ export const NumberInput = memo(function NumberInput({
 
   return (
     <div className="w-full">
-      <label 
+      <label
         htmlFor={inputId}
         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
       >
@@ -158,11 +156,11 @@ export const TimeDurationInput = memo(function TimeDurationInput({
   value,
   onChange,
   minSeconds = 0,
-  maxSeconds = 3600
+  maxSeconds = 3600,
 }: TimeDurationInputProps) {
   const totalMinutes = Math.floor(value / 60);
   const remainingSeconds = value % 60;
-  
+
   const [minutes, setMinutes] = useState(totalMinutes.toString());
   const [seconds, setSeconds] = useState(remainingSeconds.toString().padStart(2, '0'));
 
@@ -175,7 +173,7 @@ export const TimeDurationInput = memo(function TimeDurationInput({
   }, [value]);
 
   const updateValue = (newMinutes: number, newSeconds: number) => {
-    let totalSeconds = (newMinutes * 60) + newSeconds;
+    let totalSeconds = newMinutes * 60 + newSeconds;
     totalSeconds = Math.max(minSeconds, Math.min(maxSeconds, totalSeconds));
     onChange(totalSeconds);
   };

@@ -1,6 +1,6 @@
 /**
  * Type Definitions
- * 
+ *
  * Re-exports all types from focused modules.
  * Import from '@/types' for convenience.
  */
@@ -19,34 +19,16 @@ export type {
 } from './exercise';
 
 // Cycle types
-export type {
-  CycleType,
-  ProgressionMode,
-  ExerciseAssignment,
-  Group,
-  Cycle,
-} from './cycle';
+export type { CycleType, ProgressionMode, ExerciseAssignment, Group, Cycle } from './cycle';
 
 // Workout types
-export type {
-  ScheduledSet,
-  ScheduledWorkout,
-  CompletedSet,
-} from './workout';
+export type { ScheduledSet, ScheduledWorkout, CompletedSet } from './workout';
 
 // Form types
-export type {
-  ExerciseFormData,
-  QuickLogData,
-} from './forms';
+export type { ExerciseFormData, QuickLogData } from './forms';
 
 // User preferences types
-export type {
-  WeeklySetGoals,
-  TimerSettings,
-  AppMode,
-  UserPreferences,
-} from './preferences';
+export type { WeeklySetGoals, TimerSettings, AppMode, UserPreferences } from './preferences';
 
 export { DEFAULT_USER_PREFERENCES } from './preferences';
 

@@ -59,8 +59,8 @@ vi.mock('../data/db', () => ({
     },
     syncQueue: {
       orderBy: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])) })),
-      where: vi.fn(() => ({ 
-        equals: vi.fn(() => ({ first: vi.fn() })) 
+      where: vi.fn(() => ({
+        equals: vi.fn(() => ({ first: vi.fn() })),
       })),
       add: vi.fn(),
       update: vi.fn(),
@@ -153,7 +153,6 @@ function createMockMaxRecord(overrides: Partial<MaxRecord> = {}): MaxRecord {
   };
 }
 
-
 // Helper to setup Supabase mock responses
 function setupSupabaseMock(responses: Record<string, { data?: unknown; error?: unknown }>) {
   mockSupabaseFrom.mockImplementation((table: string) => ({
@@ -185,7 +184,7 @@ describe('SyncService', () => {
       configurable: true,
     });
     mockIsSupabaseConfigured.mockReturnValue(true);
-    
+
     // Reset sync queue mocks
     mockDbSyncQueue.orderBy.mockReturnValue({
       toArray: vi.fn(() => Promise.resolve([])),
@@ -278,7 +277,7 @@ describe('SyncService', () => {
       mockDbScheduledWorkouts.toArray.mockResolvedValue([]);
 
       const statusChanges: string[] = [];
-      const unsubscribe = SyncService.onStatusChange((status) => {
+      const unsubscribe = SyncService.onStatusChange(status => {
         statusChanges.push(status);
       });
 
@@ -365,7 +364,9 @@ describe('SyncService', () => {
         expect(local.mode).toBe('standard');
         expect(local.measurementType).toBe('reps');
         expect(local.notes).toBe('Test notes');
-        expect(local.customParameters).toEqual([{ name: 'grip', type: 'select', options: ['wide', 'narrow'] }]);
+        expect(local.customParameters).toEqual([
+          { name: 'grip', type: 'select', options: ['wide', 'narrow'] },
+        ]);
         expect(local.defaultConditioningReps).toBe(10);
         expect(local.defaultConditioningTime).toBeUndefined();
         expect(local.weightEnabled).toBe(true);
@@ -507,7 +508,7 @@ describe('SyncService', () => {
   describe('sync queue', () => {
     it('queues operations when offline', async () => {
       mockOnLineValue = false;
-      
+
       mockDbSyncQueue.where.mockReturnValue({
         equals: vi.fn(() => ({
           first: vi.fn(() => Promise.resolve(undefined)), // No existing item
@@ -526,7 +527,7 @@ describe('SyncService', () => {
 
     it('updates existing queue item instead of duplicating', async () => {
       mockOnLineValue = false;
-      
+
       const existingQueueItem = {
         id: 'queue-1',
         table: 'exercises',
@@ -546,10 +547,13 @@ describe('SyncService', () => {
       const exercise = createMockExercise({ id: 'ex-1', name: 'New Name' });
       await SyncService.syncItem('exercises', exercise, 'user-1');
 
-      expect(mockDbSyncQueue.update).toHaveBeenCalledWith('queue-1', expect.objectContaining({
-        data: exercise,
-        operation: 'upsert',
-      }));
+      expect(mockDbSyncQueue.update).toHaveBeenCalledWith(
+        'queue-1',
+        expect.objectContaining({
+          data: exercise,
+          operation: 'upsert',
+        })
+      );
       expect(mockDbSyncQueue.add).not.toHaveBeenCalled();
     });
 
@@ -588,7 +592,7 @@ describe('SyncService', () => {
 
     it('queues delete when offline', async () => {
       mockOnLineValue = false;
-      
+
       mockDbSyncQueue.where.mockReturnValue({
         equals: vi.fn(() => ({
           first: vi.fn(() => Promise.resolve(undefined)),
@@ -733,10 +737,13 @@ describe('SyncService', () => {
 
       expect(result.failed).toBe(1);
       // Should update with incremented retry count and nextRetryAt timestamp
-      expect(mockDbSyncQueue.update).toHaveBeenCalledWith('queue-1', expect.objectContaining({ 
-        retryCount: 3,
-        nextRetryAt: expect.any(Date)
-      }));
+      expect(mockDbSyncQueue.update).toHaveBeenCalledWith(
+        'queue-1',
+        expect.objectContaining({
+          retryCount: 3,
+          nextRetryAt: expect.any(Date),
+        })
+      );
     });
 
     it('removes item from queue after 5 retries', async () => {
@@ -808,9 +815,7 @@ describe('SyncService data integrity', () => {
         mode: 'conditioning',
         measurementType: 'time',
         notes: 'Important notes here',
-        customParameters: [
-          { name: 'difficulty', type: 'select', options: ['easy', 'hard'] }
-        ],
+        customParameters: [{ name: 'difficulty', type: 'select', options: ['easy', 'hard'] }],
         defaultConditioningReps: 15,
         defaultConditioningTime: 60,
         weightEnabled: true,

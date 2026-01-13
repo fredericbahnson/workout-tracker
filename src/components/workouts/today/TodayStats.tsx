@@ -47,36 +47,26 @@ export function TodayStats({
             • {totalSets} sets • {totalReps} reps
           </span>
         </div>
-        {isExpanded ? (
-          <ChevronUp className="w-4 h-4" />
-        ) : (
-          <ChevronDown className="w-4 h-4" />
-        )}
+        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
-      
+
       {isExpanded && (
         <Card className="p-4 mt-3">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {totalSets}
-              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalSets}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Sets Today</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {totalReps}
-              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalReps}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Reps to Date</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {exerciseCount}
-              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{exerciseCount}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Exercises</p>
             </div>
           </div>
-          
+
           {/* Ad-hoc completed sets shown in expanded view */}
           {adHocSets.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
@@ -84,9 +74,9 @@ export function TodayStats({
                 Additional Sets
               </h3>
               {adHocSets.map(set => (
-                <CompletedSetCard 
-                  key={set.id} 
-                  completedSet={set} 
+                <CompletedSetCard
+                  key={set.id}
+                  completedSet={set}
                   exercise={exerciseMap.get(set.exerciseId)}
                 />
               ))}

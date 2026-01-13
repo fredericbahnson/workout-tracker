@@ -1,6 +1,6 @@
 /**
  * Training Constants
- * 
+ *
  * Centralized configuration values for workout calculations.
  * These values are used throughout the scheduler and workout components.
  */
@@ -128,4 +128,22 @@ export const CONDITIONING = {
 /**
  * Type for warmup percentage values.
  */
-export type WarmupPercentage = typeof WARMUP.PERCENTAGES[number];
+export type WarmupPercentage = (typeof WARMUP.PERCENTAGES)[number];
+
+/**
+ * Rest timer configuration.
+ * Default durations for rest timers between sets.
+ */
+export const TIMER = {
+  /**
+   * Default rest duration in seconds for standard workout sets.
+   * 180 seconds = 3 minutes.
+   */
+  DEFAULT_REST_SECONDS: 180,
+
+  /**
+   * Default rest duration in seconds for max testing sets.
+   * 300 seconds = 5 minutes (longer rest for max effort).
+   */
+  DEFAULT_MAX_TEST_REST_SECONDS: 300,
+} as const;

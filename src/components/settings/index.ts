@@ -1,6 +1,6 @@
 /**
  * Settings Components
- * 
+ *
  * Extracted components for the Settings page.
  */
 

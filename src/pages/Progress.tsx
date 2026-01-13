@@ -5,12 +5,19 @@ import { CompletedSetRepo, ExerciseRepo, CycleRepo } from '@/data/repositories';
 import { useAppStore, type RepDisplayMode } from '@/stores/appStore';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, Badge, EmptyState, Button } from '@/components/ui';
-import { EXERCISE_TYPE_LABELS, EXERCISE_TYPES, formatDuration, type ExerciseType, type CompletedSet, type Exercise } from '@/types';
+import {
+  EXERCISE_TYPE_LABELS,
+  EXERCISE_TYPES,
+  formatDuration,
+  type ExerciseType,
+  type CompletedSet,
+  type Exercise,
+} from '@/types';
 
 const TIME_PERIOD_LABELS: Record<RepDisplayMode, string> = {
   week: 'This Week',
   cycle: 'This Cycle',
-  allTime: 'All Time'
+  allTime: 'All Time',
 };
 
 export function ProgressPage() {
@@ -30,9 +37,9 @@ export function ProgressPage() {
   // Filter sets based on time period
   const getFilteredSets = (): CompletedSet[] => {
     if (!allSets) return [];
-    
+
     const now = new Date();
-    
+
     if (repDisplayMode === 'week') {
       const startOfWeek = new Date(now);
       startOfWeek.setDate(now.getDate() - now.getDay());
@@ -61,58 +68,69 @@ export function ProgressPage() {
       return sum + (exercise?.measurementType === 'time' ? s.actualReps : 0);
     }, 0),
     uniqueExercises: new Set(filteredSets.map(s => s.exerciseId)).size,
-    workoutDays: new Set(
-      filteredSets.map(s => new Date(s.completedAt).toDateString())
-    ).size
+    workoutDays: new Set(filteredSets.map(s => new Date(s.completedAt).toDateString())).size,
   };
 
   // Group by type
-  const setsByType: Partial<Record<ExerciseType, number>> = filteredSets.reduce((acc, set) => {
-    const exercise = exerciseMap.get(set.exerciseId);
-    if (exercise) {
-      acc[exercise.type] = (acc[exercise.type] || 0) + 1;
-    }
-    return acc;
-  }, {} as Partial<Record<ExerciseType, number>>);
+  const setsByType: Partial<Record<ExerciseType, number>> = filteredSets.reduce(
+    (acc, set) => {
+      const exercise = exerciseMap.get(set.exerciseId);
+      if (exercise) {
+        acc[exercise.type] = (acc[exercise.type] || 0) + 1;
+      }
+      return acc;
+    },
+    {} as Partial<Record<ExerciseType, number>>
+  );
 
   // Reps by exercise
-  const repsByExercise = filteredSets.reduce((acc, set) => {
-    if (!acc[set.exerciseId]) {
-      acc[set.exerciseId] = { sets: 0, reps: 0 };
-    }
-    acc[set.exerciseId].sets += 1;
-    acc[set.exerciseId].reps += set.actualReps;
-    return acc;
-  }, {} as Record<string, { sets: number; reps: number }>);
+  const repsByExercise = filteredSets.reduce(
+    (acc, set) => {
+      if (!acc[set.exerciseId]) {
+        acc[set.exerciseId] = { sets: 0, reps: 0 };
+      }
+      acc[set.exerciseId].sets += 1;
+      acc[set.exerciseId].reps += set.actualReps;
+      return acc;
+    },
+    {} as Record<string, { sets: number; reps: number }>
+  );
 
   const exerciseStats = Object.entries(repsByExercise)
     .map(([id, data]) => ({
       exercise: exerciseMap.get(id),
       sets: data.sets,
-      reps: data.reps
+      reps: data.reps,
     }))
-    .filter((item): item is { exercise: Exercise; sets: number; reps: number } => item.exercise !== undefined);
+    .filter(
+      (item): item is { exercise: Exercise; sets: number; reps: number } =>
+        item.exercise !== undefined
+    );
 
   // Group exerciseStats by type in standard order
   const exerciseStatsByType = EXERCISE_TYPES.map(type => ({
     type,
     exercises: exerciseStats
       .filter(item => item.exercise.type === type)
-      .sort((a, b) => a.exercise.name.localeCompare(b.exercise.name))
+      .sort((a, b) => a.exercise.name.localeCompare(b.exercise.name)),
   })).filter(group => group.exercises.length > 0);
 
   // Group by day of week (for last 30 days regardless of filter)
-  const recentSets = allSets?.filter(s => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return new Date(s.completedAt) >= thirtyDaysAgo;
-  }) || [];
+  const recentSets =
+    allSets?.filter(s => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return new Date(s.completedAt) >= thirtyDaysAgo;
+    }) || [];
 
-  const setsByDayOfWeek = recentSets.reduce((acc, set) => {
-    const day = new Date(set.completedAt).toLocaleDateString(undefined, { weekday: 'short' });
-    acc[day] = (acc[day] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const setsByDayOfWeek = recentSets.reduce(
+    (acc, set) => {
+      const day = new Date(set.completedAt).toLocaleDateString(undefined, { weekday: 'short' });
+      acc[day] = (acc[day] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   if (!allSets || allSets.length === 0) {
     return (
@@ -131,12 +149,12 @@ export function ProgressPage() {
 
   return (
     <>
-      <PageHeader 
-        title="Progress" 
+      <PageHeader
+        title="Progress"
         action={
           <div className="relative">
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               size="sm"
               onClick={() => setShowPeriodPicker(!showPeriodPicker)}
             >
@@ -145,10 +163,7 @@ export function ProgressPage() {
             </Button>
             {showPeriodPicker && (
               <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setShowPeriodPicker(false)} 
-                />
+                <div className="fixed inset-0 z-10" onClick={() => setShowPeriodPicker(false)} />
                 <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-dark-border py-1 min-w-[140px]">
                   {(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => (
                     <button
@@ -230,7 +245,10 @@ export function ProgressPage() {
                     </h4>
                     <div className="space-y-2">
                       {exercises.map(({ exercise, sets, reps }) => (
-                        <div key={exercise.id} className="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                        <div
+                          key={exercise.id}
+                          className="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                        >
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {exercise.name}
@@ -238,13 +256,11 @@ export function ProgressPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                              {exercise.measurementType === 'time' 
+                              {exercise.measurementType === 'time'
                                 ? formatDuration(reps)
                                 : `${reps.toLocaleString()} reps`}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {sets} sets
-                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{sets} sets</p>
                           </div>
                         </div>
                       ))}
@@ -266,25 +282,30 @@ export function ProgressPage() {
             <div className="space-y-2">
               {EXERCISE_TYPES.map(type => {
                 const count = setsByType[type] || 0;
-                const percentage = stats.totalSets > 0 
-                  ? Math.round((count / stats.totalSets) * 100) 
-                  : 0;
-                
+                const percentage =
+                  stats.totalSets > 0 ? Math.round((count / stats.totalSets) * 100) : 0;
+
                 return (
                   <div key={type} className="flex items-center gap-3">
                     <Badge variant={type} className="w-20 justify-center">
                       {EXERCISE_TYPE_LABELS[type]}
                     </Badge>
                     <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full rounded-full transition-all ${
-                          type === 'push' ? 'bg-rose-500' :
-                          type === 'pull' ? 'bg-blue-500' :
-                          type === 'legs' ? 'bg-emerald-500' :
-                          type === 'core' ? 'bg-amber-500' :
-                          type === 'balance' ? 'bg-purple-500' :
-                          type === 'mobility' ? 'bg-cyan-500' :
-                          'bg-gray-500'
+                          type === 'push'
+                            ? 'bg-rose-500'
+                            : type === 'pull'
+                              ? 'bg-blue-500'
+                              : type === 'legs'
+                                ? 'bg-emerald-500'
+                                : type === 'core'
+                                  ? 'bg-amber-500'
+                                  : type === 'balance'
+                                    ? 'bg-purple-500'
+                                    : type === 'mobility'
+                                      ? 'bg-cyan-500'
+                                      : 'bg-gray-500'
                         }`}
                         style={{ width: `${percentage}%` }}
                       />
@@ -311,21 +332,18 @@ export function ProgressPage() {
                 const count = setsByDayOfWeek[day] || 0;
                 const maxCount = Math.max(...Object.values(setsByDayOfWeek), 1);
                 const intensity = count / maxCount;
-                
+
                 return (
                   <div key={day} className="flex-1 text-center">
-                    <div 
+                    <div
                       className="h-16 rounded-lg mb-1 transition-colors"
-                      style={{ 
-                        backgroundColor: count > 0 
-                          ? `rgba(14, 165, 233, ${0.2 + intensity * 0.8})` 
-                          : undefined 
+                      style={{
+                        backgroundColor:
+                          count > 0 ? `rgba(14, 165, 233, ${0.2 + intensity * 0.8})` : undefined,
                       }}
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">{day}</p>
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {count}
-                    </p>
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{count}</p>
                   </div>
                 );
               })}

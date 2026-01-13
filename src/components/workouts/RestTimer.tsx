@@ -41,29 +41,29 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
       const ctx = audioContextRef.current;
-      
+
       // Resume if suspended (iOS requirement)
       if (ctx.state === 'suspended') {
         ctx.resume();
       }
-      
+
       if (isCompletion) {
         // Play a more distinct completion sound - three ascending tones
         const frequencies = [660, 880, 1100]; // E5, A5, C#6
         frequencies.forEach((freq, i) => {
           const oscillator = ctx.createOscillator();
           const gainNode = ctx.createGain();
-          
+
           oscillator.connect(gainNode);
           gainNode.connect(ctx.destination);
-          
+
           oscillator.frequency.value = freq;
           oscillator.type = 'sine';
-          
-          const startTime = ctx.currentTime + (i * 0.15);
+
+          const startTime = ctx.currentTime + i * 0.15;
           gainNode.gain.setValueAtTime(0.4, startTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
-          
+
           oscillator.start(startTime);
           oscillator.stop(startTime + 0.3);
         });
@@ -71,16 +71,16 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
         // Single beep for countdown
         const oscillator = ctx.createOscillator();
         const gainNode = ctx.createGain();
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(ctx.destination);
-        
+
         oscillator.frequency.value = 880; // A5 note
         oscillator.type = 'sine';
-        
+
         gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-        
+
         oscillator.start(ctx.currentTime);
         oscillator.stop(ctx.currentTime + 0.15);
       }
@@ -97,13 +97,13 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
       document.removeEventListener('touchstart', handleInteraction);
       document.removeEventListener('click', handleInteraction);
     };
-    
+
     document.addEventListener('touchstart', handleInteraction, { once: true });
     document.addEventListener('click', handleInteraction, { once: true });
-    
+
     // Also try to init immediately
     initAudio();
-    
+
     return () => {
       document.removeEventListener('touchstart', handleInteraction);
       document.removeEventListener('click', handleInteraction);
@@ -193,22 +193,22 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
             strokeDashoffset={2 * Math.PI * 88 * (1 - progress)}
             strokeLinecap="round"
             className={`transition-all duration-1000 ${
-              isComplete 
-                ? 'text-green-500' 
-                : secondsRemaining <= 10 
-                  ? 'text-orange-500' 
+              isComplete
+                ? 'text-green-500'
+                : secondsRemaining <= 10
+                  ? 'text-orange-500'
                   : 'text-primary-500'
             }`}
           />
         </svg>
-        
+
         {/* Time display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-gym-2xl ${
-            isComplete 
-              ? 'text-green-600 dark:text-green-400' 
-              : 'text-gray-900 dark:text-gray-100'
-          }`}>
+          <span
+            className={`text-gym-2xl ${
+              isComplete ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
+            }`}
+          >
             {isComplete ? 'Done!' : formatTime(secondsRemaining)}
           </span>
           {!isComplete && (
@@ -231,21 +231,11 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
           <Minus className="w-4 h-4 mr-1" />
           15s
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => addTime(15)}
-          className="text-gray-500"
-        >
+        <Button variant="ghost" size="sm" onClick={() => addTime(15)} className="text-gray-500">
           <Plus className="w-4 h-4 mr-1" />
           15s
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => addTime(30)}
-          className="text-gray-500"
-        >
+        <Button variant="ghost" size="sm" onClick={() => addTime(30)} className="text-gray-500">
           <Plus className="w-4 h-4 mr-1" />
           30s
         </Button>
@@ -254,11 +244,7 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
       {/* Control buttons */}
       <div className="flex items-center gap-3">
         {!isComplete && (
-          <Button
-            variant="secondary"
-            onClick={togglePause}
-            className="w-24"
-          >
+          <Button variant="secondary" onClick={togglePause} className="w-24">
             {isRunning ? (
               <>
                 <Pause className="w-4 h-4 mr-1" />
@@ -272,21 +258,13 @@ export function RestTimer({ initialSeconds, onDismiss, onComplete }: RestTimerPr
             )}
           </Button>
         )}
-        
-        <Button
-          variant="secondary"
-          onClick={reset}
-          className="w-24"
-        >
+
+        <Button variant="secondary" onClick={reset} className="w-24">
           <RotateCcw className="w-4 h-4 mr-1" />
           Reset
         </Button>
-        
-        <Button
-          variant="primary"
-          onClick={onDismiss}
-          className="w-24"
-        >
+
+        <Button variant="primary" onClick={onDismiss} className="w-24">
           <X className="w-4 h-4 mr-1" />
           {isComplete ? 'Done' : 'Skip'}
         </Button>

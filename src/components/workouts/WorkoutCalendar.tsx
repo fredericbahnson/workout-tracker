@@ -33,27 +33,27 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
   const calendarDays = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
+
     // First day of the month
     const firstDay = new Date(year, month, 1);
     // Last day of the month
     const lastDay = new Date(year, month + 1, 0);
-    
+
     // Start from Sunday of the week containing the first day
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - startDate.getDay());
-    
+
     // End on Saturday of the week containing the last day
     const endDate = new Date(lastDay);
     endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-    
+
     const days: Date[] = [];
     const current = new Date(startDate);
     while (current <= endDate) {
       days.push(new Date(current));
       current.setDate(current.getDate() + 1);
     }
-    
+
     return days;
   }, [currentMonth]);
 
@@ -86,9 +86,9 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
     }
   };
 
-  const monthYear = currentMonth.toLocaleDateString(undefined, { 
-    month: 'long', 
-    year: 'numeric' 
+  const monthYear = currentMonth.toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
   });
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -103,14 +103,14 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        
+
         <button
           onClick={goToToday}
           className="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400"
         >
           {monthYear}
         </button>
-        
+
         <button
           onClick={goToNextMonth}
           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
@@ -139,7 +139,7 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
           const hasMultiple = dayWorkouts.length > 1;
           const inCurrentMonth = isCurrentMonth(date);
           const today = isToday(date);
-          
+
           // Check if any workout is ad-hoc
           const hasAdHoc = dayWorkouts.some(w => w.isAdHoc);
           const hasRegular = dayWorkouts.some(w => !w.isAdHoc);
@@ -158,22 +158,24 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
                 ${today ? 'bg-primary-50 dark:bg-primary-900/20' : ''}
               `}
             >
-              <span className={`
+              <span
+                className={`
                 text-sm
                 ${today ? 'font-bold text-primary-600 dark:text-primary-400' : ''}
-              `}>
+              `}
+              >
                 {date.getDate()}
               </span>
-              
+
               {/* Workout indicators */}
               {hasWorkout && (
                 <div className="flex gap-0.5 mt-0.5">
                   {hasRegular && (
-                    <div className={`w-1.5 h-1.5 rounded-full bg-green-500 ${hasMultiple ? '' : ''}`} />
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full bg-green-500 ${hasMultiple ? '' : ''}`}
+                    />
                   )}
-                  {hasAdHoc && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  )}
+                  {hasAdHoc && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
                   {hasMultiple && !hasAdHoc && dayWorkouts.length > 1 && (
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                   )}

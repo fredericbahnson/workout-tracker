@@ -1,6 +1,6 @@
 /**
  * Type Constants
- * 
+ *
  * Constants and labels related to type values.
  */
 
@@ -11,13 +11,13 @@ import type { ProgressionMode } from './cycle';
  * All exercise types in display order.
  */
 export const EXERCISE_TYPES: ExerciseType[] = [
-  'legs', 
-  'push', 
-  'pull', 
-  'core', 
-  'balance', 
-  'mobility', 
-  'other'
+  'legs',
+  'push',
+  'pull',
+  'core',
+  'balance',
+  'mobility',
+  'other',
 ];
 
 /**
@@ -30,7 +30,7 @@ export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   core: 'Core',
   balance: 'Balance',
   mobility: 'Mobility',
-  other: 'Other'
+  other: 'Other',
 };
 
 /**
@@ -39,7 +39,7 @@ export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
 export const PROGRESSION_MODE_LABELS: Record<ProgressionMode, string> = {
   rfem: 'RFEM Training',
   simple: 'Simple Progression',
-  mixed: 'Mixed (Per-Exercise)'
+  mixed: 'Mixed (Per-Exercise)',
 };
 
 /**
@@ -48,5 +48,5 @@ export const PROGRESSION_MODE_LABELS: Record<ProgressionMode, string> = {
 export const PROGRESSION_INTERVAL_LABELS: Record<ProgressionInterval, string> = {
   constant: 'Constant (no change)',
   per_workout: 'Each workout',
-  per_week: 'Each week'
+  per_week: 'Each week',
 };

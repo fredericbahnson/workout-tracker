@@ -1,6 +1,6 @@
 /**
  * MixedExerciseConfig Component
- * 
+ *
  * Inline configuration component for exercises in mixed mode.
  * Allows selecting RFEM or Simple progression mode for each exercise.
  */
@@ -17,7 +17,7 @@ export function MixedExerciseConfig({
   assignment,
   defaults,
   onUpdate,
-  onRemove
+  onRemove,
 }: MixedExerciseConfigProps) {
   const isConditioning = exercise.mode === 'conditioning';
   const isTimeBased = exercise.measurementType === 'time';
@@ -34,19 +34,23 @@ export function MixedExerciseConfig({
 
       if (isTimeBased) {
         if (assignment.conditioningBaseTime === undefined) {
-          updates.conditioningBaseTime = exercise.lastCycleSettings?.simpleBaseTime
-            || exercise.defaultConditioningTime || 30;
+          updates.conditioningBaseTime =
+            exercise.lastCycleSettings?.simpleBaseTime || exercise.defaultConditioningTime || 30;
         }
         if (assignment.conditioningTimeIncrement === undefined) {
-          updates.conditioningTimeIncrement = exercise.lastCycleSettings?.conditioningTimeIncrement || 5;
+          updates.conditioningTimeIncrement =
+            exercise.lastCycleSettings?.conditioningTimeIncrement || 5;
         }
       } else {
         if (assignment.conditioningBaseReps === undefined) {
-          updates.conditioningBaseReps = exercise.lastCycleSettings?.simpleBaseReps
-            || exercise.defaultConditioningReps || defaults.defaultConditioningReps;
+          updates.conditioningBaseReps =
+            exercise.lastCycleSettings?.simpleBaseReps ||
+            exercise.defaultConditioningReps ||
+            defaults.defaultConditioningReps;
         }
         if (assignment.conditioningRepIncrement === undefined) {
-          updates.conditioningRepIncrement = exercise.lastCycleSettings?.conditioningRepIncrement || 1;
+          updates.conditioningRepIncrement =
+            exercise.lastCycleSettings?.conditioningRepIncrement || 1;
         }
       }
 
@@ -58,7 +62,7 @@ export function MixedExerciseConfig({
       const lastSettings = exercise.lastCycleSettings;
       if (lastSettings && assignment.progressionMode === undefined) {
         const updates: Parameters<typeof onUpdate>[0] = {
-          progressionMode: lastSettings.progressionMode
+          progressionMode: lastSettings.progressionMode,
         };
 
         // If last mode was simple, copy the simple settings
@@ -94,9 +98,13 @@ export function MixedExerciseConfig({
               <Badge variant={exercise.type} className="text-2xs">
                 {EXERCISE_TYPE_LABELS[exercise.type]}
               </Badge>
-              <Badge variant="other" className="text-2xs">Cond</Badge>
+              <Badge variant="other" className="text-2xs">
+                Cond
+              </Badge>
             </div>
-            <span className="font-medium text-sm text-gray-900 dark:text-gray-100 pt-0.5">{exercise.name}</span>
+            <span className="font-medium text-sm text-gray-900 dark:text-gray-100 pt-0.5">
+              {exercise.name}
+            </span>
           </div>
           <Button
             variant="ghost"
@@ -114,12 +122,14 @@ export function MixedExerciseConfig({
               Base {isTimeBased ? 'Time (sec)' : 'Reps'}
             </label>
             <NumberInput
-              value={isTimeBased
-                ? (assignment.conditioningBaseTime || 30)
-                : (assignment.conditioningBaseReps || defaults.defaultConditioningReps)}
-              onChange={v => onUpdate(isTimeBased
-                ? { conditioningBaseTime: v }
-                : { conditioningBaseReps: v })}
+              value={
+                isTimeBased
+                  ? assignment.conditioningBaseTime || 30
+                  : assignment.conditioningBaseReps || defaults.defaultConditioningReps
+              }
+              onChange={v =>
+                onUpdate(isTimeBased ? { conditioningBaseTime: v } : { conditioningBaseReps: v })
+              }
               min={1}
               className="w-full"
             />
@@ -129,12 +139,16 @@ export function MixedExerciseConfig({
               Add {isTimeBased ? 'sec' : 'reps'}/week
             </label>
             <NumberInput
-              value={isTimeBased
-                ? (assignment.conditioningTimeIncrement ?? 5)
-                : (assignment.conditioningRepIncrement ?? 1)}
-              onChange={v => onUpdate(isTimeBased
-                ? { conditioningTimeIncrement: v }
-                : { conditioningRepIncrement: v })}
+              value={
+                isTimeBased
+                  ? (assignment.conditioningTimeIncrement ?? 5)
+                  : (assignment.conditioningRepIncrement ?? 1)
+              }
+              onChange={v =>
+                onUpdate(
+                  isTimeBased ? { conditioningTimeIncrement: v } : { conditioningRepIncrement: v }
+                )
+              }
               min={0}
               className="w-full"
             />
@@ -153,9 +167,15 @@ export function MixedExerciseConfig({
             <Badge variant={exercise.type} className="text-2xs">
               {EXERCISE_TYPE_LABELS[exercise.type]}
             </Badge>
-            {isWeighted && <Badge variant="other" className="text-2xs">Wt</Badge>}
+            {isWeighted && (
+              <Badge variant="other" className="text-2xs">
+                Wt
+              </Badge>
+            )}
           </div>
-          <span className="font-medium text-sm text-gray-900 dark:text-gray-100 pt-0.5">{exercise.name}</span>
+          <span className="font-medium text-sm text-gray-900 dark:text-gray-100 pt-0.5">
+            {exercise.name}
+          </span>
         </div>
         <Button
           variant="ghost"
@@ -210,7 +230,7 @@ export function MixedExerciseConfig({
         <input
           type="checkbox"
           checked={assignment.includeWarmup ?? false}
-          onChange={(e) => onUpdate({ includeWarmup: e.target.checked })}
+          onChange={e => onUpdate({ includeWarmup: e.target.checked })}
           className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
         />
         <span className="text-xs text-gray-600 dark:text-gray-400">Include warmup sets</span>

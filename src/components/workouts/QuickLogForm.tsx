@@ -5,25 +5,30 @@ import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from 
 
 interface QuickLogFormProps {
   exercise: Exercise;
-  suggestedReps?: number;  // For time-based, this is seconds
-  suggestedWeight?: number;  // Target weight from simple progression
+  suggestedReps?: number; // For time-based, this is seconds
+  suggestedWeight?: number; // Target weight from simple progression
   isMaxTest?: boolean;
-  onSubmit: (reps: number, notes: string, parameters: Record<string, string | number>, weight?: number) => void;
+  onSubmit: (
+    reps: number,
+    notes: string,
+    parameters: Record<string, string | number>,
+    weight?: number
+  ) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
-export function QuickLogForm({ 
-  exercise, 
+export function QuickLogForm({
+  exercise,
   suggestedReps,
   suggestedWeight,
   isMaxTest,
-  onSubmit, 
-  onCancel, 
-  isLoading 
+  onSubmit,
+  onCancel,
+  isLoading,
 }: QuickLogFormProps) {
   const isTimeBased = exercise.measurementType === 'time';
-  
+
   // For time-based exercises, store as formatted string for easier editing
   const [value, setValue] = useState(() => {
     if (suggestedReps !== undefined) {
@@ -51,7 +56,7 @@ export function QuickLogForm({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    
+
     let numericValue: number;
     if (isTimeBased) {
       const parsed = parseTimeInput(value);
@@ -61,7 +66,7 @@ export function QuickLogForm({
       numericValue = parseInt(value, 10);
       if (isNaN(numericValue) || numericValue < 0) return;
     }
-    
+
     const weightValue = weight ? parseFloat(weight) : undefined;
     onSubmit(numericValue, notes.trim(), parameters, weightValue);
   };
@@ -69,7 +74,7 @@ export function QuickLogForm({
   const updateParameter = (param: CustomParameter, paramValue: string) => {
     setParameters(prev => ({
       ...prev,
-      [param.name]: param.type === 'number' ? (parseFloat(paramValue) || 0) : paramValue
+      [param.name]: param.type === 'number' ? parseFloat(paramValue) || 0 : paramValue,
     }));
   };
 
@@ -97,32 +102,38 @@ export function QuickLogForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="text-center pb-2">
-        <h3 className="font-medium text-gray-900 dark:text-gray-100">
-          {exercise.name}
-        </h3>
+        <h3 className="font-medium text-gray-900 dark:text-gray-100">{exercise.name}</h3>
         {isMaxTest ? (
           <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
             Max Test{suggestedReps ? ` • Previous: ${formatSuggested()}` : ''}
           </p>
         ) : suggestedReps ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Target: {formatSuggested()}
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Target: {formatSuggested()}</p>
         ) : null}
       </div>
 
       <Input
-        label={isTimeBased 
-          ? (isMaxTest ? "Time Achieved" : "Time Completed")
-          : (isMaxTest ? "Reps Achieved" : "Reps Completed")
+        label={
+          isTimeBased
+            ? isMaxTest
+              ? 'Time Achieved'
+              : 'Time Completed'
+            : isMaxTest
+              ? 'Reps Achieved'
+              : 'Reps Completed'
         }
-        type={isTimeBased ? "text" : "number"}
+        type={isTimeBased ? 'text' : 'number'}
         min={isTimeBased ? undefined : 0}
         value={value}
         onChange={e => setValue(e.target.value)}
-        placeholder={isTimeBased 
-          ? (isMaxTest ? "e.g., 0:45, 1:30" : "e.g., 0:30, 1:00") 
-          : (isMaxTest ? "Enter your max" : "Enter reps")
+        placeholder={
+          isTimeBased
+            ? isMaxTest
+              ? 'e.g., 0:45, 1:30'
+              : 'e.g., 0:30, 1:00'
+            : isMaxTest
+              ? 'Enter your max'
+              : 'Enter reps'
         }
         required
         autoFocus
@@ -158,7 +169,7 @@ export function QuickLogForm({
                   onChange={e => updateParameter(param, e.target.value)}
                   options={[
                     { value: '', label: 'Select...' },
-                    ...param.options.map(opt => ({ value: opt, label: opt }))
+                    ...param.options.map(opt => ({ value: opt, label: opt })),
                   ]}
                 />
               ) : (
@@ -199,11 +210,7 @@ export function QuickLogForm({
         <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
           Cancel
         </Button>
-        <Button 
-          type="submit" 
-          disabled={!isValid() || isLoading} 
-          className="flex-1"
-        >
+        <Button type="submit" disabled={!isValid() || isLoading} className="flex-1">
           {isLoading ? 'Logging...' : 'Log Set'}
         </Button>
       </div>

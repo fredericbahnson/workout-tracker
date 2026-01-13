@@ -32,10 +32,7 @@ export function WorkoutActionButtons({
   if (isShowingCompletedWorkout && hasNextWorkout) {
     return (
       <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-        <Button 
-          className="w-full"
-          onClick={onContinue}
-        >
+        <Button className="w-full" onClick={onContinue}>
           Continue to Next Workout
           <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
@@ -47,22 +44,12 @@ export function WorkoutActionButtons({
   if (!isShowingCompletedWorkout) {
     return (
       <div className="p-3 border-t border-gray-100 dark:border-gray-800 flex gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex-1 text-gray-500"
-          onClick={onSkip}
-        >
+        <Button variant="ghost" size="sm" className="flex-1 text-gray-500" onClick={onSkip}>
           <SkipForward className="w-4 h-4 mr-1" />
           Skip Workout
         </Button>
         {hasCompletedSets && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 text-gray-500"
-            onClick={onEndEarly}
-          >
+          <Button variant="ghost" size="sm" className="flex-1 text-gray-500" onClick={onEndEarly}>
             <StopCircle className="w-4 h-4 mr-1" />
             End Early
           </Button>

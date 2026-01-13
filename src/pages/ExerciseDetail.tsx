@@ -14,7 +14,7 @@ export function ExerciseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { repDisplayMode } = useAppStore();
-  
+
   const [showEditForm, setShowEditForm] = useState(false);
   const [showMaxForm, setShowMaxForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -23,22 +23,16 @@ export function ExerciseDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Live queries
-  const exercise = useLiveQuery(() => 
-    id ? ExerciseRepo.getById(id) : undefined, 
-    [id]
-  );
-  
-  const maxRecords = useLiveQuery(() => 
-    id ? MaxRecordRepo.getAllForExercise(id) : [], 
-    [id]
-  );
+  const exercise = useLiveQuery(() => (id ? ExerciseRepo.getById(id) : undefined), [id]);
+
+  const maxRecords = useLiveQuery(() => (id ? MaxRecordRepo.getAllForExercise(id) : []), [id]);
 
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
 
   // Get stats based on display mode
   const stats = useLiveQuery(async () => {
     if (!id) return { totalSets: 0, totalReps: 0 };
-    
+
     if (repDisplayMode === 'week') {
       // This week
       const today = new Date();
@@ -69,11 +63,7 @@ export function ExerciseDetailPage() {
             icon={AlertTriangle}
             title="Exercise not found"
             description="This exercise may have been deleted."
-            action={
-              <Button onClick={() => navigate('/exercises')}>
-                Back to Exercises
-              </Button>
-            }
+            action={<Button onClick={() => navigate('/exercises')}>Back to Exercises</Button>}
           />
         </div>
       </>
@@ -97,10 +87,10 @@ export function ExerciseDetailPage() {
     try {
       const isTimeBased = exercise.measurementType === 'time';
       await MaxRecordRepo.create(
-        id, 
-        isTimeBased ? undefined : maxValue,  // maxReps
-        isTimeBased ? maxValue : undefined,  // maxTime
-        notes, 
+        id,
+        isTimeBased ? undefined : maxValue, // maxReps
+        isTimeBased ? maxValue : undefined, // maxTime
+        notes,
         weight
       );
       setShowMaxForm(false);
@@ -123,7 +113,7 @@ export function ExerciseDetailPage() {
 
   return (
     <>
-      <PageHeader 
+      <PageHeader
         title={exercise.name}
         backTo="/exercises"
         action={
@@ -131,7 +121,12 @@ export function ExerciseDetailPage() {
             <Button variant="ghost" size="sm" onClick={() => setShowEditForm(true)}>
               <Edit className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
@@ -143,33 +138,28 @@ export function ExerciseDetailPage() {
         <Card>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={exercise.type}>
-                {EXERCISE_TYPE_LABELS[exercise.type]}
-              </Badge>
-              {exercise.mode === 'conditioning' && (
-                <Badge variant="outline">Conditioning</Badge>
-              )}
+              <Badge variant={exercise.type}>{EXERCISE_TYPE_LABELS[exercise.type]}</Badge>
+              {exercise.mode === 'conditioning' && <Badge variant="outline">Conditioning</Badge>}
               {exercise.weightEnabled && (
-                <Badge variant="outline" className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
+                <Badge
+                  variant="outline"
+                  className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                >
                   +Weight
                 </Badge>
               )}
             </div>
-            
+
             {exercise.notes && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {exercise.notes}
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{exercise.notes}</p>
             )}
 
             {exercise.customParameters.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">
-                  Custom Parameters
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Custom Parameters</p>
                 <div className="flex flex-wrap gap-1">
                   {exercise.customParameters.map(param => (
-                    <span 
+                    <span
                       key={param.name}
                       className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded"
                     >
@@ -186,8 +176,11 @@ export function ExerciseDetailPage() {
         <Card>
           <CardContent>
             <div className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">
-              {repDisplayMode === 'week' ? 'This Week' : 
-               repDisplayMode === 'cycle' ? 'This Cycle' : 'All Time'}
+              {repDisplayMode === 'week'
+                ? 'This Week'
+                : repDisplayMode === 'cycle'
+                  ? 'This Cycle'
+                  : 'All Time'}
             </div>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
@@ -195,10 +188,11 @@ export function ExerciseDetailPage() {
                   // Conditioning exercise: show Base Reps or Base Time
                   <>
                     <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      {exercise.measurementType === 'time' 
-                        ? (exercise.defaultConditioningTime ? formatTime(exercise.defaultConditioningTime) : '—')
-                        : (exercise.defaultConditioningReps || '—')
-                      }
+                      {exercise.measurementType === 'time'
+                        ? exercise.defaultConditioningTime
+                          ? formatTime(exercise.defaultConditioningTime)
+                          : '—'
+                        : exercise.defaultConditioningReps || '—'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {exercise.measurementType === 'time' ? 'Base Time' : 'Base Reps'}
@@ -209,9 +203,10 @@ export function ExerciseDetailPage() {
                   <>
                     <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                       {exercise.measurementType === 'time'
-                        ? (latestMax?.maxTime ? formatTime(latestMax.maxTime) : '—')
-                        : (latestMax?.maxReps || '—')
-                      }
+                        ? latestMax?.maxTime
+                          ? formatTime(latestMax.maxTime)
+                          : '—'
+                        : latestMax?.maxReps || '—'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Current Max
@@ -232,10 +227,11 @@ export function ExerciseDetailPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {exercise.measurementType === 'time' 
-                    ? (stats?.totalReps ? formatTime(stats.totalReps) : '0:00')
-                    : (stats?.totalReps || 0)
-                  }
+                  {exercise.measurementType === 'time'
+                    ? stats?.totalReps
+                      ? formatTime(stats.totalReps)
+                      : '0:00'
+                    : stats?.totalReps || 0}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {exercise.measurementType === 'time' ? 'Total Time' : 'Total Reps'}
@@ -266,10 +262,11 @@ export function ExerciseDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {exercise.measurementType === 'time' 
-                          ? (record.maxTime ? formatTime(record.maxTime) : '—')
-                          : `${record.maxReps} reps`
-                        }
+                        {exercise.measurementType === 'time'
+                          ? record.maxTime
+                            ? formatTime(record.maxTime)
+                            : '—'
+                          : `${record.maxReps} reps`}
                       </span>
                       {record.weight !== undefined && record.weight > 0 && (
                         <span className="ml-2 text-sm text-purple-600 dark:text-purple-400">
@@ -277,7 +274,9 @@ export function ExerciseDetailPage() {
                         </span>
                       )}
                       {index === 0 && (
-                        <Badge className="ml-2 text-2xs" variant="outline">Current</Badge>
+                        <Badge className="ml-2 text-2xs" variant="outline">
+                          Current
+                        </Badge>
                       )}
                       {record.notes && (
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
@@ -312,11 +311,7 @@ export function ExerciseDetailPage() {
       </Modal>
 
       {/* Record Max Modal */}
-      <Modal
-        isOpen={showMaxForm}
-        onClose={() => setShowMaxForm(false)}
-        title="Record New Max"
-      >
+      <Modal isOpen={showMaxForm} onClose={() => setShowMaxForm(false)} title="Record New Max">
         <MaxRecordForm
           currentMax={latestMax?.maxReps}
           currentMaxWeight={latestMax?.weight}
@@ -336,23 +331,23 @@ export function ExerciseDetailPage() {
       >
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-400">
-            Are you sure you want to delete <strong>{exercise.name}</strong>? 
-            This will also delete all max records for this exercise.
+            Are you sure you want to delete <strong>{exercise.name}</strong>? This will also delete
+            all max records for this exercise.
           </p>
           <p className="text-sm text-amber-600 dark:text-amber-400">
             Note: Historical completed sets will be preserved but may affect reporting.
           </p>
           <div className="flex gap-3">
-            <Button 
-              variant="secondary" 
-              onClick={() => setShowDeleteConfirm(false)} 
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteConfirm(false)}
               className="flex-1"
             >
               Cancel
             </Button>
-            <Button 
-              variant="danger" 
-              onClick={handleDelete} 
+            <Button
+              variant="danger"
+              onClick={handleDelete}
               disabled={isDeleting}
               className="flex-1"
             >

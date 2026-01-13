@@ -1,12 +1,18 @@
 /**
  * User Preferences Repository
- * 
+ *
  * Manages user training preferences that sync across devices.
  * This is a singleton record per user (one preferences record per local database).
  */
 
 import { db, generateId } from '@/data/db';
-import type { UserPreferences, WeeklySetGoals, TimerSettings, ExerciseType, AppMode } from '@/types';
+import type {
+  UserPreferences,
+  WeeklySetGoals,
+  TimerSettings,
+  ExerciseType,
+  AppMode,
+} from '@/types';
 import { DEFAULT_USER_PREFERENCES } from '@/types';
 import { now, normalizeDates } from '@/utils/dateUtils';
 
@@ -35,11 +41,11 @@ export const UserPreferencesRepo = {
    */
   async get(): Promise<UserPreferences> {
     const records = await db.userPreferences.toArray();
-    
+
     if (records.length > 0) {
       return normalizeDates(records[0], DATE_FIELDS);
     }
-    
+
     // Return defaults with a generated ID
     const timestamp = now();
     return {
@@ -65,14 +71,14 @@ export const UserPreferencesRepo = {
   async save(prefs: Partial<UserPreferences>): Promise<UserPreferences> {
     const existing = await this.get();
     const timestamp = now();
-    
+
     const updated: UserPreferences = {
       ...existing,
       ...prefs,
       id: existing.id, // Always keep the same ID
       updatedAt: timestamp,
     };
-    
+
     await db.userPreferences.put(updated);
     return updated;
   },
@@ -157,14 +163,14 @@ export const UserPreferencesRepo = {
   async reset(): Promise<UserPreferences> {
     const timestamp = now();
     const id = getOrCreatePreferencesId();
-    
+
     const defaults: UserPreferences = {
       id,
       ...DEFAULT_USER_PREFERENCES,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    
+
     await db.userPreferences.put(defaults);
     return defaults;
   },

@@ -1,14 +1,10 @@
 /**
  * Cycle Types
- * 
+ *
  * Types related to training cycles, groups, and exercise assignments.
  */
 
-import type { 
-  ExerciseType, 
-  ExerciseProgressionMode, 
-  ProgressionInterval 
-} from './exercise';
+import type { ExerciseType, ExerciseProgressionMode, ProgressionInterval } from './exercise';
 
 /**
  * Type of training cycle.
@@ -30,41 +26,41 @@ export type ProgressionMode = 'rfem' | 'simple' | 'mixed';
  */
 export interface ExerciseAssignment {
   exerciseId: string;
-  
+
   /**
    * Per-exercise progression mode (for mixed cycles only).
    * undefined = defaults to 'rfem' in mixed mode, or follows cycle mode otherwise.
    */
   progressionMode?: ExerciseProgressionMode;
-  
+
   /**
    * Per-exercise warmup toggle (for mixed cycles only).
    * In pure RFEM/simple modes, global cycle value is used.
    */
   includeWarmup?: boolean;
-  
+
   /** Conditioning settings (used in all modes) */
   conditioningBaseReps?: number;
   conditioningBaseTime?: number;
-  
+
   /**
    * Per-exercise conditioning increments (for mixed mode).
    * In pure RFEM/simple modes, global cycle values are used.
    */
   conditioningRepIncrement?: number;
   conditioningTimeIncrement?: number;
-  
+
   /** Simple mode - base values */
   simpleBaseReps?: number;
   simpleBaseTime?: number;
   simpleBaseWeight?: number;
-  
+
   /** Simple mode - rep/time progression */
   simpleRepProgressionType?: ProgressionInterval;
   simpleRepIncrement?: number;
   simpleTimeProgressionType?: ProgressionInterval;
   simpleTimeIncrement?: number;
-  
+
   /** Simple mode - weight progression */
   simpleWeightProgressionType?: ProgressionInterval;
   simpleWeightIncrement?: number;

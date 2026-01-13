@@ -30,7 +30,7 @@ export const CycleRepo = {
       ...data,
       id: generateId(),
       createdAt: timestamp,
-      updatedAt: timestamp
+      updatedAt: timestamp,
     };
     await db.cycles.add(cycle);
     return cycle;
@@ -43,7 +43,7 @@ export const CycleRepo = {
     const updated: Cycle = {
       ...existing,
       ...data,
-      updatedAt: now()
+      updatedAt: now(),
     };
     await db.cycles.put(updated);
     return updated;
@@ -62,7 +62,7 @@ export const CycleRepo = {
   async delete(id: string): Promise<boolean> {
     const existing = await db.cycles.get(id);
     if (!existing) return false;
-    
+
     await db.cycles.delete(id);
     return true;
   },
@@ -72,7 +72,7 @@ export const CycleRepo = {
     return {
       id: generateId(),
       name,
-      exerciseAssignments
+      exerciseAssignments,
     };
-  }
+  },
 };

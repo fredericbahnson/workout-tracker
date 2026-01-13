@@ -25,7 +25,9 @@ export function OfflineIndicator() {
     return (
       <div className="bg-blue-500 text-white px-4 py-2 flex items-center justify-center gap-2 text-sm">
         <CloudOff className="w-4 h-4" />
-        <span>{queueCount} change{queueCount !== 1 ? 's' : ''} pending sync</span>
+        <span>
+          {queueCount} change{queueCount !== 1 ? 's' : ''} pending sync
+        </span>
       </div>
     );
   }

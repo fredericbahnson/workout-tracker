@@ -1,12 +1,21 @@
 /**
  * WorkoutPreviewModal Component
- * 
+ *
  * Displays a preview of an upcoming workout with its scheduled sets.
  */
 
 import { Trash2 } from 'lucide-react';
 import { Modal, Badge, Button } from '@/components/ui';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, formatTime, type ScheduledWorkout, type ScheduledSet, type Exercise, type MaxRecord, type Cycle } from '@/types';
+import {
+  EXERCISE_TYPES,
+  EXERCISE_TYPE_LABELS,
+  formatTime,
+  type ScheduledWorkout,
+  type ScheduledSet,
+  type Exercise,
+  type MaxRecord,
+  type Cycle,
+} from '@/types';
 import { calculateTargetReps } from '@/services/scheduler';
 
 interface WorkoutPreviewModalProps {
@@ -32,7 +41,7 @@ export function WorkoutPreviewModal({
   defaultMaxReps,
   onStartWorkout,
   onDeleteWorkout,
-  onClose
+  onClose,
 }: WorkoutPreviewModalProps) {
   if (!workout || !activeCycle) return null;
 
@@ -45,7 +54,7 @@ export function WorkoutPreviewModal({
         const exA = exerciseMap.get(a.exerciseId);
         const exB = exerciseMap.get(b.exerciseId);
         return (exA?.name || '').localeCompare(exB?.name || '');
-      })
+      }),
   })).filter(group => group.sets.length > 0);
 
   const getTargetReps = (set: ScheduledSet): number | string => {
@@ -69,12 +78,7 @@ export function WorkoutPreviewModal({
   };
 
   return (
-    <Modal
-      isOpen={true}
-      onClose={onClose}
-      title={`Workout #${workout.sequenceNumber}`}
-      size="lg"
-    >
+    <Modal isOpen={true} onClose={onClose} title={`Workout #${workout.sequenceNumber}`} size="lg">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -85,9 +89,7 @@ export function WorkoutPreviewModal({
               Week {workout.weekNumber} • RFEM -{workout.rfem}
             </p>
           </div>
-          <Badge className="text-sm">
-            {workout.scheduledSets.length} sets
-          </Badge>
+          <Badge className="text-sm">{workout.scheduledSets.length} sets</Badge>
         </div>
 
         <div className="space-y-4">

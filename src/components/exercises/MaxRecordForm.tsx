@@ -12,14 +12,14 @@ interface MaxRecordFormProps {
   isLoading?: boolean;
 }
 
-export function MaxRecordForm({ 
-  currentMax, 
+export function MaxRecordForm({
+  currentMax,
   currentMaxWeight,
   weightEnabled,
   defaultWeight,
-  onSubmit, 
-  onCancel, 
-  isLoading 
+  onSubmit,
+  onCancel,
+  isLoading,
 }: MaxRecordFormProps) {
   const [maxReps, setMaxReps] = useState(currentMax?.toString() || '');
   const [notes, setNotes] = useState('');
@@ -63,7 +63,9 @@ export function MaxRecordForm({
       {currentMax && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Current max: {currentMax} reps
-          {currentMaxWeight !== undefined && currentMaxWeight > 0 && ` @ +${currentMaxWeight} ${getWeightUnitLabel()}`}
+          {currentMaxWeight !== undefined &&
+            currentMaxWeight > 0 &&
+            ` @ +${currentMaxWeight} ${getWeightUnitLabel()}`}
         </p>
       )}
 
@@ -91,9 +93,9 @@ export function MaxRecordForm({
         <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
           Cancel
         </Button>
-        <Button 
-          type="submit" 
-          disabled={!maxReps || parseInt(maxReps, 10) < 1 || isLoading} 
+        <Button
+          type="submit"
+          disabled={!maxReps || parseInt(maxReps, 10) < 1 || isLoading}
           className="flex-1"
         >
           {isLoading ? 'Saving...' : 'Record Max'}

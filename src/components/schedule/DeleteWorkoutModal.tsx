@@ -1,6 +1,6 @@
 /**
  * DeleteWorkoutModal Component
- * 
+ *
  * Confirmation modal for deleting a workout.
  */
 
@@ -20,14 +20,10 @@ export function DeleteWorkoutModal({
   groupName,
   isDeleting,
   onConfirm,
-  onClose
+  onClose,
 }: DeleteWorkoutModalProps) {
   return (
-    <Modal
-      isOpen={!!workout}
-      onClose={onClose}
-      title="Delete Workout"
-    >
+    <Modal isOpen={!!workout} onClose={onClose} title="Delete Workout">
       <div className="space-y-4">
         <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
           <p className="text-sm text-red-800 dark:text-red-200">
@@ -41,9 +37,7 @@ export function DeleteWorkoutModal({
 
         {workout && (
           <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <p className="font-medium text-gray-900 dark:text-gray-100">
-              {groupName || 'Workout'}
-            </p>
+            <p className="font-medium text-gray-900 dark:text-gray-100">{groupName || 'Workout'}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Week {workout.weekNumber} • {workout.scheduledSets.length} sets
             </p>
@@ -51,12 +45,7 @@ export function DeleteWorkoutModal({
         )}
 
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={onClose}
-            disabled={isDeleting}
-          >
+          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={isDeleting}>
             Cancel
           </Button>
           <Button

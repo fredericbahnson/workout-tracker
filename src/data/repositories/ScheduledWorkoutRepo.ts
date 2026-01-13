@@ -29,10 +29,7 @@ export const ScheduledWorkoutRepo = {
   },
 
   async getByCycleId(cycleId: string): Promise<ScheduledWorkout[]> {
-    const workouts = await db.scheduledWorkouts
-      .where('cycleId')
-      .equals(cycleId)
-      .toArray();
+    const workouts = await db.scheduledWorkouts.where('cycleId').equals(cycleId).toArray();
     const normalized = normalizeWorkouts(workouts);
     return normalized.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
   },
@@ -41,9 +38,8 @@ export const ScheduledWorkoutRepo = {
     const workouts = await this.getByCycleId(cycleId);
     // Return first workout that's pending OR partial (in progress)
     // Exclude ad-hoc workouts from "next pending" - they're user-initiated
-    const pending = workouts.find(w => 
-      (w.status === 'pending' || w.status === 'partial') && 
-      !w.isAdHoc
+    const pending = workouts.find(
+      w => (w.status === 'pending' || w.status === 'partial') && !w.isAdHoc
     );
     return pending;
   },
@@ -80,7 +76,7 @@ export const ScheduledWorkoutRepo = {
   async create(workout: Omit<ScheduledWorkout, 'id'>): Promise<ScheduledWorkout> {
     const scheduledWorkout: ScheduledWorkout = {
       ...workout,
-      id: generateId()
+      id: generateId(),
     };
     await db.scheduledWorkouts.add(scheduledWorkout);
     return scheduledWorkout;
@@ -89,7 +85,7 @@ export const ScheduledWorkoutRepo = {
   async bulkCreate(workouts: Omit<ScheduledWorkout, 'id'>[]): Promise<ScheduledWorkout[]> {
     const scheduledWorkouts: ScheduledWorkout[] = workouts.map(w => ({
       ...w,
-      id: generateId()
+      id: generateId(),
     }));
     await db.scheduledWorkouts.bulkAdd(scheduledWorkouts);
     return scheduledWorkouts;
@@ -116,7 +112,7 @@ export const ScheduledWorkoutRepo = {
   async delete(id: string): Promise<boolean> {
     const existing = await db.scheduledWorkouts.get(id);
     if (!existing) return false;
-    
+
     await db.scheduledWorkouts.delete(id);
     return true;
   },
@@ -125,11 +121,11 @@ export const ScheduledWorkoutRepo = {
     return db.scheduledWorkouts.where('cycleId').equals(cycleId).delete();
   },
 
-  async getCycleProgress(cycleId: string): Promise<{ 
-    completed: number; 
+  async getCycleProgress(cycleId: string): Promise<{
+    completed: number;
     skipped: number;
     passed: number;
-    total: number 
+    total: number;
   }> {
     const workouts = await this.getByCycleId(cycleId);
     // Only count non-ad-hoc workouts for cycle progress
@@ -148,25 +144,25 @@ export const ScheduledWorkoutRepo = {
    */
   async cleanupDuplicates(): Promise<string[]> {
     const allWorkouts = await db.scheduledWorkouts.toArray();
-    
+
     // Group by cycleId + sequenceNumber
     const groups = new Map<string, typeof allWorkouts>();
     for (const workout of allWorkouts) {
       // Skip ad-hoc workouts - they don't have sequence conflicts
       if (workout.isAdHoc) continue;
-      
+
       const key = `${workout.cycleId}:${workout.sequenceNumber}`;
       if (!groups.has(key)) {
         groups.set(key, []);
       }
       groups.get(key)!.push(workout);
     }
-    
+
     // Find and remove duplicates
     const deletedIds: string[] = [];
     for (const workouts of groups.values()) {
       if (workouts.length <= 1) continue;
-      
+
       // Sort to determine which to keep:
       // 1. Prefer workouts with warmup sets
       // 2. Then prefer completed/partial over pending
@@ -175,14 +171,14 @@ export const ScheduledWorkoutRepo = {
         const aHasWarmups = a.scheduledSets.some(s => s.isWarmup);
         const bHasWarmups = b.scheduledSets.some(s => s.isWarmup);
         if (aHasWarmups !== bHasWarmups) return bHasWarmups ? 1 : -1;
-        
+
         const aCompleted = a.status === 'completed' || a.status === 'partial';
         const bCompleted = b.status === 'completed' || b.status === 'partial';
         if (aCompleted !== bCompleted) return bCompleted ? 1 : -1;
-        
+
         return b.id.localeCompare(a.id); // Newer IDs first
       });
-      
+
       // Keep the first one (best), delete the rest
       const toDelete = workouts.slice(1);
       for (const workout of toDelete) {
@@ -190,7 +186,7 @@ export const ScheduledWorkoutRepo = {
         deletedIds.push(workout.id);
       }
     }
-    
+
     return deletedIds;
-  }
+  },
 };

@@ -1,6 +1,6 @@
 /**
  * useScheduleModals Hook
- * 
+ *
  * Manages all modal/dialog state for the Schedule page.
  * Consolidates multiple useState calls into a single reducer-based hook.
  */
@@ -15,18 +15,18 @@ interface ScheduleModalState {
   cycleTypeSelector: boolean;
   maxTestingWizard: boolean;
   calendarView: boolean;
-  
+
   // Modals with associated data
   previewWorkout: ScheduledWorkout | null;
   historyWorkout: ScheduledWorkout | null;
   workoutToDelete: ScheduledWorkout | null;
-  
+
   // Related state
   historyCompletedSets: CompletedSet[];
   isEditingCycle: boolean;
   wizardProgressionMode: ProgressionMode;
   isDeleting: boolean;
-  
+
   // Calendar state
   selectedCalendarDate: Date | null;
   selectedDateWorkouts: ScheduledWorkout[];
@@ -67,77 +67,80 @@ const initialState: ScheduleModalState = {
   selectedDateWorkouts: [],
 };
 
-function scheduleModalReducer(state: ScheduleModalState, action: ScheduleModalAction): ScheduleModalState {
+function scheduleModalReducer(
+  state: ScheduleModalState,
+  action: ScheduleModalAction
+): ScheduleModalState {
   switch (action.type) {
     case 'OPEN_CYCLE_WIZARD':
-      return { 
-        ...state, 
-        cycleWizard: true, 
+      return {
+        ...state,
+        cycleWizard: true,
         isEditingCycle: action.isEditing ?? false,
         cycleTypeSelector: false,
       };
-      
+
     case 'CLOSE_CYCLE_WIZARD':
       return { ...state, cycleWizard: false, isEditingCycle: false };
-      
+
     case 'OPEN_CYCLE_TYPE_SELECTOR':
       return { ...state, cycleTypeSelector: true };
-      
+
     case 'CLOSE_CYCLE_TYPE_SELECTOR':
       return { ...state, cycleTypeSelector: false };
-      
+
     case 'OPEN_MAX_TESTING_WIZARD':
       return { ...state, maxTestingWizard: true };
-      
+
     case 'CLOSE_MAX_TESTING_WIZARD':
       return { ...state, maxTestingWizard: false };
-      
+
     case 'SET_WIZARD_MODE':
       return { ...state, wizardProgressionMode: action.mode };
-      
+
     case 'SET_PREVIEW_WORKOUT':
       return { ...state, previewWorkout: action.workout };
-      
+
     case 'SET_HISTORY_WORKOUT':
-      return { 
-        ...state, 
-        historyWorkout: action.workout, 
+      return {
+        ...state,
+        historyWorkout: action.workout,
         historyCompletedSets: action.completedSets,
       };
-      
+
     case 'CLOSE_HISTORY':
-      return { 
-        ...state, 
-        historyWorkout: null, 
+      return {
+        ...state,
+        historyWorkout: null,
         historyCompletedSets: [],
       };
-      
+
     case 'SET_WORKOUT_TO_DELETE':
       return { ...state, workoutToDelete: action.workout };
-      
+
     case 'SET_IS_DELETING':
       return { ...state, isDeleting: action.isDeleting };
-      
+
     case 'TOGGLE_CALENDAR_VIEW':
       return { ...state, calendarView: !state.calendarView };
-      
+
     case 'SET_CALENDAR_VIEW':
       return { ...state, calendarView: action.show };
-      
+
     case 'SET_SELECTED_DATE':
-      return { 
-        ...state, 
-        selectedCalendarDate: action.date, 
+      return {
+        ...state,
+        selectedCalendarDate: action.date,
         selectedDateWorkouts: action.workouts,
       };
-      
+
     case 'CLEAR_SELECTED_DATE':
-      return { 
-        ...state, 
-        selectedCalendarDate: null, 
+      return {
+        ...state,
+        selectedCalendarDate: null,
         selectedDateWorkouts: [],
       };
-      
+
     default:
       return state;
   }
@@ -188,9 +191,12 @@ export function useScheduleModals() {
   }, []);
 
   // History workout
-  const openHistoryWorkout = useCallback((workout: ScheduledWorkout, completedSets: CompletedSet[]) => {
-    dispatch({ type: 'SET_HISTORY_WORKOUT', workout, completedSets });
-  }, []);
+  const openHistoryWorkout = useCallback(
+    (workout: ScheduledWorkout, completedSets: CompletedSet[]) => {
+      dispatch({ type: 'SET_HISTORY_WORKOUT', workout, completedSets });
+    },
+    []
+  );
 
   const closeHistoryWorkout = useCallback(() => {
     dispatch({ type: 'CLOSE_HISTORY' });
@@ -248,7 +254,8 @@ export function useScheduleModals() {
     openCycleTypeSelector,
     closeCycleTypeSelector,
     selectCycleType,
-    setWizardProgressionMode: (mode: ProgressionMode) => dispatch({ type: 'SET_WIZARD_MODE', mode }),
+    setWizardProgressionMode: (mode: ProgressionMode) =>
+      dispatch({ type: 'SET_WIZARD_MODE', mode }),
 
     // Max testing
     openMaxTestingWizard,

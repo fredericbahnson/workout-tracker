@@ -1,6 +1,6 @@
 /**
  * App Version
- * 
+ *
  * Imports version from package.json for display in the UI.
  * This ensures the displayed version always matches the package version.
  */

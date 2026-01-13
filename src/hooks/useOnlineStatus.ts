@@ -12,7 +12,7 @@ export function useOnlineStatus() {
         setWasOffline(true);
       }
     };
-    
+
     const handleOffline = () => {
       setIsOnline(false);
       setWasOffline(true);

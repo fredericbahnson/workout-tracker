@@ -1,13 +1,13 @@
 /**
  * Date Utilities
- * 
+ *
  * Consistent date handling throughout the application.
- * 
+ *
  * Problem: IndexedDB can store Date objects, but they may get serialized to strings
  * during certain operations or when data passes through JSON serialization boundaries.
- * This causes inconsistent behavior where sometimes dates are Date objects and 
+ * This causes inconsistent behavior where sometimes dates are Date objects and
  * sometimes they're ISO strings.
- * 
+ *
  * Solution: These utilities ensure we always work with proper Date objects internally
  * and handle the conversion consistently.
  */
@@ -21,11 +21,11 @@ export type DateLike = Date | string;
 /**
  * Ensures a value is a Date object.
  * Handles: Date objects, ISO strings, timestamps, null/undefined.
- * 
+ *
  * @param value - The value to convert to a Date
  * @returns A Date object, or undefined if the input is null/undefined
  * @throws Error if the value cannot be converted to a valid date
- * 
+ *
  * @example
  * toDate(new Date()) // Returns the same Date
  * toDate('2024-01-15T10:30:00.000Z') // Returns new Date('2024-01-15T10:30:00.000Z')
@@ -35,11 +35,11 @@ export function toDate(value: DateLike | null | undefined): Date | undefined {
   if (value === null || value === undefined) {
     return undefined;
   }
-  
+
   if (value instanceof Date) {
     return value;
   }
-  
+
   if (typeof value === 'string') {
     const parsed = new Date(value);
     if (isNaN(parsed.getTime())) {
@@ -47,14 +47,14 @@ export function toDate(value: DateLike | null | undefined): Date | undefined {
     }
     return parsed;
   }
-  
+
   throw new Error(`Cannot convert to date: ${typeof value}`);
 }
 
 /**
  * Ensures a value is a Date object, with a required return type.
  * Throws if the value is null/undefined.
- * 
+ *
  * @param value - The value to convert to a Date
  * @returns A Date object
  * @throws Error if the value is null/undefined or invalid
@@ -70,7 +70,7 @@ export function toDateRequired(value: DateLike | null | undefined): Date {
 /**
  * Safely converts a date to an ISO string.
  * Handles both Date objects and strings (passes through valid ISO strings).
- * 
+ *
  * @param value - The date value to convert
  * @returns An ISO string representation
  */
@@ -83,18 +83,18 @@ export function toISOString(value: DateLike): string {
     }
     return parsed.toISOString();
   }
-  
+
   if (value instanceof Date) {
     return value.toISOString();
   }
-  
+
   throw new Error(`Cannot convert to ISO string: ${typeof value}`);
 }
 
 /**
  * Compares two dates and returns which is more recent.
  * Handles both Date objects and ISO strings.
- * 
+ *
  * @returns negative if a < b, positive if a > b, 0 if equal
  */
 export function compareDates(a: DateLike, b: DateLike): number {
@@ -169,6 +169,21 @@ export function now(): Date {
 }
 
 /**
+ * Checks if a given date is today.
+ * Uses isSameDay internally for consistent date comparison.
+ *
+ * @param value - The date to check (Date object or ISO string)
+ * @returns true if the date is today
+ *
+ * @example
+ * isToday(new Date()) // true
+ * isToday('2024-01-15') // true if today is Jan 15, 2024
+ */
+export function isToday(value: DateLike): boolean {
+  return isSameDay(value, now());
+}
+
+/**
  * Formats a date for display (localized).
  */
 export function formatDate(value: DateLike, options?: Intl.DateTimeFormatOptions): string {
@@ -218,17 +233,14 @@ export function getRelativeTime(value: DateLike): string {
 /**
  * Normalizes a record's date fields from potential strings to Date objects.
  * This is a generic helper for repository use.
- * 
+ *
  * @param record - The record to normalize
  * @param dateFields - Array of field names that should be dates
  * @returns The record with date fields normalized to Date objects
  */
-export function normalizeDates<T>(
-  record: T,
-  dateFields: (keyof T)[]
-): T {
+export function normalizeDates<T>(record: T, dateFields: (keyof T)[]): T {
   const result = { ...record };
-  
+
   for (const field of dateFields) {
     const value = result[field];
     if (value !== null && value !== undefined) {
@@ -236,16 +248,13 @@ export function normalizeDates<T>(
       (result as Record<string, unknown>)[field as string] = toDate(value as unknown as DateLike);
     }
   }
-  
+
   return result;
 }
 
 /**
  * Normalizes an array of records' date fields.
  */
-export function normalizeDatesArray<T>(
-  records: T[],
-  dateFields: (keyof T)[]
-): T[] {
+export function normalizeDatesArray<T>(records: T[], dateFields: (keyof T)[]): T[] {
   return records.map(record => normalizeDates(record, dateFields));
 }

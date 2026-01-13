@@ -40,17 +40,11 @@ export function CycleProgressHeader({
         <div className="flex items-start gap-3">
           <Calendar className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
           <div className="flex-1">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100">
-              No Active Cycle
-            </h3>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">No Active Cycle</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Create a training cycle to get scheduled workouts with RFEM-based rep targets.
             </p>
-            <Button 
-              size="sm" 
-              className="mt-3"
-              onClick={onCreateCycle}
-            >
+            <Button size="sm" className="mt-3" onClick={onCreateCycle}>
               Create Cycle
             </Button>
           </div>
@@ -75,14 +69,11 @@ export function CycleProgressHeader({
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           You've completed {activeCycle.name}
-          {cycleProgress.skipped > 0 
+          {cycleProgress.skipped > 0
             ? ` (${cycleProgress.completed} completed, ${cycleProgress.skipped} skipped)`
-            : ` — all ${cycleProgress.total} workouts done!`
-          }
+            : ` — all ${cycleProgress.total} workouts done!`}
         </p>
-        <Button onClick={onCreateCycle}>
-          Start New Cycle
-        </Button>
+        <Button onClick={onCreateCycle}>Start New Cycle</Button>
       </Card>
     );
   }
@@ -91,9 +82,7 @@ export function CycleProgressHeader({
   if (hasActiveWorkout) {
     return (
       <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-600 dark:text-gray-400">
-          {activeCycle.name}
-        </span>
+        <span className="text-gray-600 dark:text-gray-400">{activeCycle.name}</span>
         <span className="text-gray-500 dark:text-gray-400">
           Workout {cycleProgress.passed + 1} of {cycleProgress.total}
         </span>

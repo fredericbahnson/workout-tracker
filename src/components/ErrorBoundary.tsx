@@ -19,12 +19,12 @@ interface ErrorBoundaryState {
 
 /**
  * Error Boundary component that catches JavaScript errors in child components.
- * 
+ *
  * Usage:
  * - Wrap the entire app to prevent white-screen crashes
  * - Wrap individual pages for graceful page-level recovery
  * - Wrap risky components (those with complex state or external data)
- * 
+ *
  * Levels:
  * - 'app': Full-page error with reload option (use at root)
  * - 'page': Page-level error with navigation option (use around routes)
@@ -46,10 +46,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     this.setState({ errorInfo });
-    
+
     // Log error for debugging
     log.error(error, { componentStack: errorInfo.componentStack });
-    
+
     // Call optional error handler (for future analytics/monitoring)
     this.props.onError?.(error, errorInfo);
   }
@@ -87,21 +87,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       if (level === 'page') {
         return (
-          <PageErrorFallback 
-            error={error} 
-            onRetry={this.handleReset} 
-            onGoHome={this.handleGoHome} 
+          <PageErrorFallback
+            error={error}
+            onRetry={this.handleReset}
+            onGoHome={this.handleGoHome}
           />
         );
       }
 
       // Component level - inline error
-      return (
-        <ComponentErrorFallback 
-          error={error} 
-          onRetry={this.handleReset} 
-        />
-      );
+      return <ComponentErrorFallback error={error} onRetry={this.handleReset} />;
     }
 
     return this.props.children;
@@ -111,13 +106,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 /**
  * Full-screen error fallback for app-level crashes
  */
-function AppErrorFallback({ 
-  error, 
-  onReload 
-}: { 
-  error: Error | null; 
-  onReload: () => void;
-}) {
+function AppErrorFallback({ error, onReload }: { error: Error | null; onReload: () => void }) {
   const handleCopyError = () => {
     const errorDetails = [
       `Error: ${error?.message || 'Unknown error'}`,
@@ -126,7 +115,7 @@ function AppErrorFallback({
       `URL: ${window.location.href}`,
       `User Agent: ${navigator.userAgent}`,
     ].join('\n\n');
-    
+
     navigator.clipboard.writeText(errorDetails).then(() => {
       alert('Error details copied to clipboard. You can paste this when reporting the issue.');
     });
@@ -138,14 +127,14 @@ function AppErrorFallback({
         <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
           <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
         </div>
-        
+
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
           Something went wrong
         </h1>
-        
+
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          The app encountered an unexpected error. Your workout data is safe — 
-          please reload to continue.
+          The app encountered an unexpected error. Your workout data is safe — please reload to
+          continue.
         </p>
 
         {error && import.meta.env.DEV && (
@@ -164,7 +153,7 @@ function AppErrorFallback({
             <RefreshCw className="w-4 h-4" />
             Reload App
           </button>
-          
+
           <button
             onClick={handleCopyError}
             className="inline-flex items-center justify-center gap-2 px-6 py-2 text-gray-600 dark:text-gray-400 text-sm hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
@@ -181,12 +170,12 @@ function AppErrorFallback({
 /**
  * Page-level error fallback with retry and navigation options
  */
-function PageErrorFallback({ 
-  error, 
-  onRetry, 
-  onGoHome 
-}: { 
-  error: Error | null; 
+function PageErrorFallback({
+  error,
+  onRetry,
+  onGoHome,
+}: {
+  error: Error | null;
   onRetry: () => void;
   onGoHome: () => void;
 }) {
@@ -196,11 +185,9 @@ function PageErrorFallback({
         <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
           <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
         </div>
-        
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Page Error
-        </h2>
-        
+
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Page Error</h2>
+
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           This page couldn't load properly. Try again or go back to the home screen.
         </p>
@@ -237,13 +224,7 @@ function PageErrorFallback({
 /**
  * Inline error fallback for component-level errors
  */
-function ComponentErrorFallback({ 
-  error, 
-  onRetry 
-}: { 
-  error: Error | null; 
-  onRetry: () => void;
-}) {
+function ComponentErrorFallback({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
   return (
     <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
       <div className="flex items-start gap-3">

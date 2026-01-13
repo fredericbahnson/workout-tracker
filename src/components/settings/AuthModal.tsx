@@ -1,6 +1,6 @@
 /**
  * AuthModal Component
- * 
+ *
  * Sign in / Sign up modal for Settings page.
  */
 
@@ -32,7 +32,7 @@ export function AuthModal({
   onPasswordChange,
   onModeChange,
   onSubmit,
-  onClose
+  onClose,
 }: AuthModalProps) {
   return (
     <Modal
@@ -51,7 +51,7 @@ export function AuthModal({
           label="Email"
           type="email"
           value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
+          onChange={e => onEmailChange(e.target.value)}
           placeholder="you@example.com"
           autoFocus
         />
@@ -60,7 +60,7 @@ export function AuthModal({
           label="Password"
           type="password"
           value={password}
-          onChange={(e) => onPasswordChange(e.target.value)}
+          onChange={e => onPasswordChange(e.target.value)}
           placeholder={mode === 'signup' ? 'At least 6 characters' : ''}
         />
 
@@ -71,9 +71,12 @@ export function AuthModal({
         >
           <Mail className="w-4 h-4 mr-2" />
           {isSubmitting
-            ? (mode === 'signin' ? 'Signing in...' : 'Creating account...')
-            : (mode === 'signin' ? 'Sign In' : 'Create Account')
-          }
+            ? mode === 'signin'
+              ? 'Signing in...'
+              : 'Creating account...'
+            : mode === 'signin'
+              ? 'Sign In'
+              : 'Create Account'}
         </Button>
 
         <p className="text-center text-sm text-gray-500 dark:text-gray-400">

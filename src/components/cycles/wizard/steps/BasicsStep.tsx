@@ -1,6 +1,6 @@
 /**
  * BasicsStep Component
- * 
+ *
  * Step for configuring basic cycle parameters:
  * name, start date, duration, and workout frequency.
  */
@@ -16,13 +16,11 @@ export function BasicsStep({
   numberOfWeeks,
   setNumberOfWeeks,
   workoutDaysPerWeek,
-  setWorkoutDaysPerWeek
+  setWorkoutDaysPerWeek,
 }: BasicsStepProps) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-        Cycle Basics
-      </h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cycle Basics</h2>
 
       <Input
         label="Cycle Name"

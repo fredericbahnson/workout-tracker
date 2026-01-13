@@ -1,6 +1,6 @@
 /**
  * DeleteAccountModal Component
- * 
+ *
  * Confirmation modal for deleting user account.
  */
 
@@ -17,14 +17,10 @@ export function DeleteAccountModal({
   isOpen,
   isDeleting,
   onConfirm,
-  onClose
+  onClose,
 }: DeleteAccountModalProps) {
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Delete Account"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Delete Account">
       <div className="space-y-4">
         <p className="text-gray-600 dark:text-gray-400">
           Are you sure you want to delete your account? This will permanently remove:
@@ -38,19 +34,10 @@ export function DeleteAccountModal({
           This action cannot be undone.
         </p>
         <div className="flex gap-3">
-          <Button
-            variant="secondary"
-            onClick={onClose}
-            className="flex-1"
-          >
+          <Button variant="secondary" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button
-            variant="danger"
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="flex-1"
-          >
+          <Button variant="danger" onClick={onConfirm} disabled={isDeleting} className="flex-1">
             {isDeleting ? 'Deleting...' : 'Delete Account'}
           </Button>
         </div>

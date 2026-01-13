@@ -8,7 +8,7 @@ import type { Exercise, ScheduledSet } from '@/types';
 interface ScheduledSetData {
   set: ScheduledSet;
   targetReps: number;
-  targetWeight?: number;  // Target weight for simple progression mode
+  targetWeight?: number; // Target weight for simple progression mode
 }
 
 interface ScheduledSetModalProps {
@@ -19,7 +19,12 @@ interface ScheduledSetModalProps {
   /** Whether a log operation is in progress */
   isLogging: boolean;
   /** Called when user completes logging the set */
-  onLogSet: (reps: number, notes: string, parameters: Record<string, string | number>, weight?: number) => Promise<void>;
+  onLogSet: (
+    reps: number,
+    notes: string,
+    parameters: Record<string, string | number>,
+    weight?: number
+  ) => Promise<void>;
   /** Called when modal is closed */
   onClose: () => void;
 }
@@ -27,7 +32,7 @@ interface ScheduledSetModalProps {
 /**
  * Modal for logging a scheduled set. Automatically shows the appropriate UI:
  * - Stopwatch for time-based max tests
- * - Timer for time-based regular sets  
+ * - Timer for time-based regular sets
  * - Quick log form for rep-based sets or manual entry
  */
 export function ScheduledSetModal({
@@ -77,55 +82,53 @@ export function ScheduledSetModal({
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={title}
-    >
-      {scheduledSet && exercise && (() => {
-        // Show stopwatch for time-based max tests
-        if (showStopwatchMode && isTimeBased && isMaxTest) {
+    <Modal isOpen={isOpen} onClose={handleClose} title={title}>
+      {scheduledSet &&
+        exercise &&
+        (() => {
+          // Show stopwatch for time-based max tests
+          if (showStopwatchMode && isTimeBased && isMaxTest) {
+            return (
+              <ExerciseStopwatch
+                exerciseName={exercise.name}
+                previousMax={scheduledSet.set.previousMaxReps}
+                onRecordMax={seconds => {
+                  onLogSet(seconds, '', {}, undefined);
+                }}
+                onCancel={handleClose}
+                onSkipToLog={() => setShowStopwatchMode(false)}
+              />
+            );
+          }
+
+          // Show timer for time-based exercises (non-max test)
+          if (showTimerMode && isTimeBased) {
+            return (
+              <ExerciseTimer
+                targetSeconds={scheduledSet.targetReps}
+                exerciseName={exercise.name}
+                onComplete={actualSeconds => {
+                  onLogSet(actualSeconds, '', {}, undefined);
+                }}
+                onCancel={handleClose}
+                onSkipToLog={() => setShowTimerMode(false)}
+              />
+            );
+          }
+
+          // Show form for manual entry
           return (
-            <ExerciseStopwatch
-              exerciseName={exercise.name}
-              previousMax={scheduledSet.set.previousMaxReps}
-              onRecordMax={(seconds) => {
-                onLogSet(seconds, '', {}, undefined);
-              }}
+            <QuickLogForm
+              exercise={exercise}
+              suggestedReps={scheduledSet.targetReps}
+              suggestedWeight={scheduledSet.targetWeight}
+              isMaxTest={isMaxTest}
+              onSubmit={onLogSet}
               onCancel={handleClose}
-              onSkipToLog={() => setShowStopwatchMode(false)}
+              isLoading={isLogging}
             />
           );
-        }
-        
-        // Show timer for time-based exercises (non-max test)
-        if (showTimerMode && isTimeBased) {
-          return (
-            <ExerciseTimer
-              targetSeconds={scheduledSet.targetReps}
-              exerciseName={exercise.name}
-              onComplete={(actualSeconds) => {
-                onLogSet(actualSeconds, '', {}, undefined);
-              }}
-              onCancel={handleClose}
-              onSkipToLog={() => setShowTimerMode(false)}
-            />
-          );
-        }
-        
-        // Show form for manual entry
-        return (
-          <QuickLogForm
-            exercise={exercise}
-            suggestedReps={scheduledSet.targetReps}
-            suggestedWeight={scheduledSet.targetWeight}
-            isMaxTest={isMaxTest}
-            onSubmit={onLogSet}
-            onCancel={handleClose}
-            isLoading={isLogging}
-          />
-        );
-      })()}
+        })()}
     </Modal>
   );
 }

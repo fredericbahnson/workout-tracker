@@ -1,6 +1,6 @@
 /**
  * Sync Module
- * 
+ *
  * Cloud synchronization between local IndexedDB and Supabase.
  */
 

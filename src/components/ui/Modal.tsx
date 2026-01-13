@@ -26,46 +26,49 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', ariaLabel
   const titleId = useRef(`modal-title-${Math.random().toString(36).slice(2, 9)}`);
 
   // Handle escape key and focus trapping
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-      return;
-    }
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
 
-    // Focus trapping
-    if (e.key === 'Tab' && modalRef.current) {
-      const focusableElements = getFocusableElements(modalRef.current);
-      if (focusableElements.length === 0) return;
+      // Focus trapping
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = getFocusableElements(modalRef.current);
+        if (focusableElements.length === 0) return;
 
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
 
-      if (e.shiftKey) {
-        // Shift + Tab: if on first element, wrap to last
-        if (document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement.focus();
-        }
-      } else {
-        // Tab: if on last element, wrap to first
-        if (document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement.focus();
+        if (e.shiftKey) {
+          // Shift + Tab: if on first element, wrap to last
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          // Tab: if on last element, wrap to first
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
         }
       }
-    }
-  }, [onClose]);
+    },
+    [onClose]
+  );
 
   // Focus management and body scroll lock
   useEffect(() => {
     if (isOpen) {
       // Store the currently focused element to restore later
       previousActiveElement.current = document.activeElement as HTMLElement;
-      
+
       // Add event listener
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
-      
+
       // Focus the modal or first focusable element
       requestAnimationFrame(() => {
         if (modalRef.current) {
@@ -78,13 +81,16 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', ariaLabel
         }
       });
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
-      
+
       // Restore focus to the previously focused element
-      if (previousActiveElement.current && typeof previousActiveElement.current.focus === 'function') {
+      if (
+        previousActiveElement.current &&
+        typeof previousActiveElement.current.focus === 'function'
+      ) {
         previousActiveElement.current.focus();
       }
     };
@@ -96,23 +102,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', ariaLabel
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
-    full: 'max-w-full mx-4'
+    full: 'max-w-full mx-4',
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="presentation"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
-      
+
       {/* Modal */}
-      <div 
+      <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
@@ -131,16 +134,16 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', ariaLabel
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-dark-border">
-            <h2 
+            <h2
               id={titleId.current}
               className="text-lg font-semibold text-gray-900 dark:text-gray-100"
             >
               {title}
             </h2>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onClose} 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
               className="p-1"
               aria-label="Close modal"
             >
@@ -148,11 +151,9 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', ariaLabel
             </Button>
           </div>
         )}
-        
+
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {children}
-        </div>
+        <div className="flex-1 overflow-y-auto p-4">{children}</div>
       </div>
     </div>
   );

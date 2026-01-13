@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { 
-  generateSchedule, 
+import {
+  generateSchedule,
   calculateTargetReps,
   calculateSimpleTargetReps,
   calculateSimpleTargetWeight,
-  validateCycle 
+  validateCycle,
 } from './scheduler';
-import type { 
-  Cycle, 
-  Exercise, 
-  ScheduledWorkout, 
-  ScheduledSet, 
+import type {
+  Cycle,
+  Exercise,
+  ScheduledWorkout,
+  ScheduledSet,
   MaxRecord,
   ProgressionInterval,
-  Group
+  Group,
 } from '@/types';
 
 // ============================================================================
@@ -47,7 +47,7 @@ function createMockGroup(overrides: Partial<Group> = {}): Group {
 function createMockCycle(overrides: Partial<Cycle> = {}): Cycle {
   const groupA = createMockGroup({ id: 'group-a', name: 'Group A' });
   const groupB = createMockGroup({ id: 'group-b', name: 'Group B' });
-  
+
   return {
     id: 'cycle-1',
     name: 'Test Cycle',
@@ -133,25 +133,19 @@ describe('calculateTargetReps', () => {
       const maxRecord = createMockMaxRecord({ maxReps: 20 });
 
       // RFEM 4
-      expect(calculateTargetReps(
-        set, 
-        createMockScheduledWorkout({ rfem: 4 }), 
-        maxRecord, 5, 5, 10
-      )).toBe(16);
+      expect(
+        calculateTargetReps(set, createMockScheduledWorkout({ rfem: 4 }), maxRecord, 5, 5, 10)
+      ).toBe(16);
 
       // RFEM 3
-      expect(calculateTargetReps(
-        set, 
-        createMockScheduledWorkout({ rfem: 3 }), 
-        maxRecord, 5, 5, 10
-      )).toBe(17);
+      expect(
+        calculateTargetReps(set, createMockScheduledWorkout({ rfem: 3 }), maxRecord, 5, 5, 10)
+      ).toBe(17);
 
       // RFEM 2
-      expect(calculateTargetReps(
-        set, 
-        createMockScheduledWorkout({ rfem: 2 }), 
-        maxRecord, 5, 5, 10
-      )).toBe(18);
+      expect(
+        calculateTargetReps(set, createMockScheduledWorkout({ rfem: 2 }), maxRecord, 5, 5, 10)
+      ).toBe(18);
     });
 
     it('uses default max when no max record exists', () => {
@@ -176,9 +170,9 @@ describe('calculateTargetReps', () => {
 
   describe('conditioning exercises (progressive overload)', () => {
     it('calculates target as base plus weekly increment', () => {
-      const set = createMockScheduledSet({ 
-        isConditioning: true, 
-        conditioningBaseReps: 10 
+      const set = createMockScheduledSet({
+        isConditioning: true,
+        conditioningBaseReps: 10,
       });
       const workout = createMockScheduledWorkout({ weekNumber: 1 });
 
@@ -188,44 +182,36 @@ describe('calculateTargetReps', () => {
     });
 
     it('increases target each week', () => {
-      const set = createMockScheduledSet({ 
-        isConditioning: true, 
-        conditioningBaseReps: 10 
+      const set = createMockScheduledSet({
+        isConditioning: true,
+        conditioningBaseReps: 10,
       });
 
       // Week 1
-      expect(calculateTargetReps(
-        set, 
-        createMockScheduledWorkout({ weekNumber: 1 }), 
-        undefined, 5, 5, 10
-      )).toBe(10);
+      expect(
+        calculateTargetReps(set, createMockScheduledWorkout({ weekNumber: 1 }), undefined, 5, 5, 10)
+      ).toBe(10);
 
       // Week 2
-      expect(calculateTargetReps(
-        set, 
-        createMockScheduledWorkout({ weekNumber: 2 }), 
-        undefined, 5, 5, 10
-      )).toBe(15); // 10 + 5
+      expect(
+        calculateTargetReps(set, createMockScheduledWorkout({ weekNumber: 2 }), undefined, 5, 5, 10)
+      ).toBe(15); // 10 + 5
 
       // Week 3
-      expect(calculateTargetReps(
-        set, 
-        createMockScheduledWorkout({ weekNumber: 3 }), 
-        undefined, 5, 5, 10
-      )).toBe(20); // 10 + 10
+      expect(
+        calculateTargetReps(set, createMockScheduledWorkout({ weekNumber: 3 }), undefined, 5, 5, 10)
+      ).toBe(20); // 10 + 10
 
       // Week 4
-      expect(calculateTargetReps(
-        set, 
-        createMockScheduledWorkout({ weekNumber: 4 }), 
-        undefined, 5, 5, 10
-      )).toBe(25); // 10 + 15
+      expect(
+        calculateTargetReps(set, createMockScheduledWorkout({ weekNumber: 4 }), undefined, 5, 5, 10)
+      ).toBe(25); // 10 + 15
     });
 
     it('uses default conditioning base when not specified', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isConditioning: true,
-        conditioningBaseReps: undefined 
+        conditioningBaseReps: undefined,
       });
       const workout = createMockScheduledWorkout({ weekNumber: 2 });
 
@@ -238,9 +224,9 @@ describe('calculateTargetReps', () => {
 
   describe('time-based exercises', () => {
     it('calculates time-based standard exercise targets', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isConditioning: false,
-        measurementType: 'time'
+        measurementType: 'time',
       });
       const workout = createMockScheduledWorkout({ rfem: 2 });
       const maxRecord = createMockMaxRecord({ maxTime: 60, maxReps: undefined });
@@ -252,10 +238,10 @@ describe('calculateTargetReps', () => {
     });
 
     it('calculates time-based conditioning exercise targets', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isConditioning: true,
         measurementType: 'time',
-        conditioningBaseTime: 30
+        conditioningBaseTime: 30,
       });
       const workout = createMockScheduledWorkout({ weekNumber: 3 });
 
@@ -266,9 +252,9 @@ describe('calculateTargetReps', () => {
     });
 
     it('enforces minimum of 5 seconds for time-based', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isConditioning: false,
-        measurementType: 'time'
+        measurementType: 'time',
       });
       const workout = createMockScheduledWorkout({ rfem: 10 });
       const maxRecord = createMockMaxRecord({ maxTime: 20, maxReps: undefined });
@@ -292,9 +278,9 @@ describe('calculateTargetReps', () => {
     });
 
     it('calculates warmup as 20% of previous max', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isWarmup: true,
-        previousMaxReps: 20
+        previousMaxReps: 20,
       });
       const workout = createMockScheduledWorkout();
 
@@ -314,9 +300,9 @@ describe('calculateTargetReps', () => {
     });
 
     it('enforces minimum 1 rep for warmup', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isWarmup: true,
-        previousMaxReps: 3 // 20% would be 0.6
+        previousMaxReps: 3, // 20% would be 0.6
       });
       const workout = createMockScheduledWorkout();
 
@@ -326,10 +312,10 @@ describe('calculateTargetReps', () => {
     });
 
     it('enforces minimum 5 seconds for time-based warmup', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isWarmup: true,
         measurementType: 'time',
-        previousMaxTime: 15 // 20% would be 3
+        previousMaxTime: 15, // 20% would be 3
       });
       const workout = createMockScheduledWorkout();
 
@@ -341,9 +327,9 @@ describe('calculateTargetReps', () => {
 
   describe('normal warmup sets (with warmupPercentage)', () => {
     it('calculates 20% warmup as percentage of working set target', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isWarmup: true,
-        warmupPercentage: 20
+        warmupPercentage: 20,
       });
       const workout = createMockScheduledWorkout({ rfem: 3 });
       const maxRecord = createMockMaxRecord({ maxReps: 20 });
@@ -356,9 +342,9 @@ describe('calculateTargetReps', () => {
     });
 
     it('calculates 40% warmup as percentage of working set target', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isWarmup: true,
-        warmupPercentage: 40
+        warmupPercentage: 40,
       });
       const workout = createMockScheduledWorkout({ rfem: 3 });
       const maxRecord = createMockMaxRecord({ maxReps: 20 });
@@ -373,7 +359,7 @@ describe('calculateTargetReps', () => {
     it('uses different percentages for two warmup sets correctly', () => {
       const maxRecord = createMockMaxRecord({ maxReps: 20 });
       const workout = createMockScheduledWorkout({ rfem: 5 });
-      
+
       // Working target = 20 - 5 = 15
       const warmup20 = createMockScheduledSet({ isWarmup: true, warmupPercentage: 20 });
       const warmup40 = createMockScheduledSet({ isWarmup: true, warmupPercentage: 40 });
@@ -388,9 +374,9 @@ describe('calculateTargetReps', () => {
     });
 
     it('uses default max when no max record exists', () => {
-      const set = createMockScheduledSet({ 
+      const set = createMockScheduledSet({
         isWarmup: true,
-        warmupPercentage: 20
+        warmupPercentage: 20,
       });
       const workout = createMockScheduledWorkout({ rfem: 2 });
 
@@ -412,21 +398,30 @@ describe('generateSchedule', () => {
 
   beforeEach(() => {
     exercises = new Map();
-    exercises.set('push-1', createMockExercise({ 
-      id: 'push-1', 
-      name: 'Push-ups', 
-      type: 'push' 
-    }));
-    exercises.set('pull-1', createMockExercise({ 
-      id: 'pull-1', 
-      name: 'Pull-ups', 
-      type: 'pull' 
-    }));
-    exercises.set('legs-1', createMockExercise({ 
-      id: 'legs-1', 
-      name: 'Squats', 
-      type: 'legs' 
-    }));
+    exercises.set(
+      'push-1',
+      createMockExercise({
+        id: 'push-1',
+        name: 'Push-ups',
+        type: 'push',
+      })
+    );
+    exercises.set(
+      'pull-1',
+      createMockExercise({
+        id: 'pull-1',
+        name: 'Pull-ups',
+        type: 'pull',
+      })
+    );
+    exercises.set(
+      'legs-1',
+      createMockExercise({
+        id: 'legs-1',
+        name: 'Squats',
+        type: 'legs',
+      })
+    );
   });
 
   it('generates correct number of workouts', () => {
@@ -434,10 +429,10 @@ describe('generateSchedule', () => {
       numberOfWeeks: 4,
       workoutDaysPerWeek: 3,
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }]
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
       ],
       groupRotation: ['group-a'],
     });
@@ -452,10 +447,10 @@ describe('generateSchedule', () => {
       numberOfWeeks: 2,
       workoutDaysPerWeek: 3,
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }]
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
       ],
       groupRotation: ['group-a'],
     });
@@ -470,10 +465,10 @@ describe('generateSchedule', () => {
       numberOfWeeks: 2,
       workoutDaysPerWeek: 3,
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }]
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
       ],
       groupRotation: ['group-a'],
     });
@@ -484,15 +479,15 @@ describe('generateSchedule', () => {
   });
 
   it('rotates groups correctly', () => {
-    const groupA = createMockGroup({ 
-      id: 'group-a', 
+    const groupA = createMockGroup({
+      id: 'group-a',
       name: 'A',
-      exerciseAssignments: [{ exerciseId: 'push-1' }]
+      exerciseAssignments: [{ exerciseId: 'push-1' }],
     });
-    const groupB = createMockGroup({ 
-      id: 'group-b', 
+    const groupB = createMockGroup({
+      id: 'group-b',
       name: 'B',
-      exerciseAssignments: [{ exerciseId: 'pull-1' }]
+      exerciseAssignments: [{ exerciseId: 'pull-1' }],
     });
 
     const cycle = createMockCycle({
@@ -504,9 +499,7 @@ describe('generateSchedule', () => {
 
     const workouts = generateSchedule({ cycle, exercises });
 
-    expect(workouts.map(w => w.groupId)).toEqual([
-      'group-a', 'group-b', 'group-a', 'group-b'
-    ]);
+    expect(workouts.map(w => w.groupId)).toEqual(['group-a', 'group-b', 'group-a', 'group-b']);
   });
 
   it('rotates RFEM correctly', () => {
@@ -515,10 +508,10 @@ describe('generateSchedule', () => {
       workoutDaysPerWeek: 5,
       rfemRotation: [4, 3, 2],
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }]
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
       ],
       groupRotation: ['group-a'],
     });
@@ -533,18 +526,18 @@ describe('generateSchedule', () => {
       numberOfWeeks: 2,
       workoutDaysPerWeek: 3,
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }]
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
       ],
       groupRotation: ['group-a'],
     });
 
-    const workouts = generateSchedule({ 
-      cycle, 
-      exercises, 
-      startFromWorkout: 4 
+    const workouts = generateSchedule({
+      cycle,
+      exercises,
+      startFromWorkout: 4,
     });
 
     expect(workouts.length).toBe(3); // Only workouts 4, 5, 6
@@ -552,13 +545,13 @@ describe('generateSchedule', () => {
   });
 
   it('distributes sets across eligible days', () => {
-    const groupA = createMockGroup({ 
+    const groupA = createMockGroup({
       id: 'group-a',
-      exerciseAssignments: [{ exerciseId: 'push-1' }] // Only push
+      exerciseAssignments: [{ exerciseId: 'push-1' }], // Only push
     });
-    const groupB = createMockGroup({ 
+    const groupB = createMockGroup({
       id: 'group-b',
-      exerciseAssignments: [{ exerciseId: 'pull-1' }] // Only pull
+      exerciseAssignments: [{ exerciseId: 'pull-1' }], // Only pull
     });
 
     const cycle = createMockCycle({
@@ -593,10 +586,10 @@ describe('generateSchedule', () => {
       numberOfWeeks: 1,
       workoutDaysPerWeek: 2,
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }]
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
       ],
       groupRotation: ['group-a'],
     });
@@ -615,12 +608,15 @@ describe('generateSchedule', () => {
   });
 
   it('handles conditioning exercises correctly', () => {
-    exercises.set('cond-1', createMockExercise({ 
-      id: 'cond-1', 
-      name: 'Burpees', 
-      type: 'core',
-      mode: 'conditioning'
-    }));
+    exercises.set(
+      'cond-1',
+      createMockExercise({
+        id: 'cond-1',
+        name: 'Burpees',
+        type: 'core',
+        mode: 'conditioning',
+      })
+    );
 
     const cycle = createMockCycle({
       numberOfWeeks: 1,
@@ -635,13 +631,15 @@ describe('generateSchedule', () => {
         other: 0,
       },
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ 
-            exerciseId: 'cond-1',
-            conditioningBaseReps: 15
-          }]
-        })
+          exerciseAssignments: [
+            {
+              exerciseId: 'cond-1',
+              conditioningBaseReps: 15,
+            },
+          ],
+        }),
       ],
       groupRotation: ['group-a'],
     });
@@ -663,14 +661,20 @@ describe('validateCycle', () => {
 
   beforeEach(() => {
     exercises = new Map();
-    exercises.set('push-1', createMockExercise({ 
-      id: 'push-1', 
-      type: 'push' 
-    }));
-    exercises.set('pull-1', createMockExercise({ 
-      id: 'pull-1', 
-      type: 'pull' 
-    }));
+    exercises.set(
+      'push-1',
+      createMockExercise({
+        id: 'push-1',
+        type: 'push',
+      })
+    );
+    exercises.set(
+      'pull-1',
+      createMockExercise({
+        id: 'pull-1',
+        type: 'pull',
+      })
+    );
   });
 
   it('validates a correct cycle configuration', () => {
@@ -690,10 +694,10 @@ describe('validateCycle', () => {
         other: 0,
       },
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }, { exerciseId: 'pull-1' }]
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }, { exerciseId: 'pull-1' }],
+        }),
       ],
       groupRotation: ['group-a'],
       rfemRotation: [4, 3, 2],
@@ -764,12 +768,14 @@ describe('validateCycle', () => {
     };
 
     // Too few
-    expect(validateCycle({ ...baseCycle, workoutDaysPerWeek: 0 }, exercises).errors)
-      .toContain('Workout days per week must be between 1 and 7');
+    expect(validateCycle({ ...baseCycle, workoutDaysPerWeek: 0 }, exercises).errors).toContain(
+      'Workout days per week must be between 1 and 7'
+    );
 
     // Too many
-    expect(validateCycle({ ...baseCycle, workoutDaysPerWeek: 8 }, exercises).errors)
-      .toContain('Workout days per week must be between 1 and 7');
+    expect(validateCycle({ ...baseCycle, workoutDaysPerWeek: 8 }, exercises).errors).toContain(
+      'Workout days per week must be between 1 and 7'
+    );
 
     // Valid
     expect(validateCycle({ ...baseCycle, workoutDaysPerWeek: 5 }, exercises).valid).toBe(true);
@@ -888,20 +894,20 @@ describe('validateCycle', () => {
       startDate: new Date(),
       numberOfWeeks: 4,
       workoutDaysPerWeek: 3,
-      weeklySetGoals: { 
-        push: 0, 
+      weeklySetGoals: {
+        push: 0,
         pull: 10, // Goal for pull
-        legs: 0, 
-        core: 0, 
-        balance: 0, 
-        mobility: 0, 
-        other: 0 
+        legs: 0,
+        core: 0,
+        balance: 0,
+        mobility: 0,
+        other: 0,
       },
       groups: [
-        createMockGroup({ 
+        createMockGroup({
           id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1' }] // Only push
-        })
+          exerciseAssignments: [{ exerciseId: 'push-1' }], // Only push
+        }),
       ],
       groupRotation: ['group-a'],
       rfemRotation: [4],
@@ -968,25 +974,19 @@ describe('calculateSimpleTargetReps', () => {
       const cycle = createSimpleCycle();
 
       // First workout: 10 + 0*2 = 10
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ sequenceNumber: 1 }),
-        cycle
-      )).toBe(10);
+      expect(
+        calculateSimpleTargetReps(set, createMockScheduledWorkout({ sequenceNumber: 1 }), cycle)
+      ).toBe(10);
 
       // Second workout: 10 + 1*2 = 12
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ sequenceNumber: 2 }),
-        cycle
-      )).toBe(12);
+      expect(
+        calculateSimpleTargetReps(set, createMockScheduledWorkout({ sequenceNumber: 2 }), cycle)
+      ).toBe(12);
 
       // Fifth workout: 10 + 4*2 = 18
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ sequenceNumber: 5 }),
-        cycle
-      )).toBe(18);
+      expect(
+        calculateSimpleTargetReps(set, createMockScheduledWorkout({ sequenceNumber: 5 }), cycle)
+      ).toBe(18);
     });
 
     it('handles fractional increments', () => {
@@ -998,11 +998,9 @@ describe('calculateSimpleTargetReps', () => {
       const cycle = createSimpleCycle();
 
       // Third workout: 10 + 2*0.5 = 11
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ sequenceNumber: 3 }),
-        cycle
-      )).toBe(11);
+      expect(
+        calculateSimpleTargetReps(set, createMockScheduledWorkout({ sequenceNumber: 3 }), cycle)
+      ).toBe(11);
     });
   });
 
@@ -1016,32 +1014,40 @@ describe('calculateSimpleTargetReps', () => {
       const cycle = createSimpleCycle();
 
       // Week 1: 8 + 0*1 = 8
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ weekNumber: 1, sequenceNumber: 1 }),
-        cycle
-      )).toBe(8);
+      expect(
+        calculateSimpleTargetReps(
+          set,
+          createMockScheduledWorkout({ weekNumber: 1, sequenceNumber: 1 }),
+          cycle
+        )
+      ).toBe(8);
 
       // Week 1 day 3: still 8
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ weekNumber: 1, sequenceNumber: 3 }),
-        cycle
-      )).toBe(8);
+      expect(
+        calculateSimpleTargetReps(
+          set,
+          createMockScheduledWorkout({ weekNumber: 1, sequenceNumber: 3 }),
+          cycle
+        )
+      ).toBe(8);
 
       // Week 2: 8 + 1*1 = 9
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ weekNumber: 2, sequenceNumber: 4 }),
-        cycle
-      )).toBe(9);
+      expect(
+        calculateSimpleTargetReps(
+          set,
+          createMockScheduledWorkout({ weekNumber: 2, sequenceNumber: 4 }),
+          cycle
+        )
+      ).toBe(9);
 
       // Week 4: 8 + 3*1 = 11
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ weekNumber: 4, sequenceNumber: 10 }),
-        cycle
-      )).toBe(11);
+      expect(
+        calculateSimpleTargetReps(
+          set,
+          createMockScheduledWorkout({ weekNumber: 4, sequenceNumber: 10 }),
+          cycle
+        )
+      ).toBe(11);
     });
   });
 
@@ -1056,18 +1062,14 @@ describe('calculateSimpleTargetReps', () => {
       const cycle = createSimpleCycle();
 
       // Week 1: 30 seconds
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ weekNumber: 1 }),
-        cycle
-      )).toBe(30);
+      expect(
+        calculateSimpleTargetReps(set, createMockScheduledWorkout({ weekNumber: 1 }), cycle)
+      ).toBe(30);
 
       // Week 3: 30 + 2*5 = 40 seconds
-      expect(calculateSimpleTargetReps(
-        set,
-        createMockScheduledWorkout({ weekNumber: 3 }),
-        cycle
-      )).toBe(40);
+      expect(
+        calculateSimpleTargetReps(set, createMockScheduledWorkout({ weekNumber: 3 }), cycle)
+      ).toBe(40);
     });
 
     it('uses default time when base not set', () => {
@@ -1155,18 +1157,14 @@ describe('calculateSimpleTargetWeight', () => {
     const cycle = createSimpleCycle();
 
     // First workout: 20
-    expect(calculateSimpleTargetWeight(
-      set,
-      createMockScheduledWorkout({ sequenceNumber: 1 }),
-      cycle
-    )).toBe(20);
+    expect(
+      calculateSimpleTargetWeight(set, createMockScheduledWorkout({ sequenceNumber: 1 }), cycle)
+    ).toBe(20);
 
     // Fifth workout: 20 + 4*2.5 = 30
-    expect(calculateSimpleTargetWeight(
-      set,
-      createMockScheduledWorkout({ sequenceNumber: 5 }),
-      cycle
-    )).toBe(30);
+    expect(
+      calculateSimpleTargetWeight(set, createMockScheduledWorkout({ sequenceNumber: 5 }), cycle)
+    ).toBe(30);
   });
 
   it('progresses weight per week', () => {
@@ -1178,18 +1176,14 @@ describe('calculateSimpleTargetWeight', () => {
     const cycle = createSimpleCycle();
 
     // Week 1: 45
-    expect(calculateSimpleTargetWeight(
-      set,
-      createMockScheduledWorkout({ weekNumber: 1 }),
-      cycle
-    )).toBe(45);
+    expect(
+      calculateSimpleTargetWeight(set, createMockScheduledWorkout({ weekNumber: 1 }), cycle)
+    ).toBe(45);
 
     // Week 4: 45 + 3*5 = 60
-    expect(calculateSimpleTargetWeight(
-      set,
-      createMockScheduledWorkout({ weekNumber: 4 }),
-      cycle
-    )).toBe(60);
+    expect(
+      calculateSimpleTargetWeight(set, createMockScheduledWorkout({ weekNumber: 4 }), cycle)
+    ).toBe(60);
   });
 });
 
@@ -1255,7 +1249,10 @@ describe('validateCycle simple mode', () => {
   beforeEach(() => {
     exercises = new Map([
       ['push-1', createMockExercise({ id: 'push-1', name: 'Push-ups', type: 'push' })],
-      ['time-1', createMockExercise({ id: 'time-1', name: 'Plank', type: 'core', measurementType: 'time' })],
+      [
+        'time-1',
+        createMockExercise({ id: 'time-1', name: 'Plank', type: 'core', measurementType: 'time' }),
+      ],
     ]);
   });
 
@@ -1268,15 +1265,19 @@ describe('validateCycle simple mode', () => {
       numberOfWeeks: 4,
       workoutDaysPerWeek: 3,
       weeklySetGoals: { push: 10, pull: 0, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
-      groups: [createMockGroup({ 
-        id: 'group-a',
-        exerciseAssignments: [{ 
-          exerciseId: 'push-1',
-          simpleBaseReps: 10,
-          simpleRepProgressionType: 'per_week' as ProgressionInterval,
-          simpleRepIncrement: 1,
-        }]
-      })],
+      groups: [
+        createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [
+            {
+              exerciseId: 'push-1',
+              simpleBaseReps: 10,
+              simpleRepProgressionType: 'per_week' as ProgressionInterval,
+              simpleRepIncrement: 1,
+            },
+          ],
+        }),
+      ],
       groupRotation: ['group-a'],
       rfemRotation: [], // Empty - should be OK for simple mode
       conditioningWeeklyRepIncrement: 5,
@@ -1319,13 +1320,15 @@ describe('validateCycle simple mode', () => {
       numberOfWeeks: 4,
       workoutDaysPerWeek: 3,
       weeklySetGoals: { push: 10, pull: 0, legs: 0, core: 10, balance: 0, mobility: 0, other: 0 },
-      groups: [createMockGroup({ 
-        id: 'group-a',
-        exerciseAssignments: [
-          { exerciseId: 'push-1' }, // Missing simpleBaseReps
-          { exerciseId: 'time-1' }, // Missing simpleBaseTime
-        ]
-      })],
+      groups: [
+        createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [
+            { exerciseId: 'push-1' }, // Missing simpleBaseReps
+            { exerciseId: 'time-1' }, // Missing simpleBaseTime
+          ],
+        }),
+      ],
       groupRotation: ['group-a'],
       rfemRotation: [],
       conditioningWeeklyRepIncrement: 5,
@@ -1354,19 +1357,21 @@ describe('Mixed Mode', () => {
 
       const cycle = createMockCycle({
         progressionMode: 'mixed',
-        groups: [createMockGroup({
-          id: 'group-a',
-          exerciseAssignments: [
-            { exerciseId: 'rfem-ex', progressionMode: 'rfem' },
-            { 
-              exerciseId: 'simple-ex', 
-              progressionMode: 'simple',
-              simpleBaseReps: 12,
-              simpleRepProgressionType: 'per_week',
-              simpleRepIncrement: 2,
-            },
-          ],
-        })],
+        groups: [
+          createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { exerciseId: 'rfem-ex', progressionMode: 'rfem' },
+              {
+                exerciseId: 'simple-ex',
+                progressionMode: 'simple',
+                simpleBaseReps: 12,
+                simpleRepProgressionType: 'per_week',
+                simpleRepIncrement: 2,
+              },
+            ],
+          }),
+        ],
         groupRotation: ['group-a'],
         weeklySetGoals: { push: 0, pull: 5, legs: 5, core: 0, balance: 0, mobility: 0, other: 0 },
       });
@@ -1387,26 +1392,31 @@ describe('Mixed Mode', () => {
 
     it('denormalizes per-exercise conditioning increments in mixed mode', () => {
       const exercises = new Map<string, Exercise>([
-        ['cond-ex', createMockExercise({ 
-          id: 'cond-ex', 
-          name: 'Hollow Body', 
-          type: 'core',
-          mode: 'conditioning',
-        })],
+        [
+          'cond-ex',
+          createMockExercise({
+            id: 'cond-ex',
+            name: 'Hollow Body',
+            type: 'core',
+            mode: 'conditioning',
+          }),
+        ],
       ]);
 
       const cycle = createMockCycle({
         progressionMode: 'mixed',
-        groups: [createMockGroup({
-          id: 'group-a',
-          exerciseAssignments: [
-            { 
-              exerciseId: 'cond-ex',
-              conditioningBaseReps: 20,
-              conditioningRepIncrement: 3, // Per-exercise increment
-            },
-          ],
-        })],
+        groups: [
+          createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              {
+                exerciseId: 'cond-ex',
+                conditioningBaseReps: 20,
+                conditioningRepIncrement: 3, // Per-exercise increment
+              },
+            ],
+          }),
+        ],
         groupRotation: ['group-a'],
         weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
         conditioningWeeklyRepIncrement: 5, // Cycle-level default
@@ -1473,7 +1483,7 @@ describe('Mixed Mode', () => {
       });
 
       const workout = createMockScheduledWorkout({ weekNumber: 3 });
-      const cycle = createMockCycle({ 
+      const cycle = createMockCycle({
         progressionMode: 'mixed',
         conditioningWeeklyRepIncrement: 5, // Cycle-level (should be ignored)
       });
@@ -1493,7 +1503,7 @@ describe('Mixed Mode', () => {
       });
 
       const workout = createMockScheduledWorkout({ weekNumber: 3 });
-      const cycle = createMockCycle({ 
+      const cycle = createMockCycle({
         progressionMode: 'mixed',
         conditioningWeeklyRepIncrement: 5,
       });
@@ -1514,7 +1524,7 @@ describe('Mixed Mode', () => {
       });
 
       const workout = createMockScheduledWorkout({ weekNumber: 2 });
-      const cycle = createMockCycle({ 
+      const cycle = createMockCycle({
         progressionMode: 'mixed',
         conditioningWeeklyTimeIncrement: 5,
       });
@@ -1540,10 +1550,12 @@ describe('Mixed Mode', () => {
         numberOfWeeks: 4,
         workoutDaysPerWeek: 3,
         weeklySetGoals: { push: 10, pull: 0, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
-        groups: [createMockGroup({ 
-          id: 'group-a',
-          exerciseAssignments: [{ exerciseId: 'push-1', progressionMode: 'rfem' }]
-        })],
+        groups: [
+          createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [{ exerciseId: 'push-1', progressionMode: 'rfem' }],
+          }),
+        ],
         groupRotation: ['group-a'],
         rfemRotation: [], // Empty - should fail
         conditioningWeeklyRepIncrement: 5,
@@ -1568,12 +1580,14 @@ describe('Mixed Mode', () => {
         numberOfWeeks: 4,
         workoutDaysPerWeek: 3,
         weeklySetGoals: { push: 0, pull: 0, legs: 10, core: 0, balance: 0, mobility: 0, other: 0 },
-        groups: [createMockGroup({ 
-          id: 'group-a',
-          exerciseAssignments: [
-            { exerciseId: 'simple-ex', progressionMode: 'simple' }, // Missing simpleBaseReps
-          ]
-        })],
+        groups: [
+          createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { exerciseId: 'simple-ex', progressionMode: 'simple' }, // Missing simpleBaseReps
+            ],
+          }),
+        ],
         groupRotation: ['group-a'],
         rfemRotation: [5, 4, 3],
         conditioningWeeklyRepIncrement: 5,
@@ -1599,12 +1613,14 @@ describe('Mixed Mode', () => {
         numberOfWeeks: 4,
         workoutDaysPerWeek: 3,
         weeklySetGoals: { push: 0, pull: 10, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
-        groups: [createMockGroup({ 
-          id: 'group-a',
-          exerciseAssignments: [
-            { exerciseId: 'rfem-ex', progressionMode: 'rfem' }, // No simpleBaseReps needed
-          ]
-        })],
+        groups: [
+          createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { exerciseId: 'rfem-ex', progressionMode: 'rfem' }, // No simpleBaseReps needed
+            ],
+          }),
+        ],
         groupRotation: ['group-a'],
         rfemRotation: [5, 4, 3],
         conditioningWeeklyRepIncrement: 5,
@@ -1631,19 +1647,21 @@ describe('Mixed Mode', () => {
         numberOfWeeks: 4,
         workoutDaysPerWeek: 3,
         weeklySetGoals: { push: 0, pull: 10, legs: 10, core: 0, balance: 0, mobility: 0, other: 0 },
-        groups: [createMockGroup({ 
-          id: 'group-a',
-          exerciseAssignments: [
-            { exerciseId: 'rfem-ex', progressionMode: 'rfem' },
-            { 
-              exerciseId: 'simple-ex', 
-              progressionMode: 'simple',
-              simpleBaseReps: 12,
-              simpleRepProgressionType: 'per_week',
-              simpleRepIncrement: 2,
-            },
-          ]
-        })],
+        groups: [
+          createMockGroup({
+            id: 'group-a',
+            exerciseAssignments: [
+              { exerciseId: 'rfem-ex', progressionMode: 'rfem' },
+              {
+                exerciseId: 'simple-ex',
+                progressionMode: 'simple',
+                simpleBaseReps: 12,
+                simpleRepProgressionType: 'per_week',
+                simpleRepIncrement: 2,
+              },
+            ],
+          }),
+        ],
         groupRotation: ['group-a'],
         rfemRotation: [5, 4, 3],
         conditioningWeeklyRepIncrement: 5,
@@ -1660,31 +1678,31 @@ describe('Mixed Mode', () => {
   // ============================================================================
   // Warmup Sets Tests
   // ============================================================================
-  
+
   describe('Warmup Sets', () => {
     describe('RFEM mode warmups', () => {
       it('generates 2 warmup sets when includeWarmupSets is enabled', () => {
-        const exercises = new Map([
-          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
-        ]);
+        const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'ex-1' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'ex-1' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const workout = workouts[0];
-        
+
         const warmupSets = workout.scheduledSets.filter(s => s.isWarmup);
         const workingSets = workout.scheduledSets.filter(s => !s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(2);
         expect(warmupSets[0].warmupPercentage).toBe(20);
         expect(warmupSets[1].warmupPercentage).toBe(40);
@@ -1692,62 +1710,65 @@ describe('Mixed Mode', () => {
       });
 
       it('warmup sets are numbered 1 and 2, working sets start from 3', () => {
-        const exercises = new Map([
-          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
-        ]);
+        const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'ex-1' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'ex-1' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const sets = workouts[0].scheduledSets.filter(s => s.exerciseId === 'ex-1');
-        
+
         const warmupSets = sets.filter(s => s.isWarmup);
         const workingSets = sets.filter(s => !s.isWarmup);
-        
+
         expect(warmupSets[0].setNumber).toBe(1);
         expect(warmupSets[1].setNumber).toBe(2);
         expect(workingSets[0].setNumber).toBe(3);
       });
 
       it('does not generate warmups when includeWarmupSets is false', () => {
-        const exercises = new Map([
-          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
-        ]);
+        const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: false,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'ex-1' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'ex-1' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(0);
       });
 
       it('does not generate warmups for conditioning exercises', () => {
         const exercises = new Map([
-          ['cond-ex', createMockExercise({ 
-            id: 'cond-ex', 
-            type: 'core', 
-            mode: 'conditioning',
-            defaultConditioningReps: 30
-          })],
+          [
+            'cond-ex',
+            createMockExercise({
+              id: 'cond-ex',
+              type: 'core',
+              mode: 'conditioning',
+              defaultConditioningReps: 30,
+            }),
+          ],
         ]);
 
         const cycle = createMockCycle({
@@ -1755,26 +1776,31 @@ describe('Mixed Mode', () => {
           workoutDaysPerWeek: 1,
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'cond-ex', conditioningBaseReps: 30 }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'cond-ex', conditioningBaseReps: 30 }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(0);
       });
 
       it('skips time-based exercise warmups when includeTimedWarmups is false', () => {
         const exercises = new Map([
-          ['time-ex', createMockExercise({ 
-            id: 'time-ex', 
-            type: 'balance',
-            measurementType: 'time'
-          })],
+          [
+            'time-ex',
+            createMockExercise({
+              id: 'time-ex',
+              type: 'balance',
+              measurementType: 'time',
+            }),
+          ],
         ]);
 
         const cycle = createMockCycle({
@@ -1783,26 +1809,31 @@ describe('Mixed Mode', () => {
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 0, balance: 5, mobility: 0, other: 0 },
           includeWarmupSets: true,
           includeTimedWarmups: false,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'time-ex' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'time-ex' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(0);
       });
 
       it('generates time-based warmups when includeTimedWarmups is true', () => {
         const exercises = new Map([
-          ['time-ex', createMockExercise({ 
-            id: 'time-ex', 
-            type: 'balance',
-            measurementType: 'time'
-          })],
+          [
+            'time-ex',
+            createMockExercise({
+              id: 'time-ex',
+              type: 'balance',
+              measurementType: 'time',
+            }),
+          ],
         ]);
 
         const cycle = createMockCycle({
@@ -1811,16 +1842,18 @@ describe('Mixed Mode', () => {
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 0, balance: 5, mobility: 0, other: 0 },
           includeWarmupSets: true,
           includeTimedWarmups: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'time-ex' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'time-ex' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(2);
         expect(warmupSets[0].measurementType).toBe('time');
       });
@@ -1828,60 +1861,64 @@ describe('Mixed Mode', () => {
 
     describe('Simple mode warmups', () => {
       it('generates warmup sets for simple progression exercises', () => {
-        const exercises = new Map([
-          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
-        ]);
+        const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
           progressionMode: 'simple',
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ 
-              exerciseId: 'ex-1',
-              simpleBaseReps: 10,
-              simpleRepProgressionType: 'per_week',
-              simpleRepIncrement: 2,
-            }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [
+                {
+                  exerciseId: 'ex-1',
+                  simpleBaseReps: 10,
+                  simpleRepProgressionType: 'per_week',
+                  simpleRepIncrement: 2,
+                },
+              ],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(2);
         expect(warmupSets[0].warmupPercentage).toBe(20);
         expect(warmupSets[1].warmupPercentage).toBe(40);
       });
 
       it('stores simple mode values in warmup sets for rep progression', () => {
-        const exercises = new Map([
-          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
-        ]);
+        const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
           progressionMode: 'simple',
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ 
-              exerciseId: 'ex-1',
-              simpleBaseReps: 10,
-              simpleRepProgressionType: 'per_week',
-              simpleRepIncrement: 2,
-            }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [
+                {
+                  exerciseId: 'ex-1',
+                  simpleBaseReps: 10,
+                  simpleRepProgressionType: 'per_week',
+                  simpleRepIncrement: 2,
+                },
+              ],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         // 20% of 10 = 2 (ceil), 40% of 10 = 4 (ceil)
         expect(warmupSets[0].simpleBaseReps).toBe(2);
         expect(warmupSets[1].simpleBaseReps).toBe(4);
@@ -1900,20 +1937,22 @@ describe('Mixed Mode', () => {
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           weeklySetGoals: { push: 5, pull: 5, legs: 0, core: 0, balance: 0, mobility: 0, other: 0 },
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [
-              { exerciseId: 'warmup-ex', progressionMode: 'rfem', includeWarmup: true },
-              { exerciseId: 'no-warmup-ex', progressionMode: 'rfem', includeWarmup: false },
-            ],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [
+                { exerciseId: 'warmup-ex', progressionMode: 'rfem', includeWarmup: true },
+                { exerciseId: 'no-warmup-ex', progressionMode: 'rfem', includeWarmup: false },
+              ],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
         const warmupExerciseIds = warmupSets.map(s => s.exerciseId);
-        
+
         expect(warmupSets).toHaveLength(2); // Only 2 warmups for warmup-ex
         expect(warmupExerciseIds.every(id => id === 'warmup-ex')).toBe(true);
       });
@@ -1927,18 +1966,20 @@ describe('Mixed Mode', () => {
           progressionMode: 'mixed',
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [
-              { exerciseId: 'rfem-ex', progressionMode: 'rfem', includeWarmup: true },
-            ],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [
+                { exerciseId: 'rfem-ex', progressionMode: 'rfem', includeWarmup: true },
+              ],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(2);
         expect(warmupSets[0].progressionMode).toBe('rfem');
       });
@@ -1953,25 +1994,27 @@ describe('Mixed Mode', () => {
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           weeklySetGoals: { push: 0, pull: 0, legs: 5, core: 0, balance: 0, mobility: 0, other: 0 },
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [
-              { 
-                exerciseId: 'simple-ex', 
-                progressionMode: 'simple', 
-                includeWarmup: true,
-                simpleBaseReps: 15,
-                simpleRepProgressionType: 'per_week',
-                simpleRepIncrement: 2,
-              },
-            ],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [
+                {
+                  exerciseId: 'simple-ex',
+                  progressionMode: 'simple',
+                  includeWarmup: true,
+                  simpleBaseReps: 15,
+                  simpleRepProgressionType: 'per_week',
+                  simpleRepIncrement: 2,
+                },
+              ],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(2);
         expect(warmupSets[0].progressionMode).toBe('simple');
       });
@@ -1988,25 +2031,24 @@ describe('Mixed Mode', () => {
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [
-              { exerciseId: 'ex-1' },
-              { exerciseId: 'ex-2' },
-            ],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'ex-1' }, { exerciseId: 'ex-2' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         // 2 warmup sets per exercise = 4 total
         expect(warmupSets).toHaveLength(4);
-        
+
         const ex1Warmups = warmupSets.filter(s => s.exerciseId === 'ex-1');
         const ex2Warmups = warmupSets.filter(s => s.exerciseId === 'ex-2');
-        
+
         expect(ex1Warmups).toHaveLength(2);
         expect(ex2Warmups).toHaveLength(2);
       });
@@ -2015,12 +2057,15 @@ describe('Mixed Mode', () => {
     describe('Warmup edge cases', () => {
       it('handles weighted exercise warmups with weight progression', () => {
         const exercises = new Map([
-          ['weighted-ex', createMockExercise({ 
-            id: 'weighted-ex', 
-            type: 'push', 
-            isWeighted: true,
-            defaultWeight: 20
-          })],
+          [
+            'weighted-ex',
+            createMockExercise({
+              id: 'weighted-ex',
+              type: 'push',
+              isWeighted: true,
+              defaultWeight: 20,
+            }),
+          ],
         ]);
 
         const cycle = createMockCycle({
@@ -2028,25 +2073,29 @@ describe('Mixed Mode', () => {
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{
-              exerciseId: 'weighted-ex',
-              simpleBaseReps: 10,
-              simpleProgressionType: 'weight',
-              simpleStartWeight: 20,
-              simpleWeightIncrement: 2.5,
-            }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [
+                {
+                  exerciseId: 'weighted-ex',
+                  simpleBaseReps: 10,
+                  simpleProgressionType: 'weight',
+                  simpleStartWeight: 20,
+                  simpleWeightIncrement: 2.5,
+                },
+              ],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         // Simple mode warmups should exist
         expect(warmupSets.length).toBeGreaterThanOrEqual(0);
-        
+
         // If warmups exist, they should have correct structure
         warmupSets.forEach(warmup => {
           expect(warmup.isWarmup).toBe(true);
@@ -2056,11 +2105,14 @@ describe('Mixed Mode', () => {
 
       it('handles time-based exercise warmups when enabled', () => {
         const exercises = new Map([
-          ['time-ex', createMockExercise({ 
-            id: 'time-ex', 
-            type: 'core', 
-            measurementType: 'time'
-          })],
+          [
+            'time-ex',
+            createMockExercise({
+              id: 'time-ex',
+              type: 'core',
+              measurementType: 'time',
+            }),
+          ],
         ]);
 
         const cycle = createMockCycle({
@@ -2069,16 +2121,18 @@ describe('Mixed Mode', () => {
           includeWarmupSets: true,
           includeTimedWarmups: true,
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'time-ex' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'time-ex' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(2);
         warmupSets.forEach(warmup => {
           expect(warmup.measurementType).toBe('time');
@@ -2088,11 +2142,14 @@ describe('Mixed Mode', () => {
 
       it('does NOT generate warmups for time-based exercises when disabled', () => {
         const exercises = new Map([
-          ['time-ex', createMockExercise({ 
-            id: 'time-ex', 
-            type: 'core', 
-            measurementType: 'time'
-          })],
+          [
+            'time-ex',
+            createMockExercise({
+              id: 'time-ex',
+              type: 'core',
+              measurementType: 'time',
+            }),
+          ],
         ]);
 
         const cycle = createMockCycle({
@@ -2101,26 +2158,35 @@ describe('Mixed Mode', () => {
           includeWarmupSets: true,
           includeTimedWarmups: false, // Explicitly disabled
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'time-ex' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'time-ex' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         expect(warmupSets).toHaveLength(0);
       });
 
       it('handles max test warmups with previous max value', () => {
-        const exercises = new Map([
-          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
-        ]);
+        const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const maxRecords = new Map([
-          ['ex-1', { id: 'max-1', exerciseId: 'ex-1', value: 30, createdAt: new Date(), updatedAt: new Date() }],
+          [
+            'ex-1',
+            {
+              id: 'max-1',
+              exerciseId: 'ex-1',
+              value: 30,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
         ]);
 
         const cycle = createMockCycle({
@@ -2128,41 +2194,45 @@ describe('Mixed Mode', () => {
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'ex-1' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'ex-1' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises, maxRecords });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         // Max testing should have warmups
         expect(warmupSets).toHaveLength(2);
       });
 
       it('generates correct warmup percentages', () => {
-        const exercises = new Map([
-          ['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })],
-        ]);
+        const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           includeWarmupSets: true,
-          groups: [createMockGroup({
-            id: 'group-a',
-            exerciseAssignments: [{ exerciseId: 'ex-1' }],
-          })],
+          groups: [
+            createMockGroup({
+              id: 'group-a',
+              exerciseAssignments: [{ exerciseId: 'ex-1' }],
+            }),
+          ],
           groupRotation: ['group-a'],
         });
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        
+
         // Should have 20% and 40% warmups (from WARMUP.PERCENTAGES constant)
-        const percentages = warmupSets.map(s => s.warmupPercentage).sort((a, b) => (a || 0) - (b || 0));
+        const percentages = warmupSets
+          .map(s => s.warmupPercentage)
+          .sort((a, b) => (a || 0) - (b || 0));
         expect(percentages).toEqual([20, 40]);
       });
     });

@@ -30,21 +30,16 @@ export function ExercisePickerModal({
   const hasExercises = exercises && exercises.length > 0;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Select Exercise"
-      size="lg"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Select Exercise" size="lg">
       {hasExercises ? (
         <div className="space-y-4">
           {EXERCISE_TYPES.map(type => {
             const typeExercises = exercises
               .filter(ex => ex.type === type)
               .sort((a, b) => a.name.localeCompare(b.name));
-            
+
             if (typeExercises.length === 0) return null;
-            
+
             return (
               <div key={type}>
                 <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
@@ -68,11 +63,7 @@ export function ExercisePickerModal({
           icon={Dumbbell}
           title="No exercises yet"
           description="Add some exercises first to start logging sets."
-          action={
-            <Button onClick={onNavigateToAddExercises}>
-              Add Exercises
-            </Button>
-          }
+          action={<Button onClick={onNavigateToAddExercises}>Add Exercises</Button>}
         />
       )}
     </Modal>

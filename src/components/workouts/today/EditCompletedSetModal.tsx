@@ -65,19 +65,14 @@ export function EditCompletedSetModal({
   const isOpen = !!completedSet && !!exercise;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Edit Completed Set"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Completed Set">
       {completedSet && exercise && (
         <div className="space-y-4">
           <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-            <p className="font-medium text-gray-900 dark:text-gray-100">
-              {exercise.name}
-            </p>
+            <p className="font-medium text-gray-900 dark:text-gray-100">{exercise.name}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Target was {completedSet.targetReps} {exercise.measurementType === 'time' ? 'seconds' : 'reps'}
+              Target was {completedSet.targetReps}{' '}
+              {exercise.measurementType === 'time' ? 'seconds' : 'reps'}
             </p>
           </div>
 
@@ -99,7 +94,7 @@ export function EditCompletedSetModal({
                 min={0}
                 step={0.5}
                 value={editWeight}
-                onChange={(e) => setEditWeight(e.target.value)}
+                onChange={e => setEditWeight(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="Bodyweight if blank"
               />
@@ -112,7 +107,7 @@ export function EditCompletedSetModal({
             </label>
             <textarea
               value={editNotes}
-              onChange={(e) => setEditNotes(e.target.value)}
+              onChange={e => setEditNotes(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               rows={2}
               placeholder="Optional notes..."
@@ -120,27 +115,18 @@ export function EditCompletedSetModal({
           </div>
 
           <div className="flex gap-3">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={handleDelete}
               disabled={isSaving}
               className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
             >
               Undo & Redo
             </Button>
-            <Button 
-              variant="secondary" 
-              onClick={onClose} 
-              className="flex-1"
-              disabled={isSaving}
-            >
+            <Button variant="secondary" onClick={onClose} className="flex-1" disabled={isSaving}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleSave}
-              className="flex-1"
-              disabled={isSaving}
-            >
+            <Button onClick={handleSave} className="flex-1" disabled={isSaving}>
               {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </div>

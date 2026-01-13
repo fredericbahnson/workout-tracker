@@ -32,14 +32,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Helper to clear all local database tables
   const clearLocalDatabase = async () => {
     const { db } = await import('../data/db');
-    await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.syncQueue], async () => {
-      await db.exercises.clear();
-      await db.maxRecords.clear();
-      await db.completedSets.clear();
-      await db.cycles.clear();
-      await db.scheduledWorkouts.clear();
-      await db.syncQueue.clear();
-    });
+    await db.transaction(
+      'rw',
+      [
+        db.exercises,
+        db.maxRecords,
+        db.completedSets,
+        db.cycles,
+        db.scheduledWorkouts,
+        db.syncQueue,
+      ],
+      async () => {
+        await db.exercises.clear();
+        await db.maxRecords.clear();
+        await db.completedSets.clear();
+        await db.cycles.clear();
+        await db.scheduledWorkouts.clear();
+        await db.syncQueue.clear();
+      }
+    );
   };
 
   useEffect(() => {
@@ -57,17 +68,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.history.replaceState(null, '', window.location.pathname);
       }
     };
-    
+
     handleEmailConfirmation();
 
     // Get initial session
-    supabase.auth.getSession()
+    supabase.auth
+      .getSession()
       .then(({ data: { session }, error }) => {
         if (error) {
           // If offline or network error, try to use cached session
           // Supabase stores session in localStorage
           log.debug('getSession error (may be offline):', error.message);
-          
+
           // Still try to get the user from the cached session
           // onAuthStateChange will handle restoring from localStorage
         }
@@ -75,43 +87,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         setIsLoading(false);
       })
-      .catch((err) => {
+      .catch(err => {
         // Network error - still set loading to false
         log.debug('getSession failed (may be offline):', err);
         setIsLoading(false);
       });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        log.debug('Auth event:', event);
-        
-        // Handle token refresh errors gracefully when offline
-        if (event === 'TOKEN_REFRESHED' && !session && !navigator.onLine) {
-          log.debug('Token refresh failed while offline - keeping existing session');
-          return; // Don't clear user when offline
-        }
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      log.debug('Auth event:', event);
 
-        // Check if this is a new user (email confirmation or fresh signup)
-        if (event === 'SIGNED_IN' && session) {
-          // Check if user was created recently (within last 5 minutes)
-          const createdAt = new Date(session.user.created_at);
-          const now = new Date();
-          const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-          
-          if (createdAt > fiveMinutesAgo) {
-            setIsNewUser(true);
-          }
-          
-          // Sync will be triggered by the sync service
-          window.dispatchEvent(new CustomEvent('auth-signed-in'));
-        }
+      // Handle token refresh errors gracefully when offline
+      if (event === 'TOKEN_REFRESHED' && !session && !navigator.onLine) {
+        log.debug('Token refresh failed while offline - keeping existing session');
+        return; // Don't clear user when offline
       }
-    );
+
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+
+      // Check if this is a new user (email confirmation or fresh signup)
+      if (event === 'SIGNED_IN' && session) {
+        // Check if user was created recently (within last 5 minutes)
+        const createdAt = new Date(session.user.created_at);
+        const now = new Date();
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+        if (createdAt > fiveMinutesAgo) {
+          setIsNewUser(true);
+        }
+
+        // Sync will be triggered by the sync service
+        window.dispatchEvent(new CustomEvent('auth-signed-in'));
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, [isConfigured]);
@@ -126,9 +138,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         emailRedirectTo: window.location.origin,
-      }
+      },
     });
-    
+
     return { error: error as Error | null };
   };
 
@@ -148,24 +160,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
     });
-    
+
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
     if (!isConfigured) return;
-    
+
     // Clear local IndexedDB tables before signing out
     try {
       await clearLocalDatabase();
     } catch (e) {
       log.error(e as Error);
     }
-    
+
     // Reset onboarding flag so next user sees onboarding
     const { useAppStore } = await import('../stores/appStore');
     useAppStore.getState().setHasCompletedOnboarding(false);
-    
+
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -180,24 +192,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Call the database function to delete the user account and all data
       const { error: rpcError } = await supabase.rpc('delete_user_account');
-      
+
       if (rpcError) {
         log.error(new Error(rpcError.message), { code: rpcError.code });
         return { error: new Error(rpcError.message) };
       }
-      
+
       // Clear local IndexedDB tables
       await clearLocalDatabase();
-      
+
       // Clear localStorage
       localStorage.clear();
-      
+
       // Sign out (session is already invalid since user was deleted)
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       setIsNewUser(false);
-      
+
       return { error: null };
     } catch (e) {
       return { error: e as Error };
@@ -212,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    
+
     return { error: error as Error | null };
   };
 
@@ -222,9 +234,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const { error } = await supabase.auth.updateUser({
-      password: newPassword
+      password: newPassword,
     });
-    
+
     return { error: error as Error | null };
   };
 
@@ -233,20 +245,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      isLoading,
-      isConfigured,
-      isNewUser,
-      signUp,
-      signIn,
-      signOut,
-      deleteAccount,
-      resetPassword,
-      updatePassword,
-      clearNewUserFlag,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isLoading,
+        isConfigured,
+        isNewUser,
+        signUp,
+        signIn,
+        signOut,
+        deleteAccount,
+        resetPassword,
+        updatePassword,
+        clearNewUserFlag,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

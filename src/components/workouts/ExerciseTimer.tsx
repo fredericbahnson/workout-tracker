@@ -19,7 +19,10 @@ let audioContext: AudioContext | null = null;
 
 function getAudioContext(): AudioContext {
   if (!audioContext) {
-    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    audioContext = new (
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    )();
   }
   return audioContext;
 }
@@ -27,24 +30,24 @@ function getAudioContext(): AudioContext {
 function playBeep(frequency: number, duration: number, volume: number = 0.3) {
   try {
     const ctx = getAudioContext();
-    
+
     // Resume context if suspended (browser autoplay policy)
     if (ctx.state === 'suspended') {
       ctx.resume();
     }
-    
+
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
-    
+
     oscillator.frequency.value = frequency;
     oscillator.type = 'sine';
-    
+
     gainNode.gain.setValueAtTime(volume, ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-    
+
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + duration);
   } catch (e) {
@@ -61,11 +64,11 @@ function playCompletionSound() {
   // Two-tone success sound
   try {
     const ctx = getAudioContext();
-    
+
     if (ctx.state === 'suspended') {
       ctx.resume();
     }
-    
+
     // First tone
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
@@ -77,7 +80,7 @@ function playCompletionSound() {
     gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
     osc1.start(ctx.currentTime);
     osc1.stop(ctx.currentTime + 0.2);
-    
+
     // Second tone (higher)
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
@@ -89,7 +92,7 @@ function playCompletionSound() {
     gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
     osc2.start(ctx.currentTime + 0.15);
     osc2.stop(ctx.currentTime + 0.4);
-    
+
     // Third tone (even higher)
     const osc3 = ctx.createOscillator();
     const gain3 = ctx.createGain();
@@ -106,12 +109,12 @@ function playCompletionSound() {
   }
 }
 
-export function ExerciseTimer({ 
-  targetSeconds, 
-  exerciseName, 
-  onComplete, 
+export function ExerciseTimer({
+  targetSeconds,
+  exerciseName,
+  onComplete,
   onCancel,
-  onSkipToLog 
+  onSkipToLog,
 }: ExerciseTimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(targetSeconds);
   const [isRunning, setIsRunning] = useState(false);
@@ -139,12 +142,12 @@ export function ExerciseTimer({
         lastBeepRef.current = timeRemaining;
       }
     }
-    
+
     if (timeRemaining === 0 && isRunning) {
       setIsRunning(false);
       setIsComplete(true);
       playCompletionSound();
-      
+
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -155,10 +158,10 @@ export function ExerciseTimer({
   const startTimer = useCallback(() => {
     // Initialize audio context on user interaction (required by browsers)
     getAudioContext();
-    
+
     setIsRunning(true);
     lastBeepRef.current = null;
-    
+
     intervalRef.current = window.setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 0) {
@@ -227,24 +230,26 @@ export function ExerciseTimer({
             strokeDasharray={2 * Math.PI * 120}
             strokeDashoffset={2 * Math.PI * 120 * (1 - progress / 100)}
             className={`transition-all duration-1000 ease-linear ${
-              isComplete 
-                ? 'text-green-500' 
-                : timeRemaining <= 3 
-                  ? 'text-orange-500' 
+              isComplete
+                ? 'text-green-500'
+                : timeRemaining <= 3
+                  ? 'text-orange-500'
                   : 'text-primary-500'
             }`}
           />
         </svg>
-        
+
         {/* Time display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-5xl font-bold tabular-nums ${
-            isComplete 
-              ? 'text-green-600 dark:text-green-400' 
-              : timeRemaining <= 3 && isRunning
-                ? 'text-orange-600 dark:text-orange-400'
-                : 'text-gray-900 dark:text-gray-100'
-          }`}>
+          <span
+            className={`text-5xl font-bold tabular-nums ${
+              isComplete
+                ? 'text-green-600 dark:text-green-400'
+                : timeRemaining <= 3 && isRunning
+                  ? 'text-orange-600 dark:text-orange-400'
+                  : 'text-gray-900 dark:text-gray-100'
+            }`}
+          >
             {formatTime(timeRemaining)}
           </span>
           {!isComplete && (
@@ -280,7 +285,7 @@ export function ExerciseTimer({
                 <Pause className="w-8 h-8" />
               </Button>
             )}
-            
+
             <Button
               onClick={resetTimer}
               variant="ghost"
@@ -289,7 +294,7 @@ export function ExerciseTimer({
               <RotateCcw className="w-5 h-5" />
             </Button>
           </div>
-          
+
           {/* Show Log Elapsed button when paused with some time elapsed */}
           {!isRunning && elapsedTime > 0 && (
             <Button onClick={handleLogElapsedTime} variant="secondary" className="w-full max-w-xs">
@@ -309,19 +314,11 @@ export function ExerciseTimer({
 
       {/* Bottom actions */}
       <div className="flex gap-3 w-full max-w-xs">
-        <Button
-          onClick={onCancel}
-          variant="ghost"
-          className="flex-1"
-        >
+        <Button onClick={onCancel} variant="ghost" className="flex-1">
           <X className="w-4 h-4 mr-2" />
           Cancel
         </Button>
-        <Button
-          onClick={onSkipToLog}
-          variant="secondary"
-          className="flex-1"
-        >
+        <Button onClick={onSkipToLog} variant="secondary" className="flex-1">
           Enter Time
         </Button>
       </div>

@@ -1,6 +1,6 @@
 /**
  * Shared UI constants for consistent styling across the app.
- * 
+ *
  * These values are used for interactive gestures and other
  * UI behaviors that need to be consistent across components.
  */

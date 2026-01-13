@@ -1,9 +1,9 @@
 /**
  * Weight Unit Configuration
- * 
+ *
  * Centralized weight unit constants to enable future metric (kg) support.
  * All weight displays should use these constants and formatting functions.
- * 
+ *
  * Future: Read unit preference from user settings and convert values accordingly.
  */
 

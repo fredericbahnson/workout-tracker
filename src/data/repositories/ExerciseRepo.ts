@@ -26,7 +26,7 @@ export const ExerciseRepo = {
       ...data,
       id: generateId(),
       createdAt: timestamp,
-      updatedAt: timestamp
+      updatedAt: timestamp,
     };
     await db.exercises.add(exercise);
     return exercise;
@@ -39,7 +39,7 @@ export const ExerciseRepo = {
     const updated: Exercise = {
       ...existing,
       ...data,
-      updatedAt: now()
+      updatedAt: now(),
     };
     await db.exercises.put(updated);
     return updated;
@@ -48,7 +48,7 @@ export const ExerciseRepo = {
   async delete(id: string): Promise<boolean> {
     const existing = await db.exercises.get(id);
     if (!existing) return false;
-    
+
     await db.exercises.delete(id);
     return true;
   },
@@ -66,7 +66,7 @@ export const ExerciseRepo = {
    * These settings are used as smart defaults when adding the exercise to new cycles.
    */
   async updateLastCycleSettings(
-    exerciseId: string, 
+    exerciseId: string,
     settings: ExerciseCycleDefaults
   ): Promise<void> {
     const existing = await this.getById(exerciseId);
@@ -75,7 +75,7 @@ export const ExerciseRepo = {
     await db.exercises.put({
       ...existing,
       lastCycleSettings: settings,
-      updatedAt: now()
+      updatedAt: now(),
     });
-  }
+  },
 };

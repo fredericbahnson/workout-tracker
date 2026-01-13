@@ -1,6 +1,6 @@
 /**
  * useCycleWizardState Hook
- * 
+ *
  * Manages all state and business logic for the CycleWizard component.
  * Extracts state management from the UI for better separation of concerns.
  */
@@ -13,21 +13,16 @@ import { generateId } from '@/data/db';
 import { useSyncedPreferences, useSyncItem } from '@/contexts';
 import { createScopedLogger } from '@/utils/logger';
 import { getProgressionMode } from '@/types';
-import type { 
-  Cycle, 
-  Group, 
-  Exercise, 
-  ExerciseAssignment, 
-  ExerciseType, 
+import type {
+  Cycle,
+  Group,
+  Exercise,
+  ExerciseAssignment,
+  ExerciseType,
   ProgressionMode,
-  ExerciseCycleDefaults
+  ExerciseCycleDefaults,
 } from '@/types';
-import { 
-  type WizardStep, 
-  type EditMode, 
-  type ValidationResult,
-  getStepsForMode 
-} from '../types';
+import { type WizardStep, type EditMode, type ValidationResult, getStepsForMode } from '../types';
 
 const log = createScopedLogger('CycleWizard');
 
@@ -37,22 +32,25 @@ interface UseCycleWizardStateProps {
   onComplete: () => void;
 }
 
-export function useCycleWizardState({ 
-  editCycle, 
-  initialProgressionMode, 
-  onComplete 
+export function useCycleWizardState({
+  editCycle,
+  initialProgressionMode,
+  onComplete,
 }: UseCycleWizardStateProps) {
   const { preferences } = useSyncedPreferences();
   const { syncItem, deleteItem } = useSyncItem();
-  
+
   // Create defaults object from preferences for backward compatibility with child components
-  const defaults = useMemo(() => ({
-    defaultConditioningReps: preferences.defaultConditioningReps,
-  }), [preferences.defaultConditioningReps]);
+  const defaults = useMemo(
+    () => ({
+      defaultConditioningReps: preferences.defaultConditioningReps,
+    }),
+    [preferences.defaultConditioningReps]
+  );
 
   // Progression mode - from props, edit cycle, or default to 'rfem'
-  const [progressionMode] = useState<ProgressionMode>(
-    () => editCycle ? getProgressionMode(editCycle) : (initialProgressionMode || 'rfem')
+  const [progressionMode] = useState<ProgressionMode>(() =>
+    editCycle ? getProgressionMode(editCycle) : initialProgressionMode || 'rfem'
   );
 
   // Get the appropriate steps for the current mode
@@ -80,8 +78,8 @@ export function useCycleWizardState({
   const [numberOfWeeks, setNumberOfWeeks] = useState(editCycle?.numberOfWeeks || 4);
   const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState(editCycle?.workoutDaysPerWeek || 5);
   const [groups, setGroups] = useState<Group[]>(editCycle?.groups || []);
-  const [weeklySetGoals, setWeeklySetGoals] = useState<Record<ExerciseType, number>>(() =>
-    editCycle?.weeklySetGoals || { ...preferences.weeklySetGoals }
+  const [weeklySetGoals, setWeeklySetGoals] = useState<Record<ExerciseType, number>>(
+    () => editCycle?.weeklySetGoals || { ...preferences.weeklySetGoals }
   );
   const [groupRotation, setGroupRotation] = useState<string[]>(editCycle?.groupRotation || []);
   const [rfemRotation, setRfemRotation] = useState<number[]>(editCycle?.rfemRotation || [4, 3, 2]);
@@ -108,10 +106,7 @@ export function useCycleWizardState({
   }, [editCycle?.id]);
 
   // Exercise map for quick lookups
-  const exerciseMap = useMemo(
-    () => new Map(exercises?.map(e => [e.id, e]) || []),
-    [exercises]
-  );
+  const exerciseMap = useMemo(() => new Map(exercises?.map(e => [e.id, e]) || []), [exercises]);
 
   // Smart defaults from most recent completed cycle (for new cycles only)
   useEffect(() => {
@@ -128,8 +123,9 @@ export function useCycleWizardState({
   }, [allCycles, editCycle, initialProgressionMode]);
 
   // Count completed training cycles for naming
-  const completedTrainingCycleCount = useMemo(() =>
-    allCycles?.filter(c => c.cycleType !== 'max_testing' && c.status === 'completed').length || 0,
+  const completedTrainingCycleCount = useMemo(
+    () =>
+      allCycles?.filter(c => c.cycleType !== 'max_testing' && c.status === 'completed').length || 0,
     [allCycles]
   );
 
@@ -140,34 +136,37 @@ export function useCycleWizardState({
   );
 
   // Clone from a previous cycle
-  const handleCloneFromCycle = useCallback((sourceCycle: Cycle) => {
-    const groupIdMap = new Map<string, string>();
-    const clonedGroups: Group[] = sourceCycle.groups.map(g => {
-      const newId = generateId();
-      groupIdMap.set(g.id, newId);
-      return {
-        id: newId,
-        name: g.name,
-        exerciseAssignments: g.exerciseAssignments.map(a => ({ ...a }))
-      };
-    });
+  const handleCloneFromCycle = useCallback(
+    (sourceCycle: Cycle) => {
+      const groupIdMap = new Map<string, string>();
+      const clonedGroups: Group[] = sourceCycle.groups.map(g => {
+        const newId = generateId();
+        groupIdMap.set(g.id, newId);
+        return {
+          id: newId,
+          name: g.name,
+          exerciseAssignments: g.exerciseAssignments.map(a => ({ ...a })),
+        };
+      });
 
-    const clonedGroupRotation = sourceCycle.groupRotation.map(
-      oldId => groupIdMap.get(oldId) || oldId
-    );
+      const clonedGroupRotation = sourceCycle.groupRotation.map(
+        oldId => groupIdMap.get(oldId) || oldId
+      );
 
-    setGroups(clonedGroups);
-    setGroupRotation(clonedGroupRotation);
-    setWeeklySetGoals({ ...sourceCycle.weeklySetGoals });
-    setRfemRotation([...sourceCycle.rfemRotation]);
-    setNumberOfWeeks(sourceCycle.numberOfWeeks);
-    setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
-    setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
-    setIncludeWarmupSets(sourceCycle.includeWarmupSets ?? false);
-    setIncludeTimedWarmups(sourceCycle.includeTimedWarmups ?? false);
-    setName(getDefaultCycleName());
-    setCurrentStep('basics');
-  }, [getDefaultCycleName]);
+      setGroups(clonedGroups);
+      setGroupRotation(clonedGroupRotation);
+      setWeeklySetGoals({ ...sourceCycle.weeklySetGoals });
+      setRfemRotation([...sourceCycle.rfemRotation]);
+      setNumberOfWeeks(sourceCycle.numberOfWeeks);
+      setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
+      setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
+      setIncludeWarmupSets(sourceCycle.includeWarmupSets ?? false);
+      setIncludeTimedWarmups(sourceCycle.includeTimedWarmups ?? false);
+      setName(getDefaultCycleName());
+      setCurrentStep('basics');
+    },
+    [getDefaultCycleName]
+  );
 
   // Start fresh with default groups
   const handleStartFresh = useCallback(() => {
@@ -175,7 +174,7 @@ export function useCycleWizardState({
       const defaultGroups: Group[] = ['A', 'B', 'C'].map(letter => ({
         id: generateId(),
         name: `Group ${letter}`,
-        exerciseAssignments: []
+        exerciseAssignments: [],
       }));
       setGroups(defaultGroups);
       setGroupRotation(defaultGroups.map(g => g.id));
@@ -195,7 +194,7 @@ export function useCycleWizardState({
       const defaultGroups: Group[] = ['A', 'B', 'C'].map(letter => ({
         id: generateId(),
         name: `Group ${letter}`,
-        exerciseAssignments: []
+        exerciseAssignments: [],
       }));
       setGroups(defaultGroups);
       setGroupRotation(defaultGroups.map(g => g.id));
@@ -219,7 +218,7 @@ export function useCycleWizardState({
         return {
           id: newId,
           name: g.name,
-          exerciseAssignments: g.exerciseAssignments.map(a => ({ ...a }))
+          exerciseAssignments: g.exerciseAssignments.map(a => ({ ...a })),
         };
       });
 
@@ -261,14 +260,23 @@ export function useCycleWizardState({
         groupRotation,
         rfemRotation,
         conditioningWeeklyRepIncrement,
-        status: 'planning'
+        status: 'planning',
       },
       exerciseMap
     );
   }, [
-    exercises, name, progressionMode, startDate, numberOfWeeks, 
-    workoutDaysPerWeek, weeklySetGoals, groups, groupRotation, 
-    rfemRotation, conditioningWeeklyRepIncrement, exerciseMap
+    exercises,
+    name,
+    progressionMode,
+    startDate,
+    numberOfWeeks,
+    workoutDaysPerWeek,
+    weeklySetGoals,
+    groups,
+    groupRotation,
+    rfemRotation,
+    conditioningWeeklyRepIncrement,
+    exerciseMap,
   ]);
 
   // Can proceed to next step?
@@ -285,8 +293,8 @@ export function useCycleWizardState({
             if (!exercise) return true;
             const isTimeBased = exercise.measurementType === 'time';
             return isTimeBased
-              ? (a.simpleBaseTime !== undefined && a.simpleBaseTime > 0)
-              : (a.simpleBaseReps !== undefined && a.simpleBaseReps > 0);
+              ? a.simpleBaseTime !== undefined && a.simpleBaseTime > 0
+              : a.simpleBaseReps !== undefined && a.simpleBaseReps > 0;
           })
         );
       case 'goals':
@@ -299,7 +307,18 @@ export function useCycleWizardState({
       default:
         return false;
     }
-  }, [currentStep, name, numberOfWeeks, workoutDaysPerWeek, groups, exerciseMap, progressionMode, groupRotation, rfemRotation, validation]);
+  }, [
+    currentStep,
+    name,
+    numberOfWeeks,
+    workoutDaysPerWeek,
+    groups,
+    exerciseMap,
+    progressionMode,
+    groupRotation,
+    rfemRotation,
+    validation,
+  ]);
 
   // Navigation
   const nextStep = useCallback(() => {
@@ -321,7 +340,7 @@ export function useCycleWizardState({
     const newGroup: Group = {
       id: generateId(),
       name: `Group ${String.fromCharCode(65 + groups.length)}`,
-      exerciseAssignments: []
+      exerciseAssignments: [],
     };
     setGroups(prev => [...prev, newGroup]);
     setGroupRotation(prev => [...prev, newGroup.id]);
@@ -333,105 +352,122 @@ export function useCycleWizardState({
   }, []);
 
   const updateGroupName = useCallback((groupId: string, newName: string) => {
-    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, name: newName } : g));
+    setGroups(prev => prev.map(g => (g.id === groupId ? { ...g, name: newName } : g)));
   }, []);
 
-  const addExerciseToGroup = useCallback((groupId: string, exerciseId: string) => {
-    const exercise = exerciseMap.get(exerciseId);
-    const assignment: ExerciseAssignment = {
-      exerciseId,
-      conditioningBaseReps: exercise?.mode === 'conditioning'
-        ? (exercise.defaultConditioningReps || preferences.defaultConditioningReps)
-        : undefined
-    };
+  const addExerciseToGroup = useCallback(
+    (groupId: string, exerciseId: string) => {
+      const exercise = exerciseMap.get(exerciseId);
+      const assignment: ExerciseAssignment = {
+        exerciseId,
+        conditioningBaseReps:
+          exercise?.mode === 'conditioning'
+            ? exercise.defaultConditioningReps || preferences.defaultConditioningReps
+            : undefined,
+      };
 
-    setGroups(prev => prev.map(g => {
-      if (g.id !== groupId) return g;
-      if (g.exerciseAssignments.some(a => a.exerciseId === exerciseId)) return g;
-      return { ...g, exerciseAssignments: [...g.exerciseAssignments, assignment] };
-    }));
-  }, [exerciseMap, preferences.defaultConditioningReps]);
+      setGroups(prev =>
+        prev.map(g => {
+          if (g.id !== groupId) return g;
+          if (g.exerciseAssignments.some(a => a.exerciseId === exerciseId)) return g;
+          return { ...g, exerciseAssignments: [...g.exerciseAssignments, assignment] };
+        })
+      );
+    },
+    [exerciseMap, preferences.defaultConditioningReps]
+  );
 
   const removeExerciseFromGroup = useCallback((groupId: string, exerciseId: string) => {
-    setGroups(prev => prev.map(g => {
-      if (g.id !== groupId) return g;
-      return {
-        ...g,
-        exerciseAssignments: g.exerciseAssignments.filter(a => a.exerciseId !== exerciseId)
-      };
-    }));
+    setGroups(prev =>
+      prev.map(g => {
+        if (g.id !== groupId) return g;
+        return {
+          ...g,
+          exerciseAssignments: g.exerciseAssignments.filter(a => a.exerciseId !== exerciseId),
+        };
+      })
+    );
   }, []);
 
-  const updateConditioningReps = useCallback((groupId: string, exerciseId: string, reps: number) => {
-    setGroups(prev => prev.map(g => {
-      if (g.id !== groupId) return g;
-      return {
-        ...g,
-        exerciseAssignments: g.exerciseAssignments.map(a =>
-          a.exerciseId === exerciseId ? { ...a, conditioningBaseReps: reps } : a
-        )
-      };
-    }));
-  }, []);
+  const updateConditioningReps = useCallback(
+    (groupId: string, exerciseId: string, reps: number) => {
+      setGroups(prev =>
+        prev.map(g => {
+          if (g.id !== groupId) return g;
+          return {
+            ...g,
+            exerciseAssignments: g.exerciseAssignments.map(a =>
+              a.exerciseId === exerciseId ? { ...a, conditioningBaseReps: reps } : a
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
 
-  const updateAssignment = useCallback((
-    groupId: string,
-    exerciseId: string,
-    updates: Partial<ExerciseAssignment>
-  ) => {
-    setGroups(prev => prev.map(g => {
-      if (g.id !== groupId) return g;
-      return {
-        ...g,
-        exerciseAssignments: g.exerciseAssignments.map(a =>
-          a.exerciseId === exerciseId ? { ...a, ...updates } : a
-        )
-      };
-    }));
-  }, []);
+  const updateAssignment = useCallback(
+    (groupId: string, exerciseId: string, updates: Partial<ExerciseAssignment>) => {
+      setGroups(prev =>
+        prev.map(g => {
+          if (g.id !== groupId) return g;
+          return {
+            ...g,
+            exerciseAssignments: g.exerciseAssignments.map(a =>
+              a.exerciseId === exerciseId ? { ...a, ...updates } : a
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
 
   // Save last cycle settings for each exercise
-  const saveLastCycleSettings = useCallback(async (
-    cycleGroups: Group[],
-    cycleProgressionMode: ProgressionMode,
-    exerciseMapRef: Map<string, Exercise>
-  ) => {
-    const isMixed = cycleProgressionMode === 'mixed';
-    const isSimple = cycleProgressionMode === 'simple';
+  const saveLastCycleSettings = useCallback(
+    async (
+      cycleGroups: Group[],
+      cycleProgressionMode: ProgressionMode,
+      exerciseMapRef: Map<string, Exercise>
+    ) => {
+      const isMixed = cycleProgressionMode === 'mixed';
+      const isSimple = cycleProgressionMode === 'simple';
 
-    for (const group of cycleGroups) {
-      for (const assignment of group.exerciseAssignments) {
-        const exercise = exerciseMapRef.get(assignment.exerciseId);
-        if (!exercise) continue;
+      for (const group of cycleGroups) {
+        for (const assignment of group.exerciseAssignments) {
+          const exercise = exerciseMapRef.get(assignment.exerciseId);
+          if (!exercise) continue;
 
-        let effectiveMode: 'rfem' | 'simple';
-        if (isMixed) {
-          effectiveMode = assignment.progressionMode || 'rfem';
-        } else if (isSimple) {
-          effectiveMode = 'simple';
-        } else {
-          effectiveMode = 'rfem';
+          let effectiveMode: 'rfem' | 'simple';
+          if (isMixed) {
+            effectiveMode = assignment.progressionMode || 'rfem';
+          } else if (isSimple) {
+            effectiveMode = 'simple';
+          } else {
+            effectiveMode = 'rfem';
+          }
+
+          const settings: ExerciseCycleDefaults = {
+            progressionMode: effectiveMode,
+            conditioningRepIncrement: assignment.conditioningRepIncrement,
+            conditioningTimeIncrement: assignment.conditioningTimeIncrement,
+            simpleBaseReps: assignment.simpleBaseReps,
+            simpleBaseTime: assignment.simpleBaseTime,
+            simpleBaseWeight: assignment.simpleBaseWeight,
+            simpleRepProgressionType: assignment.simpleRepProgressionType,
+            simpleRepIncrement: assignment.simpleRepIncrement,
+            simpleTimeProgressionType: assignment.simpleTimeProgressionType,
+            simpleTimeIncrement: assignment.simpleTimeIncrement,
+            simpleWeightProgressionType: assignment.simpleWeightProgressionType,
+            simpleWeightIncrement: assignment.simpleWeightIncrement,
+          };
+
+          await ExerciseRepo.updateLastCycleSettings(assignment.exerciseId, settings);
         }
-
-        const settings: ExerciseCycleDefaults = {
-          progressionMode: effectiveMode,
-          conditioningRepIncrement: assignment.conditioningRepIncrement,
-          conditioningTimeIncrement: assignment.conditioningTimeIncrement,
-          simpleBaseReps: assignment.simpleBaseReps,
-          simpleBaseTime: assignment.simpleBaseTime,
-          simpleBaseWeight: assignment.simpleBaseWeight,
-          simpleRepProgressionType: assignment.simpleRepProgressionType,
-          simpleRepIncrement: assignment.simpleRepIncrement,
-          simpleTimeProgressionType: assignment.simpleTimeProgressionType,
-          simpleTimeIncrement: assignment.simpleTimeIncrement,
-          simpleWeightProgressionType: assignment.simpleWeightProgressionType,
-          simpleWeightIncrement: assignment.simpleWeightIncrement,
-        };
-
-        await ExerciseRepo.updateLastCycleSettings(assignment.exerciseId, settings);
       }
-    }
-  }, []);
+    },
+    []
+  );
 
   // Create/Save cycle
   const handleCreate = useCallback(async () => {
@@ -464,18 +500,19 @@ export function useCycleWizardState({
           conditioningWeeklyRepIncrement,
           includeWarmupSets,
           includeTimedWarmups,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         };
         await CycleRepo.update(editCycle.id, updatedCycle);
         cycle = updatedCycle;
-        
+
         // Sync the updated cycle to cloud
         await syncItem('cycles', { ...cycle, id: editCycle.id });
 
         if (editMode === 'continue') {
           const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(editCycle.id);
-          const pendingWorkouts = allWorkouts
-            .filter(w => w.status === 'pending' || w.status === 'partial');
+          const pendingWorkouts = allWorkouts.filter(
+            w => w.status === 'pending' || w.status === 'partial'
+          );
 
           // Delete pending workouts locally and sync deletions to cloud
           for (const workout of pendingWorkouts) {
@@ -492,12 +529,12 @@ export function useCycleWizardState({
           const scheduleInput = {
             cycle,
             exercises: exerciseMap,
-            startFromWorkout: maxExistingSequence + 1
+            startFromWorkout: maxExistingSequence + 1,
           };
 
           const workouts = generateSchedule(scheduleInput);
           const createdWorkouts = await ScheduledWorkoutRepo.bulkCreate(workouts);
-          
+
           // Sync newly created workouts to cloud
           for (const workout of createdWorkouts) {
             await syncItem('scheduled_workouts', workout);
@@ -505,10 +542,10 @@ export function useCycleWizardState({
         } else {
           // Get all workouts to delete them from cloud
           const allWorkouts = await ScheduledWorkoutRepo.getByCycleId(editCycle.id);
-          
+
           // Delete all workouts locally
           await ScheduledWorkoutRepo.deleteByCycleId(editCycle.id);
-          
+
           // Sync deletions to cloud
           for (const workout of allWorkouts) {
             await deleteItem('scheduled_workouts', workout.id);
@@ -516,12 +553,12 @@ export function useCycleWizardState({
 
           const scheduleInput = {
             cycle,
-            exercises: exerciseMap
+            exercises: exerciseMap,
           };
 
           const workouts = generateSchedule(scheduleInput);
           const createdWorkouts = await ScheduledWorkoutRepo.bulkCreate(workouts);
-          
+
           // Sync newly created workouts to cloud
           for (const workout of createdWorkouts) {
             await syncItem('scheduled_workouts', workout);
@@ -542,20 +579,20 @@ export function useCycleWizardState({
           conditioningWeeklyRepIncrement,
           includeWarmupSets,
           includeTimedWarmups,
-          status: 'active'
+          status: 'active',
         });
-        
+
         // Sync new cycle to cloud
         await syncItem('cycles', cycle);
 
         const scheduleInput = {
           cycle,
-          exercises: exerciseMap
+          exercises: exerciseMap,
         };
 
         const workouts = generateSchedule(scheduleInput);
         const createdWorkouts = await ScheduledWorkoutRepo.bulkCreate(workouts);
-        
+
         // Sync newly created workouts to cloud
         for (const workout of createdWorkouts) {
           await syncItem('scheduled_workouts', workout);
@@ -571,26 +608,40 @@ export function useCycleWizardState({
       setIsCreating(false);
     }
   }, [
-    exercises, editCycle, cycleProgress, editMode, name, progressionMode,
-    startDate, numberOfWeeks, workoutDaysPerWeek, weeklySetGoals, groups,
-    groupRotation, rfemRotation, conditioningWeeklyRepIncrement,
-    includeWarmupSets, includeTimedWarmups, exerciseMap, saveLastCycleSettings, onComplete,
-    syncItem, deleteItem
+    exercises,
+    editCycle,
+    cycleProgress,
+    editMode,
+    name,
+    progressionMode,
+    startDate,
+    numberOfWeeks,
+    workoutDaysPerWeek,
+    weeklySetGoals,
+    groups,
+    groupRotation,
+    rfemRotation,
+    conditioningWeeklyRepIncrement,
+    includeWarmupSets,
+    includeTimedWarmups,
+    exerciseMap,
+    saveLastCycleSettings,
+    onComplete,
+    syncItem,
+    deleteItem,
   ]);
 
   // Get cycles available for cloning
-  const cloneableCycles = useMemo(() =>
-    allCycles
-      ?.filter(c => c.id !== editCycle?.id && c.cycleType !== 'max_testing')
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()) || [],
+  const cloneableCycles = useMemo(
+    () =>
+      allCycles
+        ?.filter(c => c.id !== editCycle?.id && c.cycleType !== 'max_testing')
+        .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()) || [],
     [allCycles, editCycle?.id]
   );
 
   // Get steps to display (hide 'start' step from progress indicator)
-  const displaySteps = useMemo(
-    () => STEPS.filter(s => s.key !== 'start'),
-    [STEPS]
-  );
+  const displaySteps = useMemo(() => STEPS.filter(s => s.key !== 'start'), [STEPS]);
 
   return {
     // State

@@ -3,7 +3,7 @@
  */
 
 export { useTodayModals } from './useTodayModals';
-export type { 
+export type {
   TodayModalType,
   ScheduledSetModalData,
   SkipSetModalData,

@@ -1,6 +1,6 @@
 /**
  * GroupsStep Component
- * 
+ *
  * Step for managing workout groups and exercise assignments.
  * In mixed mode, also handles per-exercise progression configuration.
  */
@@ -23,7 +23,7 @@ export function GroupsStep({
   onUpdateGroupName,
   onAddExercise,
   onRemoveExercise,
-  onUpdateAssignment
+  onUpdateAssignment,
 }: GroupsStepProps) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
@@ -44,8 +44,7 @@ export function GroupsStep({
       <p className="text-sm text-gray-500 dark:text-gray-400">
         {isMixedMode
           ? 'Create groups and configure RFEM or simple progression for each exercise.'
-          : 'Create groups of exercises that will be performed together on the same day.'
-        }
+          : 'Create groups of exercises that will be performed together on the same day.'}
       </p>
 
       <div className="space-y-3">
@@ -97,7 +96,9 @@ export function GroupsStep({
                         exercise={exercise}
                         assignment={assignment}
                         defaults={defaults}
-                        onUpdate={(updates) => onUpdateAssignment(group.id, assignment.exerciseId, updates)}
+                        onUpdate={updates =>
+                          onUpdateAssignment(group.id, assignment.exerciseId, updates)
+                        }
                         onRemove={() => onRemoveExercise(group.id, assignment.exerciseId)}
                       />
                     );
@@ -115,10 +116,14 @@ export function GroupsStep({
                             {EXERCISE_TYPE_LABELS[exercise.type]}
                           </Badge>
                           {exercise.mode === 'conditioning' && (
-                            <Badge variant="other" className="text-2xs">Cond</Badge>
+                            <Badge variant="other" className="text-2xs">
+                              Cond
+                            </Badge>
                           )}
                         </div>
-                        <span className="flex-1 text-sm min-w-0 break-words pt-0.5">{exercise.name}</span>
+                        <span className="flex-1 text-sm min-w-0 break-words pt-0.5">
+                          {exercise.name}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -136,16 +141,23 @@ export function GroupsStep({
                               Base {exercise.measurementType === 'time' ? 'Time (sec)' : 'Reps'}:
                             </label>
                             <NumberInput
-                              value={exercise.measurementType === 'time'
-                                ? (assignment.conditioningBaseTime || exercise.defaultConditioningTime || 30)
-                                : (assignment.conditioningBaseReps || defaults.defaultConditioningReps)}
-                              onChange={v => onUpdateAssignment(
-                                group.id,
-                                assignment.exerciseId,
+                              value={
                                 exercise.measurementType === 'time'
-                                  ? { conditioningBaseTime: v }
-                                  : { conditioningBaseReps: v }
-                              )}
+                                  ? assignment.conditioningBaseTime ||
+                                    exercise.defaultConditioningTime ||
+                                    30
+                                  : assignment.conditioningBaseReps ||
+                                    defaults.defaultConditioningReps
+                              }
+                              onChange={v =>
+                                onUpdateAssignment(
+                                  group.id,
+                                  assignment.exerciseId,
+                                  exercise.measurementType === 'time'
+                                    ? { conditioningBaseTime: v }
+                                    : { conditioningBaseReps: v }
+                                )
+                              }
                               min={1}
                               className="w-20 text-xs"
                             />
@@ -184,7 +196,9 @@ export function GroupsStep({
                 <div className="space-y-2">
                   {typeExercises.map(exercise => {
                     const group = groups.find(g => g.id === selectedGroup);
-                    const isAdded = group?.exerciseAssignments.some(a => a.exerciseId === exercise.id);
+                    const isAdded = group?.exerciseAssignments.some(
+                      a => a.exerciseId === exercise.id
+                    );
 
                     return (
                       <button
@@ -200,18 +214,19 @@ export function GroupsStep({
                         }}
                         className={`
                           w-full flex items-center gap-2 p-3 rounded-lg text-left transition-colors
-                          ${isAdded
-                            ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                          ${
+                            isAdded
+                              ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                           }
                         `}
                       >
-                        <Badge variant={exercise.type}>
-                          {EXERCISE_TYPE_LABELS[exercise.type]}
-                        </Badge>
+                        <Badge variant={exercise.type}>{EXERCISE_TYPE_LABELS[exercise.type]}</Badge>
                         <span className="flex-1">{exercise.name}</span>
                         {exercise.mode === 'conditioning' && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">conditioning</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            conditioning
+                          </span>
                         )}
                         {isAdded && <Check className="w-4 h-4 text-primary-500" />}
                       </button>
@@ -222,10 +237,7 @@ export function GroupsStep({
             );
           })}
 
-          <Button
-            className="w-full mt-4"
-            onClick={() => setShowExercisePicker(false)}
-          >
+          <Button className="w-full mt-4" onClick={() => setShowExercisePicker(false)}>
             Done
           </Button>
         </div>

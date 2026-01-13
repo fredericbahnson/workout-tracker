@@ -56,13 +56,15 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
   const handleCheckVerification = async () => {
     setIsCheckingVerification(true);
     setError(null);
-    
+
     try {
       // Try to sign in with the credentials
       const result = await signIn(email, password);
       if (result.error) {
         if (result.error.message.includes('Email not confirmed')) {
-          setError('Email not yet verified. Please check your inbox and click the verification link.');
+          setError(
+            'Email not yet verified. Please check your inbox and click the verification link.'
+          );
         } else {
           setError(result.error.message);
         }
@@ -103,16 +105,12 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Check your email
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-2">
-            We sent a password reset link to:
-          </p>
-          <p className="text-primary-600 dark:text-primary-400 font-medium mb-6">
-            {email}
-          </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-2">We sent a password reset link to:</p>
+          <p className="text-primary-600 dark:text-primary-400 font-medium mb-6">{email}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             Click the link in your email to reset your password.
           </p>
-          
+
           <Button onClick={handleBackToSignIn} className="w-full py-3">
             Back to Sign In
           </Button>
@@ -131,13 +129,9 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Verify your email
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-2">
-            We sent a verification link to:
-          </p>
-          <p className="text-primary-600 dark:text-primary-400 font-medium mb-6">
-            {email}
-          </p>
-          
+          <p className="text-gray-600 dark:text-gray-400 mb-2">We sent a verification link to:</p>
+          <p className="text-primary-600 dark:text-primary-400 font-medium mb-6">{email}</p>
+
           <div className="text-left bg-gray-100 dark:bg-gray-800/50 rounded-lg p-4 mb-6">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               To complete signup:
@@ -148,13 +142,13 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
               <li>Return to this app and tap the button below</li>
             </ol>
           </div>
-          
+
           {error && (
             <div className="p-3 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
             </div>
           )}
-          
+
           <div className="space-y-3">
             <Button
               onClick={handleCheckVerification}
@@ -170,7 +164,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
                 </>
               )}
             </Button>
-            
+
             <button
               onClick={handleBackToSignIn}
               className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
@@ -189,14 +183,12 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center">
-          <img 
-            src="/app-icon-80.png" 
-            alt="Ascend" 
+          <img
+            src="/app-icon-80.png"
+            alt="Ascend"
             className="w-20 h-20 mb-4 rounded-2xl shadow-lg"
           />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Ascend
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Ascend</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
             {mode === 'forgot' ? 'Reset your password' : 'Progressive calisthenics training'}
           </p>
@@ -213,7 +205,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
               Back to sign in
             </button>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -226,7 +218,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="Email address"
                 required
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-colors"
@@ -239,7 +231,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder={mode === 'signup' ? 'Create password (6+ characters)' : 'Password'}
                   required
                   minLength={mode === 'signup' ? 6 : undefined}
@@ -264,7 +256,11 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  {mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'}
+                  {mode === 'signin'
+                    ? 'Sign In'
+                    : mode === 'signup'
+                      ? 'Create Account'
+                      : 'Send Reset Link'}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </>
               )}
@@ -274,7 +270,10 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
           {mode === 'signin' && (
             <div className="mt-4 text-center">
               <button
-                onClick={() => { setMode('forgot'); setError(null); }}
+                onClick={() => {
+                  setMode('forgot');
+                  setError(null);
+                }}
                 className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
               >
                 Forgot password?
@@ -300,9 +299,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
 
       {/* Footer */}
       <div className="px-6 py-4 text-center">
-        <p className="text-xs text-gray-400 dark:text-gray-500">
-          Part of the BetterDays suite
-        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">Part of the BetterDays suite</p>
       </div>
     </div>
   );

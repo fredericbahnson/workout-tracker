@@ -22,19 +22,17 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex flex-col safe-area-top">
       {/* Offline indicator */}
       <OfflineIndicator />
-      
+
       {/* Main content */}
-      <main className="flex-1 pb-20 overflow-y-auto">
-        {children}
-      </main>
+      <main className="flex-1 pb-20 overflow-y-auto">{children}</main>
 
       {/* Bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-surface border-t border-gray-200 dark:border-dark-elevated safe-area-bottom">
         <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
           {navItems.map(({ to, icon: Icon, label }) => {
-            const isActive = location.pathname === to || 
-              (to !== '/' && location.pathname.startsWith(to));
-            
+            const isActive =
+              location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+
             return (
               <NavLink
                 key={to}
@@ -42,9 +40,10 @@ export function Layout({ children }: LayoutProps) {
                 className={`
                   flex flex-col items-center justify-center w-full h-full
                   transition-colors
-                  ${isActive 
-                    ? 'text-primary-600 dark:text-primary-400' 
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ${
+                    isActive
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }
                 `}
               >

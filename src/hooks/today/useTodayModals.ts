@@ -1,12 +1,18 @@
 /**
  * useTodayModals Hook
- * 
+ *
  * Manages all modal/dialog state for the Today page.
  * Consolidates 10+ useState calls into a single reducer-based hook.
  */
 
 import { useReducer, useCallback } from 'react';
-import type { Exercise, ScheduledSet, ScheduledWorkout, CompletedSet, ProgressionMode } from '@/types';
+import type {
+  Exercise,
+  ScheduledSet,
+  ScheduledWorkout,
+  CompletedSet,
+  ProgressionMode,
+} from '@/types';
 
 // Types for modal data payloads
 export interface ScheduledSetModalData {
@@ -48,12 +54,12 @@ interface ModalState {
   skipWorkoutConfirm: boolean;
   endWorkoutConfirm: boolean;
   restTimer: boolean;
-  
+
   // Modals with associated data
   scheduledSet: ScheduledSetModalData | null;
   skipSetConfirm: SkipSetModalData | null;
   editCompletedSet: EditCompletedSetModalData | null;
-  
+
   // Related state
   selectedExercise: Exercise | null;
   wizardProgressionMode: ProgressionMode;
@@ -94,7 +100,7 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
   switch (action.type) {
     case 'OPEN_MODAL':
       return { ...state, [action.modal]: true };
-      
+
     case 'CLOSE_MODAL':
       // For modals with data, also clear the data
       if (action.modal === 'scheduledSet') {
@@ -107,31 +113,31 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
         return { ...state, editCompletedSet: null };
       }
       return { ...state, [action.modal]: false };
-      
+
     case 'CLOSE_ALL':
       return { ...initialState, wizardProgressionMode: state.wizardProgressionMode };
-      
+
     case 'SET_SCHEDULED_SET':
       return { ...state, scheduledSet: action.data };
-      
+
     case 'SET_SKIP_SET':
       return { ...state, skipSetConfirm: action.data };
-      
+
     case 'SET_EDIT_COMPLETED_SET':
       return { ...state, editCompletedSet: action.data };
-      
+
     case 'SET_SELECTED_EXERCISE':
       return { ...state, selectedExercise: action.exercise };
-      
+
     case 'SET_WIZARD_MODE':
       return { ...state, wizardProgressionMode: action.mode };
-      
+
     case 'SET_REST_TIMER_DURATION':
       return { ...state, restTimerDuration: action.duration };
-      
+
     case 'SET_IS_LOGGING':
       return { ...state, isLogging: action.isLogging };
-      
+
     default:
       return state;
   }
@@ -302,7 +308,8 @@ export function useTodayModals(options: UseTodayModalsOptions = {}) {
     openCycleTypeSelector,
     closeCycleTypeSelector,
     selectCycleType,
-    setWizardProgressionMode: (mode: ProgressionMode) => dispatch({ type: 'SET_WIZARD_MODE', mode }),
+    setWizardProgressionMode: (mode: ProgressionMode) =>
+      dispatch({ type: 'SET_WIZARD_MODE', mode }),
 
     // Scheduled set
     openScheduledSetModal,

@@ -1,6 +1,6 @@
 /**
  * Schedule Components
- * 
+ *
  * Extracted components for the Schedule page.
  */
 

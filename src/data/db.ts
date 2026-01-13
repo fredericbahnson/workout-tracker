@@ -1,10 +1,23 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Exercise, MaxRecord, CompletedSet, Cycle, ScheduledWorkout, UserPreferences } from '@/types';
+import type {
+  Exercise,
+  MaxRecord,
+  CompletedSet,
+  Cycle,
+  ScheduledWorkout,
+  UserPreferences,
+} from '@/types';
 
 // Sync queue item for offline operations
 export interface SyncQueueItem {
   id: string;
-  table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts' | 'user_preferences';
+  table:
+    | 'exercises'
+    | 'max_records'
+    | 'completed_sets'
+    | 'cycles'
+    | 'scheduled_workouts'
+    | 'user_preferences';
   operation: 'upsert' | 'delete';
   itemId: string;
   data?: unknown;
@@ -25,14 +38,14 @@ class AscendDatabase extends Dexie {
 
   constructor() {
     super('Ascend');
-    
+
     // Version 1: Initial schema for Ascend
     this.version(1).stores({
       exercises: 'id, type, mode, name, createdAt',
       maxRecords: 'id, exerciseId, recordedAt',
       completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
       cycles: 'id, status, startDate',
-      scheduledWorkouts: 'id, cycleId, sequenceNumber, status'
+      scheduledWorkouts: 'id, cycleId, sequenceNumber, status',
     });
 
     // Version 2: Add sync queue for offline support
@@ -42,7 +55,7 @@ class AscendDatabase extends Dexie {
       completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
       cycles: 'id, status, startDate',
       scheduledWorkouts: 'id, cycleId, sequenceNumber, status',
-      syncQueue: 'id, table, itemId, createdAt'
+      syncQueue: 'id, table, itemId, createdAt',
     });
 
     // Version 3: Add user preferences table for synced training preferences
@@ -53,7 +66,7 @@ class AscendDatabase extends Dexie {
       cycles: 'id, status, startDate',
       scheduledWorkouts: 'id, cycleId, sequenceNumber, status',
       syncQueue: 'id, [table+itemId], createdAt',
-      userPreferences: 'id'
+      userPreferences: 'id',
     });
   }
 }
@@ -66,9 +79,9 @@ export function generateId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  
+
   // Fallback for HTTP contexts (local dev on mobile)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
@@ -78,7 +91,7 @@ export function generateId(): string {
 // Export/Import helpers for backup
 export async function exportData(): Promise<string> {
   const userPrefs = await db.userPreferences.toArray();
-  
+
   const data = {
     exercises: await db.exercises.toArray(),
     maxRecords: await db.maxRecords.toArray(),
@@ -87,40 +100,54 @@ export async function exportData(): Promise<string> {
     scheduledWorkouts: await db.scheduledWorkouts.toArray(),
     userPreferences: userPrefs.length > 0 ? userPrefs[0] : null,
     exportedAt: new Date().toISOString(),
-    version: 2  // Increment version for new format with preferences
+    version: 2, // Increment version for new format with preferences
   };
   return JSON.stringify(data, null, 2);
 }
 
-export async function importData(jsonString: string): Promise<{ success: boolean; error?: string }> {
+export async function importData(
+  jsonString: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const data = JSON.parse(jsonString);
-    
+
     // Basic validation
     if (!data.version || !data.exercises) {
       return { success: false, error: 'Invalid backup file format' };
     }
 
     // Clear existing data and import
-    await db.transaction('rw', [db.exercises, db.maxRecords, db.completedSets, db.cycles, db.scheduledWorkouts, db.userPreferences], async () => {
-      await db.exercises.clear();
-      await db.maxRecords.clear();
-      await db.completedSets.clear();
-      await db.cycles.clear();
-      await db.scheduledWorkouts.clear();
-      await db.userPreferences.clear();
+    await db.transaction(
+      'rw',
+      [
+        db.exercises,
+        db.maxRecords,
+        db.completedSets,
+        db.cycles,
+        db.scheduledWorkouts,
+        db.userPreferences,
+      ],
+      async () => {
+        await db.exercises.clear();
+        await db.maxRecords.clear();
+        await db.completedSets.clear();
+        await db.cycles.clear();
+        await db.scheduledWorkouts.clear();
+        await db.userPreferences.clear();
 
-      if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
-      if (data.maxRecords?.length) await db.maxRecords.bulkAdd(data.maxRecords);
-      if (data.completedSets?.length) await db.completedSets.bulkAdd(data.completedSets);
-      if (data.cycles?.length) await db.cycles.bulkAdd(data.cycles);
-      if (data.scheduledWorkouts?.length) await db.scheduledWorkouts.bulkAdd(data.scheduledWorkouts);
-      
-      // Import user preferences if present (version 2+ backups)
-      if (data.userPreferences) {
-        await db.userPreferences.put(data.userPreferences);
+        if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
+        if (data.maxRecords?.length) await db.maxRecords.bulkAdd(data.maxRecords);
+        if (data.completedSets?.length) await db.completedSets.bulkAdd(data.completedSets);
+        if (data.cycles?.length) await db.cycles.bulkAdd(data.cycles);
+        if (data.scheduledWorkouts?.length)
+          await db.scheduledWorkouts.bulkAdd(data.scheduledWorkouts);
+
+        // Import user preferences if present (version 2+ backups)
+        if (data.userPreferences) {
+          await db.userPreferences.put(data.userPreferences);
+        }
       }
-    });
+    );
 
     return { success: true };
   } catch (e) {
