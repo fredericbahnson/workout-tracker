@@ -280,7 +280,7 @@ export const CompletedSetRepo = {
   },
 
   /**
-   * Gets working set history for an exercise, excluding warmup sets.
+   * Gets working set history for an exercise, excluding warmup and skipped sets.
    * Groups sets by workout session (same calendar day).
    * @param exerciseId - The exercise UUID
    * @returns Promise resolving to array of session groups, newest first
@@ -315,10 +315,11 @@ export const CompletedSetRepo = {
       }
     }
 
-    // Filter out warmup sets
+    // Filter out warmup sets and skipped sets (0 reps)
     // Ad-hoc sets (scheduledSetId === null) are never warmups
     const workingSets = allSets.filter(
-      cs => cs.scheduledSetId === null || !warmupSetIds.has(cs.scheduledSetId)
+      cs =>
+        cs.actualReps > 0 && (cs.scheduledSetId === null || !warmupSetIds.has(cs.scheduledSetId))
     );
 
     // Group by date (same calendar day = same session)

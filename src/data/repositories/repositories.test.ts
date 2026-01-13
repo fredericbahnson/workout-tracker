@@ -848,5 +848,42 @@ describe('CompletedSetRepo', () => {
 
       expect(result[0].sets[0].weight).toBe(25);
     });
+
+    it('excludes skipped sets (0 reps)', async () => {
+      const completedSets = [
+        createMockCompletedSet({
+          id: 'cs-1',
+          scheduledSetId: null,
+          actualReps: 0, // Skipped set
+          completedAt: new Date('2024-01-10T10:00:00'),
+        }),
+        createMockCompletedSet({
+          id: 'cs-2',
+          scheduledSetId: null,
+          actualReps: 15, // Completed set
+          completedAt: new Date('2024-01-10T10:05:00'),
+        }),
+        createMockCompletedSet({
+          id: 'cs-3',
+          scheduledSetId: null,
+          actualReps: 0, // Another skipped set
+          completedAt: new Date('2024-01-10T10:10:00'),
+        }),
+      ];
+
+      const mockWhere = vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue(completedSets),
+        }),
+      });
+      (db.completedSets.where as Mock).mockImplementation(mockWhere);
+      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+
+      const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].sets).toHaveLength(1);
+      expect(result[0].sets[0].actualReps).toBe(15);
+    });
   });
 });
