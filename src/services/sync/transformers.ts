@@ -263,6 +263,7 @@ export function remoteToLocalUserPreferences(remote: RemoteUserPreferences): Use
       enabled: remote.max_test_rest_timer_enabled,
       durationSeconds: remote.max_test_rest_timer_duration_seconds,
     },
+    timerVolume: remote.timer_volume ?? 40, // Default to 40 for existing records
     createdAt: toDateRequired(remote.created_at),
     updatedAt: toDateRequired(remote.updated_at),
   };
@@ -284,6 +285,7 @@ export function localToRemoteUserPreferences(local: UserPreferences, userId: str
     rest_timer_duration_seconds: local.restTimer.durationSeconds,
     max_test_rest_timer_enabled: local.maxTestRestTimer.enabled,
     max_test_rest_timer_duration_seconds: local.maxTestRestTimer.durationSeconds,
+    timer_volume: local.timerVolume,
     created_at: toISOString(local.createdAt),
     updated_at: toISOString(local.updatedAt),
   };

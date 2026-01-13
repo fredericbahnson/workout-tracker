@@ -158,6 +158,15 @@ export const UserPreferencesRepo = {
   },
 
   /**
+   * Update timer volume (0-100).
+   */
+  async setTimerVolume(volume: number): Promise<UserPreferences> {
+    // Clamp to valid range
+    const clampedVolume = Math.min(100, Math.max(0, Math.round(volume)));
+    return this.save({ timerVolume: clampedVolume });
+  },
+
+  /**
    * Reset preferences to defaults.
    */
   async reset(): Promise<UserPreferences> {

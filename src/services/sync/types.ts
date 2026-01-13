@@ -155,6 +155,7 @@ export interface RemoteUserPreferences {
   rest_timer_duration_seconds: number;
   max_test_rest_timer_enabled: boolean;
   max_test_rest_timer_duration_seconds: number;
+  timer_volume: number | null; // null for backwards compatibility
   created_at: string;
   updated_at: string;
 }

@@ -91,7 +91,7 @@ export function MixedExerciseConfig({
   // Conditioning exercise UI
   if (isConditioning) {
     return (
-      <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-gray-100 dark:bg-gray-800">
+      <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-2 bg-gray-100 dark:bg-gray-800">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-start gap-2">
             <div className="flex flex-col gap-1 flex-shrink-0">
@@ -160,7 +160,7 @@ export function MixedExerciseConfig({
 
   // Standard exercise UI with RFEM/Simple toggle
   return (
-    <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-gray-100 dark:bg-gray-800">
+    <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-2 bg-gray-100 dark:bg-gray-800">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-start gap-2">
           <div className="flex flex-col gap-1 flex-shrink-0">

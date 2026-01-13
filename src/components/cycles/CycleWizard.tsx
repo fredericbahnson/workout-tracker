@@ -102,8 +102,8 @@ export function CycleWizard({
       {/* Progress indicator - hide on start step */}
       {currentStep !== 'start' && <WizardProgress steps={displaySteps} currentStep={currentStep} />}
 
-      {/* Step content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Step content - reduced horizontal padding for more content width */}
+      <div className="flex-1 overflow-y-auto px-2 py-4">
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm">
             {error}

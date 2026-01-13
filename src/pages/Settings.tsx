@@ -21,8 +21,11 @@ import {
   Layers,
   Lock,
   Crown,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
+import { playTestSound, initAudioOnInteraction } from '@/utils/audio';
 import { ScheduledWorkoutRepo } from '@/data/repositories';
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
 import { useAuth, useSync, useSyncedPreferences, useSyncItem, useEntitlement } from '@/contexts';
@@ -58,6 +61,7 @@ export function SettingsPage() {
     setWeeklySetGoal,
     setRestTimer,
     setMaxTestRestTimer,
+    setTimerVolume,
   } = useSyncedPreferences();
   const {
     user,
@@ -861,6 +865,87 @@ export function SettingsPage() {
                   />
                 </div>
               )}
+            </div>
+
+            {/* Timer Volume */}
+            <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
+              <div className="flex items-center gap-2 mb-3">
+                {preferences.timerVolume === 0 ? (
+                  <VolumeX className="w-4 h-4 text-gray-400" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-gray-500" />
+                )}
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Timer Sound
+                </h4>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Mute button */}
+                <button
+                  onClick={() => {
+                    initAudioOnInteraction();
+                    setTimerVolume(preferences.timerVolume === 0 ? 40 : 0);
+                  }}
+                  className={`
+                    p-2 rounded-lg transition-colors
+                    ${
+                      preferences.timerVolume === 0
+                        ? 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }
+                  `}
+                  title={preferences.timerVolume === 0 ? 'Unmute' : 'Mute'}
+                >
+                  {preferences.timerVolume === 0 ? (
+                    <VolumeX className="w-5 h-5" />
+                  ) : (
+                    <Volume2 className="w-5 h-5" />
+                  )}
+                </button>
+
+                {/* Volume slider */}
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={preferences.timerVolume}
+                  onChange={e => {
+                    initAudioOnInteraction();
+                    setTimerVolume(Number(e.target.value));
+                  }}
+                  className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+
+                {/* Volume percentage */}
+                <span className="text-sm text-gray-500 dark:text-gray-400 w-10 text-right tabular-nums">
+                  {preferences.timerVolume}%
+                </span>
+
+                {/* Test button */}
+                <button
+                  onClick={() => {
+                    initAudioOnInteraction();
+                    playTestSound(preferences.timerVolume);
+                  }}
+                  disabled={preferences.timerVolume === 0}
+                  className={`
+                    px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                    ${
+                      preferences.timerVolume === 0
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                        : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-900/50'
+                    }
+                  `}
+                >
+                  Test
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Volume for countdown beeps and completion sounds
+              </p>
             </div>
           </CardContent>
         </Card>

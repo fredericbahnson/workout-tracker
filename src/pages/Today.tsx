@@ -630,6 +630,7 @@ export function TodayPage() {
             : null
         }
         isLogging={modals.isLogging}
+        timerVolume={preferences.timerVolume}
         onLogSet={handleLogSet}
         onClose={modals.closeScheduledSetModal}
       />
@@ -663,7 +664,11 @@ export function TodayPage() {
       />
 
       <Modal isOpen={modals.showRestTimer} onClose={modals.closeRestTimer} title="Rest Timer">
-        <RestTimer initialSeconds={modals.restTimerDuration} onDismiss={modals.closeRestTimer} />
+        <RestTimer
+          initialSeconds={modals.restTimerDuration}
+          onDismiss={modals.closeRestTimer}
+          volume={preferences.timerVolume}
+        />
       </Modal>
 
       <SkipSetConfirmModal

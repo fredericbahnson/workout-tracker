@@ -29,15 +29,13 @@ export function BasicsStep({
         placeholder="e.g., Winter 2025 Block 1"
       />
 
-      <div className="overflow-hidden">
-        <Input
-          label="Start Date"
-          type="date"
-          value={startDate}
-          onChange={e => setStartDate(e.target.value)}
-          className="max-w-full"
-        />
-      </div>
+      <Input
+        label="Start Date"
+        type="date"
+        value={startDate}
+        onChange={e => setStartDate(e.target.value)}
+        className="w-full [&::-webkit-calendar-picker-indicator]:ml-auto"
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <NumberInput

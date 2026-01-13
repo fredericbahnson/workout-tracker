@@ -49,7 +49,7 @@ export function GroupsStep({
 
       <div className="space-y-3">
         {groups.map(group => (
-          <Card key={group.id} className="p-3">
+          <Card key={group.id} className="p-2">
             <div className="flex items-center gap-2 mb-2">
               <Input
                 value={group.name}

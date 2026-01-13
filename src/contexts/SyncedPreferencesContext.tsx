@@ -45,6 +45,9 @@ interface SyncedPreferencesContextType {
 
   /** Update max test rest timer settings */
   setMaxTestRestTimer: (settings: Partial<TimerSettings>) => Promise<void>;
+
+  /** Update timer volume (0-100) */
+  setTimerVolume: (volume: number) => Promise<void>;
 }
 
 const SyncedPreferencesContext = createContext<SyncedPreferencesContextType | undefined>(undefined);
@@ -154,6 +157,14 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     [saveAndSync]
   );
 
+  const setTimerVolume = useCallback(
+    async (volume: number) => {
+      const updated = await UserPreferencesRepo.setTimerVolume(volume);
+      await saveAndSync(updated);
+    },
+    [saveAndSync]
+  );
+
   return (
     <SyncedPreferencesContext.Provider
       value={{
@@ -166,6 +177,7 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
         setWeeklySetGoal,
         setRestTimer,
         setMaxTestRestTimer,
+        setTimerVolume,
       }}
     >
       {children}

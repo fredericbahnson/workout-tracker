@@ -477,8 +477,8 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Content - reduced horizontal padding for more content width */}
+      <div className="flex-1 overflow-y-auto px-2 py-4">
         {error && (
           <div className="mb-4 flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />

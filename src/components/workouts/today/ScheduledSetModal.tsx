@@ -18,6 +18,8 @@ interface ScheduledSetModalProps {
   exercise: Exercise | null;
   /** Whether a log operation is in progress */
   isLogging: boolean;
+  /** Timer volume 0-100 */
+  timerVolume?: number;
   /** Called when user completes logging the set */
   onLogSet: (
     reps: number,
@@ -39,6 +41,7 @@ export function ScheduledSetModal({
   scheduledSet,
   exercise,
   isLogging,
+  timerVolume = 40,
   onLogSet,
   onClose,
 }: ScheduledSetModalProps) {
@@ -112,6 +115,7 @@ export function ScheduledSetModal({
                 }}
                 onCancel={handleClose}
                 onSkipToLog={() => setShowTimerMode(false)}
+                volume={timerVolume}
               />
             );
           }

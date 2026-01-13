@@ -102,7 +102,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', ariaLabel
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
-    full: 'max-w-full mx-4',
+    full: 'max-w-full mx-2',
   };
 
   return (
@@ -152,8 +152,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', ariaLabel
           </div>
         )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        {/* Content - reduced padding for full-size modals */}
+        <div className={`flex-1 overflow-y-auto ${size === 'full' ? 'p-2' : 'p-4'}`}>
+          {children}
+        </div>
       </div>
     </div>
   );

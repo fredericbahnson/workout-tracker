@@ -2,9 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { formatTime } from '@/types';
-import { createScopedLogger } from '@/utils/logger';
-
-const log = createScopedLogger('Timer');
+import {
+  getAudioContext,
+  initAudioOnInteraction,
+  playCountdownBeep,
+  playCompletionSound,
+} from '@/utils/audio';
 
 interface ExerciseTimerProps {
   targetSeconds: number;
@@ -12,101 +15,8 @@ interface ExerciseTimerProps {
   onComplete: (actualSeconds: number) => void;
   onCancel: () => void;
   onSkipToLog: () => void;
-}
-
-// Audio context for generating beeps
-let audioContext: AudioContext | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new (
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    )();
-  }
-  return audioContext;
-}
-
-function playBeep(frequency: number, duration: number, volume: number = 0.3) {
-  try {
-    const ctx = getAudioContext();
-
-    // Resume context if suspended (browser autoplay policy)
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
-
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.frequency.value = frequency;
-    oscillator.type = 'sine';
-
-    gainNode.gain.setValueAtTime(volume, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + duration);
-  } catch (e) {
-    log.warn('Audio playback failed:', e);
-  }
-}
-
-function playCountdownBeep() {
-  // Short beep at 880Hz (A5)
-  playBeep(880, 0.15, 0.4);
-}
-
-function playCompletionSound() {
-  // Two-tone success sound
-  try {
-    const ctx = getAudioContext();
-
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
-
-    // First tone
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.frequency.value = 523.25; // C5
-    osc1.type = 'sine';
-    gain1.gain.setValueAtTime(0.4, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-    osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.2);
-
-    // Second tone (higher)
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.frequency.value = 659.25; // E5
-    osc2.type = 'sine';
-    gain2.gain.setValueAtTime(0.4, ctx.currentTime + 0.15);
-    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-    osc2.start(ctx.currentTime + 0.15);
-    osc2.stop(ctx.currentTime + 0.4);
-
-    // Third tone (even higher)
-    const osc3 = ctx.createOscillator();
-    const gain3 = ctx.createGain();
-    osc3.connect(gain3);
-    gain3.connect(ctx.destination);
-    osc3.frequency.value = 783.99; // G5
-    osc3.type = 'sine';
-    gain3.gain.setValueAtTime(0.4, ctx.currentTime + 0.3);
-    gain3.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-    osc3.start(ctx.currentTime + 0.3);
-    osc3.stop(ctx.currentTime + 0.6);
-  } catch (e) {
-    log.warn('Audio playback failed:', e);
-  }
+  /** Volume 0-100, default 40 */
+  volume?: number;
 }
 
 export function ExerciseTimer({
@@ -115,6 +25,7 @@ export function ExerciseTimer({
   onComplete,
   onCancel,
   onSkipToLog,
+  volume = 40,
 }: ExerciseTimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(targetSeconds);
   const [isRunning, setIsRunning] = useState(false);
@@ -138,7 +49,7 @@ export function ExerciseTimer({
     if (isRunning && timeRemaining <= 3 && timeRemaining > 0) {
       // Play beep for 3, 2, 1
       if (lastBeepRef.current !== timeRemaining) {
-        playCountdownBeep();
+        playCountdownBeep(volume);
         lastBeepRef.current = timeRemaining;
       }
     }
@@ -146,18 +57,19 @@ export function ExerciseTimer({
     if (timeRemaining === 0 && isRunning) {
       setIsRunning(false);
       setIsComplete(true);
-      playCompletionSound();
+      playCompletionSound(volume);
 
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     }
-  }, [timeRemaining, isRunning]);
+  }, [timeRemaining, isRunning, volume]);
 
   const startTimer = useCallback(() => {
     // Initialize audio context on user interaction (required by browsers)
     getAudioContext();
+    initAudioOnInteraction();
 
     setIsRunning(true);
     lastBeepRef.current = null;
