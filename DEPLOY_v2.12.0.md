@@ -45,6 +45,7 @@ src/types/index.ts                 # Export entitlement types
 src/components/cycles/CycleTypeSelector.tsx  # Locked options with paywall
 src/pages/Settings.tsx             # Trial banner, subscription status, gated Advanced mode
 src/services/syncService.test.ts   # Fixed: added missing userPreferences mock (2 tests were failing)
+src/utils/dateUtils.test.ts        # Fixed: timezone-sensitive test now uses UTC methods
 CHANGELOG.md                       # Version history
 package.json                       # Version bump to 2.12.0
 ```

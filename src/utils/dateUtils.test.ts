@@ -43,9 +43,10 @@ describe('dateUtils', () => {
       const dateString = '2024-01-15';
       const result = toDate(dateString);
       expect(result).toBeInstanceOf(Date);
-      expect(result?.getFullYear()).toBe(2024);
-      expect(result?.getMonth()).toBe(0); // January is 0
-      expect(result?.getDate()).toBe(15);
+      // Use UTC methods since date-only strings are parsed as UTC
+      expect(result?.getUTCFullYear()).toBe(2024);
+      expect(result?.getUTCMonth()).toBe(0); // January is 0
+      expect(result?.getUTCDate()).toBe(15);
     });
 
     it('throws for invalid date string', () => {

@@ -52,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **syncService.test.ts**: Added missing `userPreferences` mock to db mock factory
   - Two tests were failing due to incomplete mock setup after userPreferences sync was added
   - All 246 tests now pass
+- **dateUtils.test.ts**: Fixed timezone-sensitive test assertion
+  - `converts date string without timezone to Date` test used local time methods on a UTC-parsed date
+  - Changed to use `getUTCFullYear()`, `getUTCMonth()`, `getUTCDate()` for consistent results across timezones
 
 ## [2.11.1] - 2026-01-13
 
