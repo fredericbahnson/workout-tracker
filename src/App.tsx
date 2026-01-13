@@ -10,7 +10,7 @@ import {
   SettingsPage,
   SchedulePage,
 } from './pages';
-import { useAppStore } from './stores/appStore';
+import { useAppStore, useThemeEffect } from './stores/appStore';
 import { AuthProvider, SyncProvider, useAuth, SyncedPreferencesProvider } from './contexts';
 import { AuthGate, OnboardingFlow } from './components/onboarding';
 
@@ -95,35 +95,10 @@ function AppContent() {
 }
 
 function App() {
-  const theme = useAppStore(state => state.theme);
+  // Apply theme (consolidated in useThemeEffect hook)
+  useThemeEffect();
+
   const fontSize = useAppStore(state => state.fontSize);
-
-  // Apply theme on mount and when it changes
-  useEffect(() => {
-    const root = document.documentElement;
-
-    const applyTheme = () => {
-      if (theme === 'system') {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.classList.toggle('dark', systemDark);
-      } else {
-        root.classList.toggle('dark', theme === 'dark');
-      }
-    };
-
-    applyTheme();
-
-    // Listen for system theme changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (theme === 'system') {
-        applyTheme();
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
 
   // Apply font size on mount and when it changes
   useEffect(() => {

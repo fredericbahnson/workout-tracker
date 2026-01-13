@@ -1,3 +1,4 @@
+import React from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -73,11 +74,45 @@ export const useAppStore = create<AppState>()(
   )
 );
 
-// Theme helper hook
+// Theme helper hook - applies theme to document and listens for system changes
+export function useThemeEffect() {
+  const { theme, setTheme } = useAppStore();
+
+  // Apply theme to document and set up system theme listener
+  React.useEffect(() => {
+    const root = document.documentElement;
+
+    const applyTheme = () => {
+      if (theme === 'system') {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.classList.toggle('dark', systemDark);
+      } else {
+        root.classList.toggle('dark', theme === 'dark');
+      }
+    };
+
+    applyTheme();
+
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (theme === 'system') {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
+
+  return { theme, setTheme };
+}
+
+// Legacy useTheme hook for backward compatibility
 export function useTheme() {
   const { theme, setTheme } = useAppStore();
 
-  // Apply theme to document
+  // Apply theme to document (for manual calls)
   const applyTheme = (newTheme: Theme) => {
     const root = document.documentElement;
 

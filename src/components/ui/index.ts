@@ -1,4 +1,6 @@
 export { Button } from './Button';
+export { ConfirmModal } from './ConfirmModal';
+export { FilterChip } from './FilterChip';
 export { Input, NumberInput, TimeDurationInput } from './Input';
 export { Select } from './Select';
 export { Card, CardContent, CardHeader, CardFooter } from './Card';

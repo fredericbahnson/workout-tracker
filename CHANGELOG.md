@@ -5,6 +5,34 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-01-12
+
+### Added
+- **FilterChip component**: Reusable filter chip/button for toggle-style filtering
+  - Used in Exercises page for type filtering
+  - Supports label, count, active state, and custom className
+- **ConfirmModal component**: Generic confirmation modal for simple confirm/cancel dialogs
+  - Supports primary and danger button variants
+  - Loading state with customizable labels
+  - Optional secondary message and custom children
+- **useSettingsState hook**: Reducer-based state management for Settings page
+  - Consolidates 19 useState calls into organized state groups
+  - Typed actions for modals, auth, password change, loading states, and messages
+  - Exported from hooks/index.ts for use in Settings page refactoring
+- **useThemeEffect hook**: Consolidated theme application with system theme listener
+  - Removed duplicate theme logic from App.tsx
+  - Single source of truth for theme management
+
+### Changed
+- Exercises page now uses FilterChip component instead of inline buttons
+- App.tsx simplified by using useThemeEffect hook
+- appStore.ts exports both useThemeEffect (recommended) and useTheme (legacy)
+
+### Technical
+- Phase 3 refactoring complete
+- All new components follow existing patterns and conventions
+- No breaking changes - existing code continues to work
+
 ## [2.8.0] - 2026-01-12
 
 ### Added

@@ -2,6 +2,8 @@ export { useOnlineStatus } from './useOnlineStatus';
 export { useWorkoutDisplay } from './useWorkoutDisplay';
 export { useCycleCompletion } from './useCycleCompletion';
 export { useAdHocWorkout } from './useAdHocWorkout';
+export { useSettingsState } from './useSettingsState';
+export type { SettingsState } from './useSettingsState';
 
 // Page-specific hooks
 export { useTodayModals } from './today';

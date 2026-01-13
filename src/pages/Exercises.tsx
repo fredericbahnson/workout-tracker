@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Search, ListChecks, Filter } from 'lucide-react';
 import { ExerciseRepo, MaxRecordRepo } from '@/data/repositories';
 import { PageHeader } from '@/components/layout';
-import { Button, Input, Modal, EmptyState } from '@/components/ui';
+import { Button, Input, Modal, EmptyState, FilterChip } from '@/components/ui';
 import { ExerciseCard, ExerciseForm } from '@/components/exercises';
 import { createScopedLogger } from '@/utils/logger';
 import {
@@ -119,34 +119,20 @@ export function ExercisesPage() {
 
         {/* Type Filter */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
-          <button
+          <FilterChip
+            label="All"
+            count={exercises?.length || 0}
+            isActive={filterType === 'all'}
             onClick={() => setFilterType('all')}
-            className={`
-              px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-              ${
-                filterType === 'all'
-                  ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-              }
-            `}
-          >
-            All ({exercises?.length || 0})
-          </button>
+          />
           {EXERCISE_TYPES.map(type => (
-            <button
+            <FilterChip
               key={type}
+              label={EXERCISE_TYPE_LABELS[type]}
+              count={typeCounts[type] || 0}
+              isActive={filterType === type}
               onClick={() => setFilterType(type)}
-              className={`
-                px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-                ${
-                  filterType === type
-                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                }
-              `}
-            >
-              {EXERCISE_TYPE_LABELS[type]} ({typeCounts[type] || 0})
-            </button>
+            />
           ))}
         </div>
 
