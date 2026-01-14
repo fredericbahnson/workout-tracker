@@ -69,7 +69,9 @@ export function useCycleWizardState({
 
   // Form state - use edit cycle values or defaults from settings
   const [name, setName] = useState(editCycle?.name || '');
-  const [startDate, setStartDate] = useState(() => {
+  // startDate defaults to today for new cycles, or uses existing date when editing
+  // We don't expose setStartDate - it's automatically determined
+  const [startDate] = useState(() => {
     if (editCycle) {
       return new Date(editCycle.startDate).toISOString().split('T')[0];
     }
@@ -659,7 +661,6 @@ export function useCycleWizardState({
     name,
     setName,
     startDate,
-    setStartDate,
     numberOfWeeks,
     setNumberOfWeeks,
     workoutDaysPerWeek,

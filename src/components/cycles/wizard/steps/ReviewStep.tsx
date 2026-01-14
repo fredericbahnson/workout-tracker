@@ -14,7 +14,6 @@ import type { ReviewStepProps } from '../types';
 export function ReviewStep({
   progressionMode,
   name,
-  startDate,
   numberOfWeeks,
   workoutDaysPerWeek,
   groups,
@@ -130,10 +129,6 @@ export function ReviewStep({
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="text-gray-500 dark:text-gray-400">Start Date</span>
-            <p className="font-medium">{new Date(startDate).toLocaleDateString()}</p>
-          </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400">Duration</span>
             <p className="font-medium">{numberOfWeeks} weeks</p>

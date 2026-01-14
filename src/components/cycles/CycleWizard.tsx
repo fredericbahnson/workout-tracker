@@ -49,8 +49,6 @@ export function CycleWizard({
     // Form state
     name,
     setName,
-    startDate,
-    setStartDate,
     numberOfWeeks,
     setNumberOfWeeks,
     workoutDaysPerWeek,
@@ -123,8 +121,6 @@ export function CycleWizard({
           <BasicsStep
             name={name}
             setName={setName}
-            startDate={startDate}
-            setStartDate={setStartDate}
             numberOfWeeks={numberOfWeeks}
             setNumberOfWeeks={setNumberOfWeeks}
             workoutDaysPerWeek={workoutDaysPerWeek}
@@ -180,7 +176,6 @@ export function CycleWizard({
           <ReviewStep
             progressionMode={progressionMode}
             name={name}
-            startDate={startDate}
             numberOfWeeks={numberOfWeeks}
             workoutDaysPerWeek={workoutDaysPerWeek}
             groups={groups}

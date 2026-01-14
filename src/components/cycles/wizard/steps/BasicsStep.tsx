@@ -2,7 +2,7 @@
  * BasicsStep Component
  *
  * Step for configuring basic cycle parameters:
- * name, start date, duration, and workout frequency.
+ * name, duration, and workout frequency.
  */
 
 import { Input, NumberInput } from '@/components/ui';
@@ -11,8 +11,6 @@ import type { BasicsStepProps } from '../types';
 export function BasicsStep({
   name,
   setName,
-  startDate,
-  setStartDate,
   numberOfWeeks,
   setNumberOfWeeks,
   workoutDaysPerWeek,
@@ -27,14 +25,6 @@ export function BasicsStep({
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder="e.g., Winter 2025 Block 1"
-      />
-
-      <Input
-        label="Start Date"
-        type="date"
-        value={startDate}
-        onChange={e => setStartDate(e.target.value)}
-        className="w-full [&::-webkit-calendar-picker-indicator]:ml-auto"
       />
 
       <div className="grid grid-cols-2 gap-4">

@@ -5,6 +5,20 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.1] - 2026-01-14
+
+### Fixed
+- **TrialBanner light mode**: Fixed styling to be readable in both light and dark modes
+  - Added proper light mode colors for trial active, ending soon, and expired states
+  - Compact and full variants now both support dark: prefixed classes
+
+### Changed
+- **Removed Start Date field from Cycle Wizard**: Cycles now automatically start "today"
+  - Removed date picker from Basics step
+  - Removed start date display from Review step
+  - startDate is still tracked internally for stats filtering (Progress, Exercise Detail)
+  - Matches existing MaxTestingWizard behavior which already defaulted to today
+
 ## [2.13.0] - 2026-01-14
 
 ### Added

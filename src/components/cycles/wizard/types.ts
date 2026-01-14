@@ -97,8 +97,6 @@ export interface StartStepProps {
 export interface BasicsStepProps {
   name: string;
   setName: (v: string) => void;
-  startDate: string;
-  setStartDate: (v: string) => void;
   numberOfWeeks: number;
   setNumberOfWeeks: (v: number) => void;
   workoutDaysPerWeek: number;
@@ -154,7 +152,6 @@ export interface GoalsStepProps {
 export interface ReviewStepProps {
   progressionMode: ProgressionMode;
   name: string;
-  startDate: string;
   numberOfWeeks: number;
   workoutDaysPerWeek: number;
   groups: Group[];
