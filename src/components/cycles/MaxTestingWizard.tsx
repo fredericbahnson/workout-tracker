@@ -48,12 +48,18 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [maxTestingCycleCount, setMaxTestingCycleCount] = useState(0);
 
   // Load exercises and their current maxes
   useEffect(() => {
     async function loadData() {
       const allExercises = await ExerciseRepo.getAll();
       setExercises(allExercises);
+
+      // Count existing max testing cycles for naming
+      const allCycles = await CycleRepo.getAll();
+      const maxTestingCount = allCycles.filter(c => c.cycleType === 'max_testing').length;
+      setMaxTestingCycleCount(maxTestingCount);
 
       const toTest: ExerciseToTest[] = [];
 
@@ -319,7 +325,7 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
       // Create the max testing cycle - use returned cycle which has the actual DB ID
       const savedCycle = await CycleRepo.create({
-        name: 'Max Testing',
+        name: `Max Testing Cycle ${maxTestingCycleCount + 1}`,
         cycleType: 'max_testing',
         previousCycleId: completedCycle?.id,
         startDate,

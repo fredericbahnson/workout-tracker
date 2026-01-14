@@ -124,18 +124,29 @@ export function useCycleWizardState({
     }
   }, [allCycles, editCycle, initialProgressionMode]);
 
-  // Count completed training cycles for naming
-  const completedTrainingCycleCount = useMemo(
-    () =>
-      allCycles?.filter(c => c.cycleType !== 'max_testing' && c.status === 'completed').length || 0,
-    [allCycles]
-  );
+  // Count completed training cycles by progression mode for naming
+  const cycleCountByMode = useMemo(() => {
+    if (!allCycles) return { rfem: 0, simple: 0, mixed: 0 };
 
-  // Generate default name for new cycle
-  const getDefaultCycleName = useCallback(
-    () => `Workout Cycle ${completedTrainingCycleCount + 1}`,
-    [completedTrainingCycleCount]
-  );
+    const trainingCycles = allCycles.filter(c => c.cycleType === 'training');
+    return {
+      rfem: trainingCycles.filter(c => getProgressionMode(c) === 'rfem').length,
+      simple: trainingCycles.filter(c => getProgressionMode(c) === 'simple').length,
+      mixed: trainingCycles.filter(c => getProgressionMode(c) === 'mixed').length,
+    };
+  }, [allCycles]);
+
+  // Generate default name for new cycle based on progression mode
+  const getDefaultCycleName = useCallback(() => {
+    const modeLabels: Record<ProgressionMode, string> = {
+      rfem: 'RFEM',
+      simple: 'Progression',
+      mixed: 'Mixed',
+    };
+    const label = modeLabels[progressionMode];
+    const count = cycleCountByMode[progressionMode] + 1;
+    return `${label} Cycle ${count}`;
+  }, [progressionMode, cycleCountByMode]);
 
   // Clone from a previous cycle
   const handleCloneFromCycle = useCallback(

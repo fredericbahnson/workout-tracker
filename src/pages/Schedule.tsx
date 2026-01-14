@@ -103,17 +103,27 @@ export function SchedulePage() {
   );
 
   // Split workouts - memoized for performance
-  const { pendingWorkouts, doneWorkouts, skippedWorkouts, passedWorkouts } = useMemo(
-    () => ({
-      pendingWorkouts:
-        allWorkouts?.filter(w => w.status === 'pending' || w.status === 'partial') || [],
-      doneWorkouts: allWorkouts?.filter(w => w.status === 'completed') || [],
-      skippedWorkouts: allWorkouts?.filter(w => w.status === 'skipped') || [],
-      passedWorkouts:
-        allWorkouts?.filter(w => w.status === 'completed' || w.status === 'skipped') || [],
-    }),
-    [allWorkouts]
-  );
+  const { pendingWorkouts, doneWorkouts, skippedWorkouts, passedWorkouts } = useMemo(() => {
+    const pending =
+      allWorkouts?.filter(w => w.status === 'pending' || w.status === 'partial') || [];
+    const skipped = allWorkouts?.filter(w => w.status === 'skipped') || [];
+    const passed =
+      allWorkouts?.filter(w => w.status === 'completed' || w.status === 'skipped') || [];
+
+    // Sort completed workouts by completedAt descending (most recent first)
+    const done = (allWorkouts?.filter(w => w.status === 'completed') || []).sort((a, b) => {
+      const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return bTime - aTime; // Descending order
+    });
+
+    return {
+      pendingWorkouts: pending,
+      doneWorkouts: done,
+      skippedWorkouts: skipped,
+      passedWorkouts: passed,
+    };
+  }, [allWorkouts]);
 
   const getStatusIcon = useCallback((status: ScheduledWorkout['status']) => {
     switch (status) {
@@ -344,11 +354,11 @@ export function SchedulePage() {
               />
             )}
 
-            {/* Completed Workouts */}
+            {/* Completed Workouts - already sorted by completedAt descending */}
             {doneWorkouts.length > 0 && (
               <WorkoutSection
                 title={`Completed (${doneWorkouts.length})`}
-                workouts={[...doneWorkouts].reverse()}
+                workouts={doneWorkouts}
                 activeCycle={activeCycle}
                 onWorkoutClick={handleHistoryClick}
                 getStatusIcon={getStatusIcon}
@@ -357,7 +367,7 @@ export function SchedulePage() {
               />
             )}
 
-            {/* Skipped Workouts */}
+            {/* Skipped Workouts - sorted by sequence (reverse) */}
             {skippedWorkouts.length > 0 && (
               <WorkoutSection
                 title={`Skipped (${skippedWorkouts.length})`}
@@ -641,9 +651,25 @@ function WorkoutSection({
                     )}
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {workout.isAdHoc ? (
-                      workout.completedAt && new Date(workout.completedAt).toLocaleDateString()
+                    {variant === 'completed' && workout.completedAt ? (
+                      // Completed workouts show completion date
+                      <>
+                        {new Date(workout.completedAt).toLocaleDateString(undefined, {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                        {!workout.isAdHoc && <> • {workout.scheduledSets.length} sets</>}
+                      </>
+                    ) : workout.isAdHoc ? (
+                      // Ad-hoc workouts in other contexts
+                      workout.completedAt ? (
+                        new Date(workout.completedAt).toLocaleDateString()
+                      ) : (
+                        'In progress'
+                      )
                     ) : (
+                      // Upcoming/skipped workouts show week/RFEM info
                       <>
                         Week {workout.weekNumber} • RFEM -{workout.rfem} •{' '}
                         {workout.scheduledSets.length} sets

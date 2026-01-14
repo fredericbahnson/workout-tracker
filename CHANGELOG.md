@@ -5,6 +5,24 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.3] - 2026-01-14
+
+### Changed
+- **Schedule Tab Completed Workouts**: Improved display of completed workout history
+  - Completed workouts now sorted by completion time (most recent at top)
+  - Ad-hoc workouts appear in chronological position with scheduled workouts
+  - All completed workouts now display completion date (e.g., "Tue, Jan 14 • 8 sets")
+  - Skipped workouts remain in separate section sorted by sequence
+
+## [2.13.2] - 2026-01-14
+
+### Added
+- **Smart Default Cycle Names**: Cycles now auto-generate descriptive names based on type
+  - Training cycles: "RFEM Cycle 1", "Progression Cycle 2", "Mixed Cycle 1"
+  - Max testing: "Max Testing Cycle 1", "Max Testing Cycle 2"
+  - Count is based on total cycles of that type (not just completed ones)
+  - Users can still edit the name in the Basics step
+
 ## [2.13.1] - 2026-01-14
 
 ### Fixed
