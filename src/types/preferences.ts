@@ -95,5 +95,5 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
     enabled: false,
     durationSeconds: TIMER.DEFAULT_MAX_TEST_REST_SECONDS,
   },
-  timerVolume: 40, // 0-100 scale, 40 = 0.4 gain (matches previous hardcoded values)
+  timerVolume: 100, // 0-100 scale, percentage of system volume (100 = full system volume)
 };

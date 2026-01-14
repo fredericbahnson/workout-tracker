@@ -5,6 +5,15 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.9] - 2026-01-14
+
+### Changed
+- **Timer Volume Default**: Changed default from 40% to 100%
+  - Volume is relative to system volume (100% = full system volume)
+  - Users can turn it down from there if needed
+- **Timer Volume UI**: Added helper text clarifying volume is relative to system volume
+- **Unmute Button**: Now restores to 100% instead of 40%
+
 ## [2.13.8] - 2026-01-14
 
 ### Fixed

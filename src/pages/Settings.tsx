@@ -877,7 +877,7 @@ export function SettingsPage() {
 
             {/* Timer Volume */}
             <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-1">
                 {preferences.timerVolume === 0 ? (
                   <VolumeX className="w-4 h-4 text-gray-400" />
                 ) : (
@@ -887,13 +887,16 @@ export function SettingsPage() {
                   Timer Sound
                 </h4>
               </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Volume relative to system volume (100% = system volume)
+              </p>
 
               <div className="flex items-center gap-3">
                 {/* Mute button */}
                 <button
                   onClick={() => {
                     initAudioOnInteraction();
-                    setTimerVolume(preferences.timerVolume === 0 ? 40 : 0);
+                    setTimerVolume(preferences.timerVolume === 0 ? 100 : 0);
                   }}
                   className={`
                     p-2 rounded-lg transition-colors
