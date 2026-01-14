@@ -5,6 +5,19 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.5] - 2026-01-14
+
+### Fixed
+- **Cycle Wizard Back Button**: Back button on Basics step now returns to cycle type selector
+  - Previously closed the wizard entirely, returning to Schedule page
+  - Added `onBackToSelector` callback to properly navigate back to cycle type selection
+
+### Changed
+- **Cycle Type Selector Order**: Reordered options to group RFEM workflow together
+  - Order is now: RFEM Training → Max Testing → Simple Progression → Mixed
+  - Groups the core RFEM workflow (training + max testing) at the top
+  - Locked Advanced options (Simple/Mixed) now appear at the bottom
+
 ## [2.13.4] - 2026-01-14
 
 ### Fixed

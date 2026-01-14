@@ -248,6 +248,10 @@ export function SchedulePage() {
           editCycle={isEditingCycle ? activeCycle : undefined}
           progressionMode={wizardProgressionMode}
           onClose={() => setShowCycleWizard(false)}
+          onBackToSelector={() => {
+            setShowCycleWizard(false);
+            setShowCycleTypeSelector(true);
+          }}
         />
         {showMaxTestingWizard && (
           <MaxTestingWizard
@@ -404,6 +408,10 @@ export function SchedulePage() {
         editCycle={isEditingCycle ? activeCycle : undefined}
         progressionMode={wizardProgressionMode}
         onClose={() => setShowCycleWizard(false)}
+        onBackToSelector={() => {
+          setShowCycleWizard(false);
+          setShowCycleTypeSelector(true);
+        }}
       />
 
       {showMaxTestingWizard && (
@@ -752,11 +760,13 @@ function CycleWizardModal({
   editCycle,
   progressionMode,
   onClose,
+  onBackToSelector,
 }: {
   isOpen: boolean;
   editCycle?: NonNullable<Awaited<ReturnType<typeof CycleRepo.getActive>>>;
   progressionMode: ProgressionMode;
   onClose: () => void;
+  onBackToSelector?: () => void;
 }) {
   return (
     <Modal
@@ -768,7 +778,7 @@ function CycleWizardModal({
       <div className="h-[80vh]">
         <CycleWizard
           onComplete={onClose}
-          onCancel={onClose}
+          onCancel={editCycle ? onClose : onBackToSelector || onClose}
           editCycle={editCycle}
           initialProgressionMode={progressionMode}
         />
