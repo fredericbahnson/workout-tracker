@@ -23,6 +23,7 @@ interface MaxTestingWizardProps {
   completedCycle?: Cycle; // Optional - if not provided, user selects all exercises
   onComplete: () => void;
   onCancel: () => void;
+  onBackToSelector?: () => void; // Optional - returns to cycle type selector
 }
 
 interface ExerciseToTest {
@@ -39,7 +40,12 @@ interface ExerciseToTest {
 
 type Step = 'select_exercises' | 'conditioning_baselines' | 'review';
 
-export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTestingWizardProps) {
+export function MaxTestingWizard({
+  completedCycle,
+  onComplete,
+  onCancel,
+  onBackToSelector,
+}: MaxTestingWizardProps) {
   const { syncItem } = useSyncItem();
   const [step, setStep] = useState<Step>('select_exercises');
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -203,7 +209,14 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
   const handleBack = () => {
     const hasConditioning = exercisesToTest.some(e => e.included && e.isConditioning);
 
-    if (step === 'review') {
+    if (step === 'select_exercises') {
+      // On first step, go back to cycle type selector
+      if (onBackToSelector) {
+        onBackToSelector();
+      } else {
+        onCancel();
+      }
+    } else if (step === 'review') {
       if (hasConditioning) {
         setStep('conditioning_baselines');
       } else {
@@ -691,11 +704,9 @@ export function MaxTestingWizard({ completedCycle, onComplete, onCancel }: MaxTe
 
       {/* Footer */}
       <div className="px-4 py-4 border-t border-gray-200 dark:border-dark-border flex gap-3">
-        {step !== 'select_exercises' && (
-          <Button variant="secondary" onClick={handleBack} className="px-4">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        )}
+        <Button variant="secondary" onClick={handleBack} className="px-4">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
 
         {step === 'review' ? (
           <Button

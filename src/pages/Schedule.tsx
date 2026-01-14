@@ -257,6 +257,10 @@ export function SchedulePage() {
           <MaxTestingWizard
             onComplete={() => setShowMaxTestingWizard(false)}
             onCancel={() => setShowMaxTestingWizard(false)}
+            onBackToSelector={() => {
+              setShowMaxTestingWizard(false);
+              setShowCycleTypeSelector(true);
+            }}
           />
         )}
       </>
@@ -418,6 +422,10 @@ export function SchedulePage() {
         <MaxTestingWizard
           onComplete={() => setShowMaxTestingWizard(false)}
           onCancel={() => setShowMaxTestingWizard(false)}
+          onBackToSelector={() => {
+            setShowMaxTestingWizard(false);
+            setShowCycleTypeSelector(true);
+          }}
         />
       )}
 
