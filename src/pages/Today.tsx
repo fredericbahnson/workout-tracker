@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Dumbbell } from 'lucide-react';
+import { Plus, Dumbbell, Trophy, Target, Calendar, AlertTriangle } from 'lucide-react';
 import {
   CompletedSetRepo,
   ExerciseRepo,
@@ -126,6 +126,7 @@ export function TodayPage() {
     showMaxTestingWizard,
     showStandaloneMaxTesting,
     completedCycleForModal,
+    cycleCompleteDismissed,
     handleStartMaxTesting,
     handleCreateNewCycleFromCompletion,
     handleDismissCycleCompletion,
@@ -133,6 +134,7 @@ export function TodayPage() {
     handleCancelMaxTesting,
     openStandaloneMaxTesting,
     closeStandaloneMaxTesting,
+    handleShowCycleCompletionModal,
   } = useCycleCompletion({
     isCycleComplete: !!isCycleComplete,
     activeCycle,
@@ -297,8 +299,11 @@ export function TodayPage() {
       {}
     );
 
-    const newCompletedCount = completedScheduledSetIds.size + 1;
-    if (newCompletedCount >= displayWorkout.scheduledSets.length) {
+    // Query actual count from DB to avoid race conditions with React state
+    const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
+      displayWorkout.id
+    );
+    if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
       markWorkoutCompleted(displayWorkout.id);
     } else {
@@ -331,11 +336,14 @@ export function TodayPage() {
       {}
     );
 
-    const newCompletedCount = completedScheduledSetIds.size + 1;
-    if (newCompletedCount >= displayWorkout.scheduledSets.length) {
+    // Query actual count from DB to avoid race conditions with React state
+    const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
+      displayWorkout.id
+    );
+    if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
       markWorkoutCompleted(displayWorkout.id);
-    } else if (newCompletedCount > 0) {
+    } else if (actualCompletedCount > 0) {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
     }
     modals.closeSkipSetConfirm();
@@ -409,13 +417,16 @@ export function TodayPage() {
           await syncItem('max_records', newMaxRecord);
         }
 
-        const newCompletedCount = completedScheduledSetIds.size + 1;
+        // Query actual count from DB to avoid race conditions with React state
         const totalSets = displayWorkout?.scheduledSets.length || 0;
+        const actualCompletedCount = displayWorkout
+          ? await CompletedSetRepo.countCompletedScheduledSets(displayWorkout.id)
+          : 0;
 
-        if (newCompletedCount >= totalSets && displayWorkout) {
+        if (actualCompletedCount >= totalSets && displayWorkout) {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
           markWorkoutCompleted(displayWorkout.id);
-        } else if (newCompletedCount > 0 && displayWorkout) {
+        } else if (actualCompletedCount > 0 && displayWorkout) {
           await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
           if (set.isMaxTest && preferences.maxTestRestTimer.enabled) {
             shouldShowTimer = true;
@@ -499,6 +510,21 @@ export function TodayPage() {
               }
             />
 
+            {/* Max testing warmup reminder */}
+            {activeCycle?.cycleType === 'max_testing' &&
+              !isShowingAdHocWorkout &&
+              !isShowingCompletedWorkout && (
+                <div className="mx-4 mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <span className="font-medium">Warm up first!</span> Before attempting each max
+                      test, do 2-3 lighter warmup sets to prepare the movement pattern.
+                    </div>
+                  </div>
+                </div>
+              )}
+
             {!isShowingAdHocWorkout && (
               <ScheduledSetsList
                 groupedSetsRemaining={isShowingCompletedWorkout ? [] : groupedSetsRemaining}
@@ -568,6 +594,38 @@ export function TodayPage() {
             <Plus className="w-4 h-4 mr-1" />
             Log Ad-Hoc Workout
           </Button>
+        )}
+
+        {/* Cycle complete actions - shown when user dismissed the completion modal */}
+        {activeCycle && isCycleComplete && cycleCompleteDismissed && (
+          <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Cycle Complete!</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  What would you like to do next?
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Button onClick={handleShowCycleCompletionModal} className="w-full" size="sm">
+                <Target className="w-4 h-4 mr-2" />
+                Test New Maxes
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleCreateNewCycleFromCompletion}
+                className="w-full"
+                size="sm"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Create New Cycle
+              </Button>
+            </div>
+          </Card>
         )}
 
         <TodayStats

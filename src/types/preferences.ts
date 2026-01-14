@@ -74,7 +74,7 @@ export interface UserPreferences {
  * Used when creating new preferences or as fallback.
  */
 export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' | 'updatedAt'> = {
-  appMode: 'standard',
+  appMode: 'advanced', // Default to advanced so trial users see all features
   defaultMaxReps: 10,
   defaultConditioningReps: 30,
   conditioningWeeklyIncrement: 10,
@@ -82,10 +82,10 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
     push: 10,
     pull: 10,
     legs: 10,
-    core: 0,
-    balance: 0,
-    mobility: 0,
-    other: 0,
+    core: 10,
+    balance: 10,
+    mobility: 10,
+    other: 10,
   },
   restTimer: {
     enabled: false,

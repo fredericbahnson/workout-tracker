@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui';
 import { OnboardingSlide } from './OnboardingSlide';
 import { OnboardingProgress } from './OnboardingProgress';
-import { RFEMCalculator, ProgressComparisonChart, RFEMWaveAnimation } from './visuals';
+import { RFEMCalculator, ProgressComparisonChart } from './visuals';
 
 interface RFEMGuideProps {
   onComplete: () => void;
@@ -190,7 +190,94 @@ export function RFEMGuide({
             body={
               <div className="space-y-4">
                 <p>Ascend rotates your RFEM values from workout to workout:</p>
-                <RFEMWaveAnimation animate={true} />
+                {/* Static RFEM wave chart */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                  <svg
+                    viewBox="0 0 300 100"
+                    className="w-full max-w-[300px] mx-auto"
+                    style={{ overflow: 'visible' }}
+                  >
+                    {/* Y-axis labels and grid lines */}
+                    {[3, 4, 5].map(rfem => {
+                      const y = 15 + ((5 - rfem) / 2) * 55;
+                      return (
+                        <g key={rfem}>
+                          <text
+                            x={17}
+                            y={y + 4}
+                            textAnchor="end"
+                            className="fill-gray-500 dark:fill-gray-400 text-[10px] font-medium"
+                          >
+                            {rfem}
+                          </text>
+                          <line
+                            x1={25}
+                            y1={y}
+                            x2={285}
+                            y2={y}
+                            stroke="currentColor"
+                            strokeWidth="1"
+                            strokeDasharray="2,2"
+                            className="text-gray-200 dark:text-gray-700"
+                            opacity="0.5"
+                          />
+                        </g>
+                      );
+                    })}
+                    {/* Y-axis title */}
+                    <text
+                      x={8}
+                      y={40}
+                      textAnchor="middle"
+                      transform="rotate(-90, 8, 40)"
+                      className="fill-gray-400 dark:fill-gray-500 text-[9px]"
+                    >
+                      RFEM
+                    </text>
+                    {/* Wave line - precomputed smooth curve */}
+                    <path
+                      d="M 25 70 Q 43.75 70, 53.125 56.25 Q 62.5 42.5, 71.875 42.5 Q 81.25 42.5, 90.625 28.75 Q 100 15, 109.375 15 Q 118.75 15, 128.125 28.75 Q 137.5 42.5, 146.875 42.5 Q 156.25 42.5, 165.625 56.25 Q 175 70, 184.375 70 Q 193.75 70, 203.125 56.25 Q 212.5 42.5, 221.875 42.5 Q 231.25 42.5, 240.625 28.75 Q 250 15, 259.375 15 Q 268.75 15, 278.125 28.75 Q 287.5 42.5, 285 42.5"
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {/* Data points */}
+                    {[
+                      { x: 25, y: 70 },
+                      { x: 62.14, y: 42.5 },
+                      { x: 99.29, y: 15 },
+                      { x: 136.43, y: 42.5 },
+                      { x: 173.57, y: 70 },
+                      { x: 210.71, y: 42.5 },
+                      { x: 247.86, y: 15 },
+                      { x: 285, y: 42.5 },
+                    ].map((point, index) => (
+                      <g key={index}>
+                        <circle cx={point.x} cy={point.y} r={4} className="fill-emerald-500" />
+                        <text
+                          x={point.x}
+                          y={85}
+                          textAnchor="middle"
+                          className="fill-gray-500 dark:fill-gray-400 text-[9px]"
+                        >
+                          #{index + 1}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                  <div className="mt-2 text-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
+                      <span>RFEM rotates:</span>
+                      <span className="font-bold">3 → 4 → 5 → 4</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between mt-2 text-[10px] text-gray-400 px-2">
+                    <span>← Harder sessions</span>
+                    <span>Lighter sessions →</span>
+                  </div>
+                </div>
                 <p className="text-sm">
                   This creates{' '}
                   <strong className="text-emerald-600 dark:text-emerald-400">

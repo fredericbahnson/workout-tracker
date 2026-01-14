@@ -147,6 +147,20 @@ export const CompletedSetRepo = {
   },
 
   /**
+   * Counts unique scheduled sets that have been completed for a workout.
+   * Only counts sets with a non-null scheduledSetId (excludes ad-hoc sets).
+   * @param workoutId - The scheduled workout UUID
+   * @returns Promise resolving to count of unique completed scheduled sets
+   */
+  async countCompletedScheduledSets(workoutId: string): Promise<number> {
+    const records = await db.completedSets.where('scheduledWorkoutId').equals(workoutId).toArray();
+    const uniqueScheduledSetIds = new Set(
+      records.map(r => r.scheduledSetId).filter((id): id is string => id !== null)
+    );
+    return uniqueScheduledSetIds.size;
+  },
+
+  /**
    * Updates a completed set.
    * @param id - The completed set UUID
    * @param data - Partial data to merge (excludes id and completedAt)

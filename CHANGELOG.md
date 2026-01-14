@@ -5,6 +5,48 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.8] - 2026-01-14
+
+### Fixed
+- **RFEM Guide Animation Layout Shifts**: Replaced animated RFEM wave chart with static SVG
+  - Removed `RFEMWaveAnimation` component entirely (was causing layout jumps on different font sizes)
+  - Static chart now shows the wave pattern with fixed "RFEM rotates: 3 → 4 → 5 → 4" label
+
+- **Accidental Taps While Scrolling**: Added vertical movement tracking to swipeable components
+  - Now tracks both horizontal AND vertical finger movement
+  - If vertical movement exceeds 10px, gesture is treated as scroll (not tap)
+  - Prevents accidentally opening exercises/workouts when trying to scroll
+
+### Added
+- **Max Testing Warmup Reminder**: Added amber warning box at top of Max Testing workouts
+  - Reminds users: "Warm up first! Before attempting each max test, do 2-3 lighter warmup sets"
+  - Only shows during active max testing workouts (not completed/ad-hoc)
+
+### Changed
+- **Default Preferences for New Users**:
+  - `appMode` now defaults to `'advanced'` (trial users see all features)
+  - Weekly set goals for core, balance, mobility, other now default to 10 (was 0)
+
+## [2.13.7] - 2026-01-14
+
+### Fixed
+- **Critical: Premature Cycle Completion Bug** - Fixed race condition where cycle was marked complete before final set was logged
+  - Root cause: Completion check used stale React state (`completedScheduledSetIds.size + 1`) instead of actual DB count
+  - Fix: Added `CompletedSetRepo.countCompletedScheduledSets()` method that queries actual DB count
+  - Updated `handleQuickComplete`, `handleConfirmSkipSet`, and `handleSaveSet` to use DB counts
+  
+- **Cycle Completion Dismiss Behavior** - Fixed issue where dismissing cycle completion modal ejected user from their workout
+  - Root cause: `handleDismissCycleCompletion` marked cycle as `status: 'completed'`, causing `CycleRepo.getActive()` to return null
+  - Fix: Dismissing modal no longer marks cycle completed; cycle only marked completed when user explicitly creates new cycle or starts max testing
+  - Added `cycleCompleteDismissed` state to track when modal was dismissed
+  - User now stays on their completed workout view after dismissing
+
+### Added
+- **Inline Cycle Complete Actions**: When user dismisses cycle completion modal, shows card with:
+  - "Test New Maxes" button to reopen cycle completion flow
+  - "Create New Cycle" button to proceed directly to cycle creation
+- Added `handleShowCycleCompletionModal` handler to reopen completion modal
+
 ## [2.13.6] - 2026-01-14
 
 ### Added

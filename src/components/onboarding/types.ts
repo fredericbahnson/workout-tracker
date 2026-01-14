@@ -82,11 +82,3 @@ export interface ProgressComparisonChartProps {
   className?: string;
   animate?: boolean;
 }
-
-/**
- * Props for the RFEMWaveAnimation visual component.
- */
-export interface RFEMWaveAnimationProps {
-  className?: string;
-  animate?: boolean;
-}

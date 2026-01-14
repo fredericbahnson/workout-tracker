@@ -25,6 +25,8 @@ export function SwipeableWorkoutCard({
   const [translateX, setTranslateX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const maxYMovementRef = useRef(0);
   const startTimeRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -32,6 +34,8 @@ export function SwipeableWorkoutCard({
     (e: React.TouchEvent) => {
       if (disabled) return;
       startXRef.current = e.touches[0].clientX;
+      startYRef.current = e.touches[0].clientY;
+      maxYMovementRef.current = 0;
       startTimeRef.current = Date.now();
       setIsDragging(true);
     },
@@ -42,7 +46,12 @@ export function SwipeableWorkoutCard({
     (e: React.TouchEvent) => {
       if (!isDragging || disabled) return;
       const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
       const diff = currentX - startXRef.current;
+
+      // Track maximum vertical movement (for tap detection)
+      const yMovement = Math.abs(currentY - startYRef.current);
+      maxYMovementRef.current = Math.max(maxYMovementRef.current, yMovement);
 
       // Only allow left swipe (negative diff)
       if (diff > 0) {
@@ -72,8 +81,12 @@ export function SwipeableWorkoutCard({
       const duration = endTime - startTimeRef.current;
       const velocity = Math.abs(translateX) / duration;
 
-      // Check if it was a tap (minimal movement and short duration)
-      if (Math.abs(translateX) < TAP_THRESHOLD.movement && duration < TAP_THRESHOLD.duration) {
+      // Check if it was a tap (minimal horizontal AND vertical movement, short duration)
+      const isMinimalXMovement = Math.abs(translateX) < TAP_THRESHOLD.movementX;
+      const isMinimalYMovement = maxYMovementRef.current < TAP_THRESHOLD.movementY;
+      const isShortDuration = duration < TAP_THRESHOLD.duration;
+
+      if (isMinimalXMovement && isMinimalYMovement && isShortDuration) {
         setTranslateX(0);
         setIsDragging(false);
         onTap();
@@ -106,6 +119,8 @@ export function SwipeableWorkoutCard({
     (e: React.MouseEvent) => {
       if (disabled) return;
       startXRef.current = e.clientX;
+      startYRef.current = e.clientY;
+      maxYMovementRef.current = 0;
       startTimeRef.current = Date.now();
       setIsDragging(true);
     },
@@ -116,6 +131,10 @@ export function SwipeableWorkoutCard({
     (e: React.MouseEvent) => {
       if (!isDragging || disabled) return;
       const diff = e.clientX - startXRef.current;
+
+      // Track maximum vertical movement (for tap detection)
+      const yMovement = Math.abs(e.clientY - startYRef.current);
+      maxYMovementRef.current = Math.max(maxYMovementRef.current, yMovement);
 
       // Only allow left swipe
       if (diff > 0) {
@@ -143,8 +162,12 @@ export function SwipeableWorkoutCard({
     const duration = endTime - startTimeRef.current;
     const velocity = Math.abs(translateX) / duration;
 
-    // Check if it was a click
-    if (Math.abs(translateX) < TAP_THRESHOLD.movement && duration < TAP_THRESHOLD.duration) {
+    // Check if it was a click (minimal horizontal AND vertical movement, short duration)
+    const isMinimalXMovement = Math.abs(translateX) < TAP_THRESHOLD.movementX;
+    const isMinimalYMovement = maxYMovementRef.current < TAP_THRESHOLD.movementY;
+    const isShortDuration = duration < TAP_THRESHOLD.duration;
+
+    if (isMinimalXMovement && isMinimalYMovement && isShortDuration) {
       setTranslateX(0);
       setIsDragging(false);
       onTap();

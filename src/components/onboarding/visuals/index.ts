@@ -6,4 +6,3 @@
 
 export { RFEMCalculator } from './RFEMCalculator';
 export { ProgressComparisonChart } from './ProgressComparisonChart';
-export { RFEMWaveAnimation } from './RFEMWaveAnimation';

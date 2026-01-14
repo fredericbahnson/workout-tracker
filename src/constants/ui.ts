@@ -26,6 +26,10 @@ export const SWIPE_ANIMATION_DURATION = 200;
 
 /** Maximum movement (px) and duration (ms) to consider as a tap/click */
 export const TAP_THRESHOLD = {
-  movement: 10,
+  /** Max horizontal movement (px) */
+  movementX: 10,
+  /** Max vertical movement (px) - prevents accidental taps while scrolling */
+  movementY: 10,
+  /** Max duration (ms) */
   duration: 200,
 };
