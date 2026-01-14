@@ -5,6 +5,82 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.0] - 2026-01-14
+
+### Added
+- **Comprehensive Onboarding Redesign**: Complete overhaul of new user experience
+  - **Welcome Screen**: Sets expectations with 2-minute overview promise
+  - **RFEM Training Guide** (5 slides): Deep-dive into RFEM methodology
+    - Problem with training to failure explained
+    - Interactive RFEM calculator demo (adjust max reps to see target calculations)
+    - Progress comparison chart (failure vs RFEM training curves)
+    - Animated RFEM rotation wave showing workout-by-workout periodization
+    - Acknowledgment of alternative progression modes (Simple, Mixed, Conditioning)
+  - **App Tour** (4 slides): Visual walkthrough of key features
+    - Today page with swipe gesture demo mockups
+    - Exercises page with filtering and max tracking
+    - Schedule page with calendar preview
+    - Progress page with stats visualization
+  - **Exercise Creation Step**: Streamlined first exercise creation
+  - **Success Screen**: Clear next steps after first exercise
+
+- **Revisitable Help Guides**: Access onboarding content anytime from Settings
+  - New "Help & Guides" section in Settings page
+  - "Learn About RFEM Training" - standalone RFEM guide access
+  - "App Tour" - standalone feature walkthrough
+  - Both guides work as full-screen overlays with skip functionality
+
+### Changed
+- **Onboarding Architecture**: Modular component system
+  - `OnboardingFlow` orchestrates Welcome → RFEM → Tour → Exercise Creation
+  - `RFEMGuide` and `AppTour` work both embedded and standalone
+  - Shared `OnboardingSlide` and `OnboardingProgress` components
+  - Visual components in `visuals/` directory for interactive elements
+
+### Technical
+- New component structure in `src/components/onboarding/`:
+  - `types.ts` - TypeScript definitions for onboarding
+  - `OnboardingSlide.tsx` - Shared slide layout with animations
+  - `OnboardingProgress.tsx` - Progress indicator with module breaks
+  - `RFEMGuide.tsx` - RFEM training module (5 slides)
+  - `AppTour.tsx` - App feature tour (4 slides)
+  - `visuals/RFEMCalculator.tsx` - Interactive max/target calculator
+  - `visuals/ProgressComparisonChart.tsx` - SVG comparison chart
+  - `visuals/RFEMWaveAnimation.tsx` - Animated periodization wave
+- Settings page updated with Help & Guides section
+- Previous onboarding preserved as `OnboardingFlowLegacy.tsx` for reference
+
+## [2.12.1] - 2026-01-13
+
+### Added
+- **Timer Volume Control**: New setting to control the volume of timer sounds
+  - Slider control (0-100%) in Settings under Rest Timer section
+  - One-tap mute button to quickly silence/unmute
+  - Test button to preview sound at current volume
+  - Applies to both rest timers and exercise timers (countdown beeps and completion sounds)
+  - Volume preference syncs across devices
+  - Default volume: 40% (matches previous behavior)
+
+### Fixed
+- **Start Date field truncation**: Date input in cycle wizard basics step no longer gets clipped at right edge on large font sizes
+  - Removed overflow-hidden wrapper, added proper width constraint
+  - Calendar picker indicator now aligns properly
+
+### Changed
+- **Wizard width optimization**: Increased content width in cycle and max testing wizards
+  - Full-size modal margin reduced from 16px to 8px per side
+  - Full-size modal content padding reduced from 16px to 8px
+  - Wizard step content horizontal padding reduced from 16px to 8px
+  - Group cards padding reduced from 12px to 8px
+  - MixedExerciseConfig tile padding reduced from 12px to 8px
+  - Total horizontal space savings: ~24px per side, giving exercise names more room
+
+### Technical
+- New shared audio utility (`src/utils/audio.ts`) centralizes beep/sound functions
+- `timerVolume` field added to UserPreferences (syncs via Supabase)
+- RestTimer and ExerciseTimer components now accept volume prop
+- New Supabase migration: `003_timer_volume.sql`
+
 ## [2.12.0] - 2026-01-13
 
 ### Added
