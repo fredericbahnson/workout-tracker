@@ -197,7 +197,13 @@ export function CycleWizard({
           canProceed={canProceed()}
           isCreating={isCreating}
           isEditing={!!editCycle}
-          onBack={currentStep === 'basics' && !editCycle ? () => setCurrentStep('start') : prevStep}
+          onBack={
+            currentStep === 'basics' && !editCycle
+              ? initialProgressionMode
+                ? onCancel // Exit wizard if came from cycle type selector
+                : () => setCurrentStep('start') // Go to start step if started fresh
+              : prevStep
+          }
           onNext={nextStep}
           onCancel={onCancel}
           onSubmit={handleCreate}

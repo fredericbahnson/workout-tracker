@@ -5,7 +5,7 @@
  * Extracts state management from the UI for better separation of concerns.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo } from '@/data/repositories';
 import { generateSchedule, validateCycle } from '@/services/scheduler';
@@ -213,6 +213,18 @@ export function useCycleWizardState({
       setGroupRotation(defaultGroups.map(g => g.id));
     }
   }, [exercises, currentStep, groups.length, editCycle]);
+
+  // Set default cycle name when allCycles loads (for new cycles that skip start step via initialProgressionMode)
+  // Use a ref to track if we've already set the initial name
+  const hasSetInitialName = useRef(false);
+  useEffect(() => {
+    // Only apply when initialProgressionMode is set (skipped start step)
+    // handleStartFresh/handleCloneFromCycle handle name setting when going through start step
+    if (initialProgressionMode && !editCycle && !hasSetInitialName.current && allCycles) {
+      setName(getDefaultCycleName());
+      hasSetInitialName.current = true;
+    }
+  }, [initialProgressionMode, editCycle, allCycles, getDefaultCycleName]);
 
   // Auto-clone the most recent training cycle if available
   useEffect(() => {

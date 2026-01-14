@@ -5,6 +5,18 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.4] - 2026-01-14
+
+### Fixed
+- **Cycle Wizard Default Names**: Default cycle names now appear in the Cycle Name field
+  - "RFEM Cycle 1", "Progression Cycle 1", etc. now properly populate on wizard open
+  - Previously showed only placeholder text "e.g., Winter 2025 Block 1"
+  - Fixed by adding effect to set default name once cycle data loads
+
+- **Cycle Wizard Back Button**: Fixed incorrect navigation when pressing Back on first step
+  - Previously took user to an unintended "start" step when coming from cycle type selector
+  - Now properly exits the wizard back to cycle type selection
+
 ## [2.13.3] - 2026-01-14
 
 ### Changed
