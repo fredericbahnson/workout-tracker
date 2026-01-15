@@ -5,6 +5,27 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.15.0] - 2026-01-15
+
+### Changed
+- **Settings Page Architecture Refactoring**: Decomposed monolithic Settings.tsx (1,162 lines) into focused section components for improved maintainability
+  - Created `settingsSections/` subdirectory with 7 specialized section components
+  - `AccountSection.tsx` (288 lines): Authentication, cloud sync, account management
+  - `AppearanceSection.tsx` (234 lines): Theme, app mode, font size
+  - `DataSection.tsx` (221 lines): Export, import, clear data, cleanup duplicates
+  - `TimerSection.tsx` (190 lines): Rest timer settings and volume controls
+  - `TrainingSection.tsx` (97 lines): Default values and display settings
+  - `HelpSection.tsx` (95 lines): Help guides and about info
+  - `SubscriptionSection.tsx` (47 lines): Trial banner and subscription status
+  - Settings.tsx reduced to 67-line orchestrator (94% reduction)
+
+### Technical Details
+- Each section component is self-contained with its own state management
+- Shared types extracted to `settingsSections/types.ts`
+- Clean re-exports through `settingsSections/index.ts`
+- Directory named `settingsSections` to avoid case-sensitivity conflicts on macOS
+- No functional changes - pure structural refactoring
+
 ## [2.14.1] - 2026-01-15
 
 ### Changed
