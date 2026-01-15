@@ -67,6 +67,7 @@ export const logger = {
    */
   debug(context: string, message: string, ...args: unknown[]): void {
     if (shouldLog('debug')) {
+      // eslint-disable-next-line no-console
       console.log(`[${getTimestamp()}] [${context}]`, message, ...args);
     }
   },
@@ -81,6 +82,7 @@ export const logger = {
    */
   info(context: string, message: string, ...args: unknown[]): void {
     if (shouldLog('info')) {
+      // eslint-disable-next-line no-console
       console.info(`[${getTimestamp()}] [${context}]`, message, ...args);
     }
   },

@@ -1,15 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import {
-  TodayPage,
-  ExercisesPage,
-  ExerciseDetailPage,
-  ProgressPage,
-  SettingsPage,
-  SchedulePage,
-} from './pages';
+import { PageSkeleton } from './components/ui/Skeleton';
 import { useAppStore, useThemeEffect } from './stores/appStore';
 import {
   AuthProvider,
@@ -21,6 +14,26 @@ import {
 } from './contexts';
 import { AuthGate, OnboardingFlow } from './components/onboarding';
 import { PaywallModal } from './components/paywall';
+
+// Lazy-loaded page components
+const TodayPage = lazy(() =>
+  import('./pages/Today').then(module => ({ default: module.TodayPage }))
+);
+const SchedulePage = lazy(() =>
+  import('./pages/Schedule').then(module => ({ default: module.SchedulePage }))
+);
+const ExercisesPage = lazy(() =>
+  import('./pages/Exercises').then(module => ({ default: module.ExercisesPage }))
+);
+const ExerciseDetailPage = lazy(() =>
+  import('./pages/ExerciseDetail').then(module => ({ default: module.ExerciseDetailPage }))
+);
+const ProgressPage = lazy(() =>
+  import('./pages/Progress').then(module => ({ default: module.ProgressPage }))
+);
+const SettingsPage = lazy(() =>
+  import('./pages/Settings').then(module => ({ default: module.SettingsPage }))
+);
 
 /**
  * Paywall container that renders the modal based on entitlement context state.
@@ -105,14 +118,16 @@ function AppContent() {
   return (
     <Layout>
       <ErrorBoundary level="page">
-        <Routes>
-          <Route path="/" element={<TodayPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/exercises" element={<ExercisesPage />} />
-          <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
-          <Route path="/progress" element={<ProgressPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
+            <Route path="/" element={<TodayPage />} />
+            <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/exercises" element={<ExercisesPage />} />
+            <Route path="/exercises/:id" element={<ExerciseDetailPage />} />
+            <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </Suspense>
       </ErrorBoundary>
     </Layout>
   );

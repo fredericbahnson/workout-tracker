@@ -1,26 +1,12 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { supabase, isSupabaseConfigured } from '@/data/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { createScopedLogger } from '@/utils/logger';
+import { db } from '@/data/db';
+import { useAppStore } from '@/stores/appStore';
+import { AuthContext } from './AuthContext';
 
 const log = createScopedLogger('Auth');
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  isConfigured: boolean;
-  isNewUser: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
-  deleteAccount: () => Promise<{ error: Error | null }>;
-  resetPassword: (email: string) => Promise<{ error: Error | null }>;
-  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
-  clearNewUserFlag: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -31,7 +17,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Helper to clear all local database tables
   const clearLocalDatabase = async () => {
-    const { db } = await import('../data/db');
     await db.transaction(
       'rw',
       [
@@ -175,7 +160,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Reset onboarding flag so next user sees onboarding
-    const { useAppStore } = await import('../stores/appStore');
     useAppStore.getState().setHasCompletedOnboarding(false);
 
     await supabase.auth.signOut();
@@ -264,12 +248,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

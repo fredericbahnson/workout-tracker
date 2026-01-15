@@ -29,7 +29,10 @@ import {
 } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
 import { playTestSound, initAudioOnInteraction } from '@/utils/audio';
+import { createScopedLogger } from '@/utils/logger';
 import { ScheduledWorkoutRepo } from '@/data/repositories';
+
+const log = createScopedLogger('Settings');
 import { useAppStore, useTheme, type RepDisplayMode, type FontSize } from '@/stores/appStore';
 import { useAuth, useSync, useSyncedPreferences, useSyncItem, useEntitlement } from '@/contexts';
 import { PageHeader } from '@/components/layout';
@@ -146,7 +149,8 @@ export function SettingsPage() {
         // Account deleted - page will redirect to auth gate
         setMessage({ type: 'success', text: 'Account and data deleted successfully.' });
       }
-    } catch (e) {
+    } catch (error) {
+      log.error(error as Error);
       setMessage({ type: 'error', text: 'Failed to delete account.' });
     } finally {
       setIsDeleting(false);
@@ -175,7 +179,8 @@ export function SettingsPage() {
         setNewPassword('');
         setConfirmPassword('');
       }
-    } catch (e) {
+    } catch (error) {
+      log.error(error as Error);
       setMessage({ type: 'error', text: 'Failed to change password.' });
     } finally {
       setIsChangingPassword(false);
@@ -203,6 +208,7 @@ export function SettingsPage() {
       URL.revokeObjectURL(url);
       setMessage({ type: 'success', text: 'Backup exported successfully!' });
     } catch (error) {
+      log.error(error as Error);
       setMessage({ type: 'error', text: 'Failed to export backup.' });
     } finally {
       setIsExporting(false);
@@ -228,6 +234,7 @@ export function SettingsPage() {
         setMessage({ type: 'error', text: result.error || 'Failed to import backup.' });
       }
     } catch (error) {
+      log.error(error as Error);
       setMessage({ type: 'error', text: 'Failed to read backup file.' });
     } finally {
       setIsImporting(false);
@@ -260,7 +267,8 @@ export function SettingsPage() {
               if (softSuccess) successCount++;
               else failCount++;
             }
-          } catch (e) {
+          } catch (error) {
+            log.error(error as Error);
             failCount++;
           }
         }
@@ -280,6 +288,7 @@ export function SettingsPage() {
         setMessage({ type: 'success', text: 'No duplicate workouts found.' });
       }
     } catch (error) {
+      log.error(error as Error);
       setMessage({ type: 'error', text: 'Failed to cleanup duplicates.' });
     } finally {
       setIsCleaningDuplicates(false);
@@ -304,6 +313,7 @@ export function SettingsPage() {
       setShowClearConfirm(false);
       setMessage({ type: 'success', text: 'All data cleared.' });
     } catch (error) {
+      log.error(error as Error);
       setMessage({ type: 'error', text: 'Failed to clear data.' });
     } finally {
       setIsClearing(false);

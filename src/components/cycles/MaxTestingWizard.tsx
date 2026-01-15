@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, CardContent, Modal } from '@/components/ui';
 import { CycleRepo, ExerciseRepo, MaxRecordRepo, ScheduledWorkoutRepo } from '@/data/repositories';
-import { useSyncItem } from '@/contexts/SyncContext';
+import { useSyncItem } from '@/contexts';
 import { generateId } from '@/data/db';
 import { createScopedLogger } from '@/utils/logger';
 import type { Cycle, Exercise, Group, ScheduledSet, ScheduledWorkout, ExerciseType } from '@/types';

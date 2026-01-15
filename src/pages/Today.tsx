@@ -11,7 +11,7 @@ import {
 } from '@/data/repositories';
 import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/scheduler';
 import { useSyncedPreferences } from '@/contexts';
-import { useSyncItem } from '@/contexts/SyncContext';
+import { useSyncItem } from '@/contexts';
 import { useWorkoutDisplay, useCycleCompletion, useAdHocWorkout, useTodayModals } from '@/hooks';
 import { PageHeader } from '@/components/layout';
 import { Button, Modal, EmptyState, Card } from '@/components/ui';

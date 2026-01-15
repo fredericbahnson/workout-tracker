@@ -23,7 +23,7 @@ import {
   CompletedSetRepo,
 } from '@/data/repositories';
 import { useSyncedPreferences } from '@/contexts';
-import { useSyncItem } from '@/contexts/SyncContext';
+import { useSyncItem } from '@/contexts';
 import { PageHeader } from '@/components/layout';
 import { Card, Badge, EmptyState, Button, Modal } from '@/components/ui';
 import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '@/components/cycles';

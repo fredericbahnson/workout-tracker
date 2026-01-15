@@ -1,20 +1,10 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, type ReactNode } from 'react';
 import { SyncService, type SyncStatus } from '@/services/syncService';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../auth';
 import { createScopedLogger } from '@/utils/logger';
+import { SyncContext } from './SyncContext';
 
 const log = createScopedLogger('Sync');
-
-interface SyncContextType {
-  status: SyncStatus;
-  lastSyncTime: Date | null;
-  lastError: string | null;
-  sync: () => Promise<void>;
-  isSyncing: boolean;
-  queueCount: number;
-}
-
-const SyncContext = createContext<SyncContextType | undefined>(undefined);
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { user, isConfigured } = useAuth();
@@ -164,63 +154,4 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       {children}
     </SyncContext.Provider>
   );
-}
-
-export function useSync() {
-  const context = useContext(SyncContext);
-  if (context === undefined) {
-    throw new Error('useSync must be used within a SyncProvider');
-  }
-  return context;
-}
-
-// Hook to sync individual items after local changes
-export function useSyncItem() {
-  const { user, isConfigured } = useAuth();
-
-  const syncItem = useCallback(
-    async (
-      table:
-        | 'exercises'
-        | 'max_records'
-        | 'completed_sets'
-        | 'cycles'
-        | 'scheduled_workouts'
-        | 'user_preferences',
-      item: unknown
-    ) => {
-      if (user && isConfigured) {
-        await SyncService.syncItem(table, item, user.id);
-      }
-    },
-    [user, isConfigured]
-  );
-
-  const deleteItem = useCallback(
-    async (
-      table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
-      id: string
-    ): Promise<boolean> => {
-      if (user && isConfigured) {
-        return await SyncService.deleteItem(table, id, user.id);
-      }
-      return false;
-    },
-    [user, isConfigured]
-  );
-
-  const hardDeleteItem = useCallback(
-    async (
-      table: 'exercises' | 'max_records' | 'completed_sets' | 'cycles' | 'scheduled_workouts',
-      id: string
-    ): Promise<boolean> => {
-      if (user && isConfigured) {
-        return await SyncService.hardDeleteItem(table, id, user.id);
-      }
-      return false;
-    },
-    [user, isConfigured]
-  );
-
-  return { syncItem, deleteItem, hardDeleteItem };
 }

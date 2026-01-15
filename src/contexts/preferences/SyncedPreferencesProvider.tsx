@@ -1,5 +1,5 @@
 /**
- * Synced Preferences Context
+ * Synced Preferences Provider
  *
  * Provides training preferences that sync across devices.
  * These preferences affect workout cycle creation and are important
@@ -8,57 +8,16 @@
  * UI preferences (theme, font size, etc.) remain in the local appStore.
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { UserPreferencesRepo } from '@/data/repositories';
-import { useSyncItem, useSync } from './SyncContext';
+import { useSyncItem, useSync } from '../sync';
 import { createScopedLogger } from '@/utils/logger';
 import type { UserPreferences, TimerSettings, ExerciseType, AppMode } from '@/types';
-import { DEFAULT_USER_PREFERENCES } from '@/types';
+import { SyncedPreferencesContext } from './SyncedPreferencesContext';
+import { defaultPrefs } from './types';
 
 const log = createScopedLogger('SyncedPrefs');
-
-interface SyncedPreferencesContextType {
-  /** Current preferences (always has a value, uses defaults if not loaded) */
-  preferences: UserPreferences;
-
-  /** Whether preferences are currently loading */
-  isLoading: boolean;
-
-  /** Update app mode (standard or advanced) */
-  setAppMode: (mode: AppMode) => Promise<void>;
-
-  /** Update default max reps */
-  setDefaultMaxReps: (value: number) => Promise<void>;
-
-  /** Update default conditioning reps */
-  setDefaultConditioningReps: (value: number) => Promise<void>;
-
-  /** Update conditioning weekly increment */
-  setConditioningWeeklyIncrement: (value: number) => Promise<void>;
-
-  /** Update a single weekly set goal */
-  setWeeklySetGoal: (type: ExerciseType, value: number) => Promise<void>;
-
-  /** Update rest timer settings */
-  setRestTimer: (settings: Partial<TimerSettings>) => Promise<void>;
-
-  /** Update max test rest timer settings */
-  setMaxTestRestTimer: (settings: Partial<TimerSettings>) => Promise<void>;
-
-  /** Update timer volume (0-100) */
-  setTimerVolume: (volume: number) => Promise<void>;
-}
-
-const SyncedPreferencesContext = createContext<SyncedPreferencesContextType | undefined>(undefined);
-
-// Default preferences object for initial state
-const defaultPrefs: UserPreferences = {
-  id: '',
-  ...DEFAULT_USER_PREFERENCES,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
 
 export function SyncedPreferencesProvider({ children }: { children: ReactNode }) {
   const { syncItem } = useSyncItem();
@@ -183,12 +142,4 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
       {children}
     </SyncedPreferencesContext.Provider>
   );
-}
-
-export function useSyncedPreferences() {
-  const context = useContext(SyncedPreferencesContext);
-  if (context === undefined) {
-    throw new Error('useSyncedPreferences must be used within a SyncedPreferencesProvider');
-  }
-  return context;
 }

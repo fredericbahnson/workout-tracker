@@ -1,9 +1,9 @@
-export { AuthProvider, useAuth } from './AuthContext';
-export { SyncProvider, useSync, useSyncItem } from './SyncContext';
-export { SyncedPreferencesProvider, useSyncedPreferences } from './SyncedPreferencesContext';
+export { AuthProvider, useAuth } from './auth';
+export { SyncProvider, useSync, useSyncItem } from './sync';
+export { SyncedPreferencesProvider, useSyncedPreferences } from './preferences';
 export {
   EntitlementProvider,
   useEntitlement,
   useFeatureAccess,
   useGatedAction,
-} from './EntitlementContext';
+} from './entitlement';

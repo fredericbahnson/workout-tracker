@@ -86,7 +86,7 @@ export function useCycleCompletion({
     }
   }, [
     isCycleComplete,
-    activeCycle?.id,
+    activeCycle,
     showCycleCompletionModal,
     showMaxTestingWizard,
     showCycleWizard,

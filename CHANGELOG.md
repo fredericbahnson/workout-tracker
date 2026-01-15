@@ -5,6 +5,51 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.1] - 2026-01-15
+
+### Changed
+- **Performance: Bundle Size Optimization** - Reduced main bundle from 811 kB to 117 kB (85% reduction)
+  - Implemented vendor chunk splitting: react (164 kB), supabase (172 kB), dexie (97 kB), lucide-react (30 kB)
+  - Implemented route-based lazy loading for all page components
+  - Pages now load on-demand with Suspense fallback skeleton
+  - Removed ineffective dynamic imports from AuthProvider (replaced with static imports)
+  
+### Technical Details
+- Added `build.rollupOptions.output.manualChunks` configuration to `vite.config.ts`
+- Converted all page imports to use `React.lazy()` with named export wrapper pattern
+- Wrapped Routes in `<Suspense fallback={<PageSkeleton />}>` for loading states
+- Vendor chunks improve cache hit rates for returning users (these change less frequently)
+
+### Bundle Breakdown
+| Chunk | Size (gzip) |
+|-------|-------------|
+| Main bundle | 117 kB (30 kB) |
+| vendor-supabase | 172 kB (45 kB) |
+| vendor-react | 164 kB (53 kB) |
+| vendor-dexie | 97 kB (32 kB) |
+| Today page | 62 kB (16 kB) |
+| Settings page | 32 kB (7 kB) |
+
+## [2.14.0] - 2026-01-15
+
+### Changed
+- **Context Architecture Refactoring**: Reorganized all React context files to resolve HMR warnings and improve maintainability
+  - Split `AuthContext.tsx` into `auth/` subdirectory with separate Provider, hook, and types files
+  - Split `SyncContext.tsx` into `sync/` subdirectory with separate Provider and hook files
+  - Split `EntitlementContext.tsx` into `entitlement/` subdirectory with separate Provider and hook files
+  - Split `SyncedPreferencesContext.tsx` into `preferences/` subdirectory with separate Provider and hook files
+  - Each context now follows the pattern: `Context.ts`, `Provider.tsx`, `use*.ts`, `types.ts`, `index.ts`
+  - No functional changes - pure structural refactoring
+
+### Fixed
+- **ESLint Warnings Eliminated**: Resolved all 20 ESLint warnings
+  - Fixed 10 unused error variable warnings in `Settings.tsx` and `audio.ts` (renamed `e` → `_e` or added logging)
+  - Fixed 7 Fast Refresh HMR warnings by separating context providers from hooks
+  - Fixed 2 console statement warnings in `logger.ts` with inline ESLint exceptions
+  - Fixed 1 missing useEffect dependency in `useCycleCompletion.ts`
+- **Improved Error Logging**: Added proper error logging to all catch blocks in Settings page
+  - Uses scoped logger (`log.error`) for consistent debugging across the app
+
 ## [2.13.9] - 2026-01-14
 
 ### Changed

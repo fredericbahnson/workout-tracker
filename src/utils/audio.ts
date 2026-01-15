@@ -47,7 +47,7 @@ export function initAudioOnInteraction(): void {
     if (ctx.state === 'suspended') {
       ctx.resume();
     }
-  } catch (e) {
+  } catch (_e) {
     log.debug('Audio context initialization failed');
   }
 }
@@ -86,7 +86,7 @@ export function playBeep(frequency: number, duration: number, volume: number): v
 
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + duration);
-  } catch (e) {
+  } catch (_e) {
     log.debug('Beep playback failed');
   }
 }
@@ -139,7 +139,7 @@ export function playCompletionSound(volume: number): void {
       oscillator.start(startTime);
       oscillator.stop(startTime + 0.3);
     });
-  } catch (e) {
+  } catch (_e) {
     log.debug('Completion sound playback failed');
   }
 }
