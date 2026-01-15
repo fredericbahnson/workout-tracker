@@ -1,4 +1,4 @@
-import { Circle, CheckCircle, Edit2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, Edit2 } from 'lucide-react';
 import { SwipeableSetCard } from '@/components/workouts/SwipeableSetCard';
 import { getWeightUnitLabel } from '@/constants';
 import {
@@ -104,14 +104,10 @@ export function ScheduledSetsList({
                       <div
                         className={`flex items-center gap-4 p-4 text-left ${isWarmupSet ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
                       >
-                        <div className="flex flex-col items-center w-8 flex-shrink-0">
-                          <Circle className="w-6 h-6 text-gray-300 dark:text-gray-600" />
-                          <span
-                            className={`text-xs mt-0.5 ${isWarmupSet ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}
-                          >
-                            {set.setNumber}
-                            {isWarmupSet ? 'w' : ''}
-                          </span>
+                        {/* Swipe indicator */}
+                        <div className="flex items-center gap-0.5 flex-shrink-0 text-gray-300 dark:text-gray-600">
+                          <ChevronLeft className="w-4 h-4" />
+                          <ChevronRight className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-lg font-medium text-gray-900 dark:text-gray-100">

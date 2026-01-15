@@ -140,9 +140,11 @@ export function SchedulePage() {
 
   const getSetsSummary = useCallback((workout: ScheduledWorkout) => {
     const summary: Record<string, number> = {};
-    workout.scheduledSets.forEach(set => {
-      summary[set.exerciseType] = (summary[set.exerciseType] || 0) + 1;
-    });
+    workout.scheduledSets
+      .filter(set => !set.isWarmup) // Exclude warmup sets from count
+      .forEach(set => {
+        summary[set.exerciseType] = (summary[set.exerciseType] || 0) + 1;
+      });
     return summary;
   }, []);
 
@@ -675,7 +677,9 @@ function WorkoutSection({
                           month: 'short',
                           day: 'numeric',
                         })}
-                        {!workout.isAdHoc && <> • {workout.scheduledSets.length} sets</>}
+                        {!workout.isAdHoc && (
+                          <> • {workout.scheduledSets.filter(s => !s.isWarmup).length} sets</>
+                        )}
                       </>
                     ) : workout.isAdHoc ? (
                       // Ad-hoc workouts in other contexts
@@ -688,7 +692,7 @@ function WorkoutSection({
                       // Upcoming/skipped workouts show week/RFEM info
                       <>
                         Week {workout.weekNumber} • RFEM -{workout.rfem} •{' '}
-                        {workout.scheduledSets.length} sets
+                        {workout.scheduledSets.filter(s => !s.isWarmup).length} sets
                       </>
                     )}
                   </p>

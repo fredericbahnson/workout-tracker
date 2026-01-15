@@ -98,9 +98,7 @@ To enable user accounts and cloud sync:
 
 ### Database Migrations
 
-If updating an existing database:
-- `supabase-migration-delete-account.sql` - Account deletion function
-- See deployment docs in `DEPLOY_*.md` files for version-specific migrations
+If updating an existing database, see migration files in `supabase/migrations/`.
 
 ## Install as Mobile App
 
@@ -162,7 +160,7 @@ The test suite includes:
 - **Sync tests**: Cloud sync transformers, conflict resolution, queue processing
 - **Repository tests**: Data access layer CRUD operations
 
-Current test coverage: 186 tests
+Current test coverage: 284 tests
 
 ## Version History
 

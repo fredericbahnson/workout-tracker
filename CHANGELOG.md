@@ -5,6 +5,17 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.16.1] - 2026-01-15
+
+### Changed
+- **Today View Swipe Indicator**: Replaced exercise number and empty circle with back-to-back chevrons (‹›) as a visual hint for swipeability
+  - Cleaner, more intuitive indicator that the tile is interactive
+  - Removed set number display (1w, 2, 3, etc.) from left side of exercise tiles
+- **Schedule Tab Set Counts**: Warmup sets are now excluded from all set count displays
+  - Workout tiles show only work sets in the total count
+  - Exercise type badges (Push, Pull, etc.) count only work sets
+  - Provides more accurate representation of actual training volume
+
 ## [2.16.0] - 2026-01-15
 
 ### Added
