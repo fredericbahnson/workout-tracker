@@ -108,7 +108,22 @@ export function useThemeEffect() {
   return { theme, setTheme };
 }
 
-// Legacy useTheme hook for backward compatibility
+/**
+ * @deprecated Use `useThemeEffect` instead. This legacy hook requires manual
+ * `applyTheme()` calls, while `useThemeEffect` handles theme application
+ * automatically via useEffect. This hook will be removed in a future version.
+ *
+ * Migration:
+ * ```tsx
+ * // Before (useTheme)
+ * const { theme, setTheme, applyTheme } = useTheme();
+ * const handleChange = (t) => { setTheme(t); applyTheme(t); };
+ *
+ * // After (useThemeEffect)
+ * const { theme, setTheme } = useThemeEffect();
+ * const handleChange = (t) => { setTheme(t); }; // Auto-applied!
+ * ```
+ */
 export function useTheme() {
   const { theme, setTheme } = useAppStore();
 

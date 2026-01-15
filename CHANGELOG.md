@@ -5,6 +5,36 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.16.0] - 2026-01-15
+
+### Added
+- **iOS Preparation Hooks**: Created native-ready hooks with web fallbacks for future Capacitor integration
+  - `useHaptics`: Provides haptic feedback using Vibration API (web) with Capacitor Haptics ready
+    - `impact(style)`: Light/medium/heavy physical feedback
+    - `notification(type)`: Success/warning/error semantic feedback
+    - `selection()`: Light tap for UI selections
+  - `useKeyboardHeight`: Tracks virtual keyboard height using visualViewport API (web) with Capacitor Keyboard ready
+    - Returns `keyboardHeight`, `isKeyboardVisible`, `isSupported`
+    - Enables proper input positioning when keyboard is open
+- **Safe Area CSS Variables**: Added CSS custom properties for safe area insets
+  - `--safe-area-inset-top/right/bottom/left` with env() fallbacks
+  - New utility classes: `.safe-area-x`, `.safe-area-y`, `.safe-area-all`
+- **Entitlement Integration Tests**: Added comprehensive test suite (38 tests)
+  - Trial service tests: start, status, expiration, persistence
+  - Entitlement service tests: access levels, feature gating, lock reasons
+  - Integration tests: full trial lifecycle, state consistency
+
+### Changed
+- **Deprecated `useTheme` hook**: Added deprecation notice recommending `useThemeEffect` instead
+  - `useThemeEffect` automatically applies theme changes via useEffect
+  - `useTheme` requires manual `applyTheme()` calls
+- **AppearanceSection**: Updated to use `useThemeEffect` instead of deprecated `useTheme`
+
+### Technical Details
+- iOS hooks designed for drop-in Capacitor plugin integration
+- Web fallbacks provide graceful degradation
+- Test count increased from 246 to 284 (+38 entitlement tests)
+
 ## [2.15.0] - 2026-01-15
 
 ### Changed

@@ -11,6 +11,12 @@
   --color-dark-border-hover: #3d3d5a;
   --color-scrollbar: #3a3a4a;
   --color-scrollbar-hover: #4a4a5a;
+
+  /* Safe area insets - defaults to 0, overridden by env() when available */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 
 /* Font size scaling */
@@ -47,13 +53,38 @@ html.font-xl {
     @apply text-gray-100;
   }
 
-  /* Safe area for iOS devices */
+  /* Safe area for iOS devices - use CSS variables for consistency */
   .safe-area-top {
-    padding-top: env(safe-area-inset-top);
+    padding-top: var(--safe-area-inset-top);
   }
 
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: var(--safe-area-inset-bottom);
+  }
+
+  .safe-area-left {
+    padding-left: var(--safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: var(--safe-area-inset-right);
+  }
+
+  .safe-area-x {
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+  }
+
+  .safe-area-y {
+    padding-top: var(--safe-area-inset-top);
+    padding-bottom: var(--safe-area-inset-bottom);
+  }
+
+  .safe-area-all {
+    padding-top: var(--safe-area-inset-top);
+    padding-right: var(--safe-area-inset-right);
+    padding-bottom: var(--safe-area-inset-bottom);
+    padding-left: var(--safe-area-inset-left);
   }
 
   /* Prevent overscroll on iOS */

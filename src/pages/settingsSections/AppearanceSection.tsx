@@ -1,17 +1,18 @@
 import { Sun, Moon, Monitor, Type, Layers, Lock } from 'lucide-react';
-import { useAppStore, useTheme, type FontSize } from '@/stores/appStore';
+import { useAppStore, useThemeEffect, type FontSize } from '@/stores/appStore';
 import { useSyncedPreferences, useEntitlement } from '@/contexts';
 import { Card, CardContent } from '@/components/ui';
 
 export function AppearanceSection() {
-  const { theme, setTheme, applyTheme } = useTheme();
+  // useThemeEffect handles theme application automatically via useEffect
+  const { theme, setTheme } = useThemeEffect();
   const { fontSize, setFontSize } = useAppStore();
   const { preferences, setAppMode } = useSyncedPreferences();
   const { canAccessAdvanced, showPaywall, purchase, trial } = useEntitlement();
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    // setTheme will trigger the effect in useThemeEffect to apply the theme
     setTheme(newTheme);
-    applyTheme(newTheme);
   };
 
   const themeOptions = [

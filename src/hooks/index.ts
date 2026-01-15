@@ -5,6 +5,12 @@ export { useAdHocWorkout } from './useAdHocWorkout';
 export { useSettingsState } from './useSettingsState';
 export type { SettingsState } from './useSettingsState';
 
+// iOS preparation hooks (with web fallbacks)
+export { useHaptics } from './useHaptics';
+export type { ImpactStyle, NotificationType, HapticsOptions } from './useHaptics';
+export { useKeyboardHeight } from './useKeyboardHeight';
+export type { KeyboardState, KeyboardHeightOptions } from './useKeyboardHeight';
+
 // Page-specific hooks
 export { useTodayModals } from './today';
 export type {
