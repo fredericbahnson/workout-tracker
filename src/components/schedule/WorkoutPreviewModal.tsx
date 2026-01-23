@@ -6,17 +6,19 @@
 
 import { Trash2 } from 'lucide-react';
 import { Modal, Badge, Button } from '@/components/ui';
+import { getWeightUnitLabel } from '@/constants';
 import {
   EXERCISE_TYPES,
   EXERCISE_TYPE_LABELS,
   formatTime,
+  getProgressionMode,
   type ScheduledWorkout,
   type ScheduledSet,
   type Exercise,
   type MaxRecord,
   type Cycle,
 } from '@/types';
-import { calculateTargetReps } from '@/services/scheduler';
+import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/scheduler';
 
 interface WorkoutPreviewModalProps {
   workout: ScheduledWorkout | null;
@@ -68,13 +70,32 @@ export function WorkoutPreviewModal({
       maxRecord,
       activeCycle.conditioningWeeklyRepIncrement,
       activeCycle.conditioningWeeklyTimeIncrement || 5,
-      defaultMaxReps
+      defaultMaxReps,
+      activeCycle
     );
 
     if (exercise.measurementType === 'time') {
       return formatTime(calculated);
     }
     return calculated;
+  };
+
+  const getTargetWeight = (set: ScheduledSet): number | undefined => {
+    const cycleMode = getProgressionMode(activeCycle);
+    // For mixed mode, check the per-exercise mode; otherwise use cycle mode
+    const effectiveMode = cycleMode === 'mixed' ? set.progressionMode || 'rfem' : cycleMode;
+
+    if (effectiveMode === 'simple') {
+      return calculateSimpleTargetWeight(set, workout, activeCycle);
+    }
+
+    // For RFEM mode, return exercise.defaultWeight if weightEnabled
+    const exercise = exerciseMap.get(set.exerciseId);
+    if (exercise?.weightEnabled && exercise.defaultWeight) {
+      return exercise.defaultWeight;
+    }
+
+    return undefined;
   };
 
   return (
@@ -103,6 +124,7 @@ export function WorkoutPreviewModal({
                   const exercise = exerciseMap.get(set.exerciseId);
                   if (!exercise) return null;
                   const target = getTargetReps(set);
+                  const targetWeight = getTargetWeight(set);
                   const isTimeBased = exercise.measurementType === 'time';
 
                   return (
@@ -115,6 +137,11 @@ export function WorkoutPreviewModal({
                       </span>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         {target} {isTimeBased ? '' : 'reps'}
+                        {targetWeight !== undefined && targetWeight > 0 && (
+                          <span className="ml-1 text-purple-600 dark:text-purple-400">
+                            @{targetWeight} {getWeightUnitLabel()}
+                          </span>
+                        )}
                       </span>
                     </div>
                   );

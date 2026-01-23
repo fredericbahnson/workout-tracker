@@ -5,6 +5,30 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.1] - 2026-01-23
+
+### Fixed
+- **Weight Display**: Exercises with added weight now show scheduled weight on exercise tiles in Today workout view and schedule preview for future workouts
+- **Mixed Mode Progression**: Simple progression exercises in Mixed cycles no longer incorrectly have reps adjusted by RFEM amount
+- **Exercise Timer Sounds**: Timer countdown beeps and completion sound now work correctly on second and subsequent sets of the same exercise
+- **Swipe Hint Text**: Updated hint to "Tap to edit details" for clearer functionality cue
+
+## [2.17.0] - 2026-01-15
+
+### Added
+- **Capacitor Integration**: iOS App Store deployment infrastructure
+  - Capacitor configuration for iOS native builds
+  - RevenueCat IAP service with purchase/restore functionality
+  - Connected haptics hook to @capacitor/haptics
+  - Connected keyboard hook to @capacitor/keyboard
+  - Paywall modal now handles real purchases on native
+  - Auth provider syncs user ID with RevenueCat for cross-device purchases
+
+### Technical
+- Added @capacitor/core, @capacitor/cli, @capacitor/ios, @capacitor/haptics, @capacitor/keyboard, @capacitor/status-bar, @capacitor/app
+- Added @revenuecat/purchases-capacitor for in-app purchases
+- New cap:sync, cap:open, cap:build npm scripts
+
 ## [2.16.1] - 2026-01-15
 
 ### Changed

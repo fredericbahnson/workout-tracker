@@ -4,15 +4,14 @@
  * Displays when user tries to access a locked feature.
  * On native (iOS), this will show purchase options.
  * On web, it shows information about the iOS app.
- *
- * This is a placeholder implementation for the PWA.
- * The full purchase flow will be implemented with Capacitor IAP.
  */
 
+import { useState, useEffect } from 'react';
 import { Modal, Button } from '@/components/ui';
 import { useEntitlement } from '@/contexts';
 import { entitlementService } from '@/services/entitlementService';
-import { Check, Lock, Star, Zap, Clock, ExternalLink } from 'lucide-react';
+import { iapService, type OfferingInfo } from '@/services/iapService';
+import { Check, Lock, Star, Zap, Clock, ExternalLink, Loader2 } from 'lucide-react';
 import type { PurchaseTier, LockReason } from '@/types';
 
 interface PaywallModalProps {
@@ -23,7 +22,77 @@ interface PaywallModalProps {
 }
 
 export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallModalProps) {
-  const { trial, isNativePlatform } = useEntitlement();
+  const { trial, isNativePlatform, refreshEntitlement } = useEntitlement();
+
+  // State for IAP
+  const [offerings, setOfferings] = useState<OfferingInfo[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load offerings when modal opens on native platform
+  useEffect(() => {
+    if (isOpen && isNativePlatform) {
+      const loadOfferings = async () => {
+        try {
+          const result = await iapService.getOfferings();
+          setOfferings(result);
+        } catch {
+          // Offerings failed to load - will show placeholder prices
+        }
+      };
+      loadOfferings();
+    }
+  }, [isOpen, isNativePlatform]);
+
+  // Handle purchase
+  const handlePurchase = async (packageId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      await iapService.purchase(packageId);
+      await refreshEntitlement();
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Purchase failed. Please try again.';
+      // Don't show error for user cancellation
+      if (!message.includes('cancel')) {
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle restore purchases
+  const handleRestore = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const purchaseInfo = await iapService.restorePurchases();
+      await refreshEntitlement();
+      if (purchaseInfo) {
+        onClose();
+      } else {
+        setError('No purchases found to restore.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Restore failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get package price from offerings
+  const getPackagePrice = (packageId: string): string | null => {
+    if (!offerings) return null;
+    for (const offering of offerings) {
+      const pkg = offering.packages.find(p => p.identifier === packageId);
+      if (pkg) return pkg.priceString;
+    }
+    return null;
+  };
 
   // Get contextual messages
   const title = getTitle(reason);
@@ -106,15 +175,34 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           </div>
         )}
 
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-3">
+            <p className="text-sm text-red-200 text-center">{error}</p>
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="space-y-3">
           {isNativePlatform ? (
-            // Native: Show purchase buttons (placeholder)
+            // Native: Show purchase buttons
             <>
-              <Button onClick={() => {}} className="w-full" variant="primary">
-                View Subscription Options
+              <Button
+                onClick={() => handlePurchase('$rc_lifetime')}
+                className="w-full"
+                variant="primary"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                {getPackagePrice('$rc_lifetime') || 'Lifetime Access'}
               </Button>
-              <Button onClick={() => {}} variant="secondary" className="w-full">
+              <Button
+                onClick={handleRestore}
+                variant="secondary"
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Restore Purchases
               </Button>
             </>
@@ -138,7 +226,7 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
             </>
           )}
 
-          <Button onClick={onClose} variant="ghost" className="w-full">
+          <Button onClick={onClose} variant="ghost" className="w-full" disabled={loading}>
             Maybe Later
           </Button>
         </div>

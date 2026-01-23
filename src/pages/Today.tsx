@@ -196,13 +196,29 @@ export function TodayPage() {
       maxRecord,
       activeCycle.conditioningWeeklyRepIncrement,
       activeCycle.conditioningWeeklyTimeIncrement || 5,
-      preferences.defaultMaxReps
+      preferences.defaultMaxReps,
+      activeCycle
     );
   };
 
   const getTargetWeight = (set: ScheduledSet, workout: ScheduledWorkout): number | undefined => {
-    if (!activeCycle || getProgressionMode(activeCycle) !== 'simple') return undefined;
-    return calculateSimpleTargetWeight(set, workout, activeCycle);
+    if (!activeCycle) return undefined;
+
+    const cycleMode = getProgressionMode(activeCycle);
+    // For mixed mode, check the per-exercise mode; otherwise use cycle mode
+    const effectiveMode = cycleMode === 'mixed' ? set.progressionMode || 'rfem' : cycleMode;
+
+    if (effectiveMode === 'simple') {
+      return calculateSimpleTargetWeight(set, workout, activeCycle);
+    }
+
+    // For RFEM mode, return exercise.defaultWeight if weightEnabled
+    const exercise = exerciseMap.get(set.exerciseId);
+    if (exercise?.weightEnabled && exercise.defaultWeight) {
+      return exercise.defaultWeight;
+    }
+
+    return undefined;
   };
 
   const groupSetsByType = useMemo(

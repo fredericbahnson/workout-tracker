@@ -17,6 +17,7 @@
  * - OR we can give web users full access (business decision)
  */
 
+import { Capacitor } from '@capacitor/core';
 import type {
   EntitlementStatus,
   PurchaseInfo,
@@ -25,28 +26,22 @@ import type {
   LockReason,
 } from '@/types/entitlement';
 import { trialService } from './trialService';
+import { iapService } from './iapService';
 
 /**
  * Check if running on a native platform (iOS/Android via Capacitor).
- * When Capacitor is added, this will use Capacitor.isNativePlatform()
  */
 function isNativePlatform(): boolean {
-  // TODO: When Capacitor is added:
-  // import { Capacitor } from '@capacitor/core';
-  // return Capacitor.isNativePlatform();
-  return false;
+  return Capacitor.isNativePlatform();
 }
 
 /**
- * Placeholder for getting purchase info from IAP service.
- * Will be implemented when Capacitor IAP is added.
+ * Get purchase info from IAP service.
+ * Returns null on web platform.
  */
 async function getPurchaseInfo(): Promise<PurchaseInfo | null> {
-  // TODO: When IAP is implemented:
-  // return iapService.getPurchaseInfo();
-
-  // For now, no purchases on web
-  return null;
+  if (!isNativePlatform()) return null;
+  return iapService.getPurchaseInfo();
 }
 
 /**
@@ -58,6 +53,11 @@ export const entitlementService = {
    * Call once at app startup.
    */
   async initialize(): Promise<EntitlementStatus> {
+    // Initialize IAP service on native platforms
+    if (isNativePlatform()) {
+      await iapService.initialize();
+    }
+
     // Start trial if this is first launch
     trialService.startTrialIfNeeded();
 

@@ -93,6 +93,7 @@ export function ScheduledSetModal({
           if (showStopwatchMode && isTimeBased && isMaxTest) {
             return (
               <ExerciseStopwatch
+                key={scheduledSet.set.id}
                 exerciseName={exercise.name}
                 previousMax={scheduledSet.set.previousMaxReps}
                 onRecordMax={seconds => {
@@ -108,6 +109,7 @@ export function ScheduledSetModal({
           if (showTimerMode && isTimeBased) {
             return (
               <ExerciseTimer
+                key={scheduledSet.set.id}
                 targetSeconds={scheduledSet.targetReps}
                 exerciseName={exercise.name}
                 onComplete={actualSeconds => {

@@ -5,6 +5,7 @@ import { createScopedLogger } from '@/utils/logger';
 import { db } from '@/data/db';
 import { useAppStore } from '@/stores/appStore';
 import { AuthContext } from './AuthContext';
+import { iapService } from '@/services/iapService';
 
 const log = createScopedLogger('Auth');
 
@@ -93,6 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+
+      // Sync user ID with RevenueCat for purchase attribution
+      if (session?.user) {
+        iapService.setUserId(session.user.id);
+      } else {
+        iapService.clearUserId();
+      }
 
       // Check if this is a new user (email confirmation or fresh signup)
       if (event === 'SIGNED_IN' && session) {

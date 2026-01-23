@@ -21,6 +21,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 /** Impact style for physical feedback */
 export type ImpactStyle = 'light' | 'medium' | 'heavy';
@@ -43,13 +44,9 @@ function isVibrationSupported(): boolean {
 
 /**
  * Check if running on native platform (Capacitor).
- * Will return true when Capacitor is integrated.
  */
 function isNativePlatform(): boolean {
-  // TODO: When Capacitor is added:
-  // import { Capacitor } from '@capacitor/core';
-  // return Capacitor.isNativePlatform();
-  return false;
+  return Capacitor.isNativePlatform();
 }
 
 /**
@@ -109,14 +106,21 @@ export function useHaptics(options: HapticsOptions = {}) {
    * On web: Uses Vibration API
    */
   const impact = useCallback(
-    (style: ImpactStyle = 'medium') => {
+    async (style: ImpactStyle = 'medium') => {
       if (!enabled) return;
 
       if (isNativePlatform()) {
-        // TODO: When Capacitor is added:
-        // import { Haptics, ImpactStyle } from '@capacitor/haptics';
-        // const styleMap = { light: ImpactStyle.Light, medium: ImpactStyle.Medium, heavy: ImpactStyle.Heavy };
-        // Haptics.impact({ style: styleMap[style] });
+        try {
+          const { Haptics, ImpactStyle: CapImpactStyle } = await import('@capacitor/haptics');
+          const styleMap = {
+            light: CapImpactStyle.Light,
+            medium: CapImpactStyle.Medium,
+            heavy: CapImpactStyle.Heavy,
+          };
+          await Haptics.impact({ style: styleMap[style] });
+        } catch {
+          // Silently fail - haptics are non-critical
+        }
         return;
       }
 
@@ -131,14 +135,22 @@ export function useHaptics(options: HapticsOptions = {}) {
    * Semantic feedback for success/warning/error states.
    */
   const notification = useCallback(
-    (type: NotificationType = 'success') => {
+    async (type: NotificationType = 'success') => {
       if (!enabled) return;
 
       if (isNativePlatform()) {
-        // TODO: When Capacitor is added:
-        // import { Haptics, NotificationType } from '@capacitor/haptics';
-        // const typeMap = { success: NotificationType.Success, warning: NotificationType.Warning, error: NotificationType.Error };
-        // Haptics.notification({ type: typeMap[type] });
+        try {
+          const { Haptics, NotificationType: CapNotificationType } =
+            await import('@capacitor/haptics');
+          const typeMap = {
+            success: CapNotificationType.Success,
+            warning: CapNotificationType.Warning,
+            error: CapNotificationType.Error,
+          };
+          await Haptics.notification({ type: typeMap[type] });
+        } catch {
+          // Silently fail - haptics are non-critical
+        }
         return;
       }
 
@@ -152,14 +164,17 @@ export function useHaptics(options: HapticsOptions = {}) {
    * Trigger selection feedback.
    * Light tap for UI selections like toggles, checkboxes.
    */
-  const selection = useCallback(() => {
+  const selection = useCallback(async () => {
     if (!enabled) return;
 
     if (isNativePlatform()) {
-      // TODO: When Capacitor is added:
-      // import { Haptics } from '@capacitor/haptics';
-      // Haptics.selectionStart();
-      // Haptics.selectionEnd();
+      try {
+        const { Haptics } = await import('@capacitor/haptics');
+        await Haptics.selectionStart();
+        await Haptics.selectionEnd();
+      } catch {
+        // Silently fail - haptics are non-critical
+      }
       return;
     }
 

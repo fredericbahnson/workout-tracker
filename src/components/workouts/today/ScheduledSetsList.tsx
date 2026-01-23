@@ -69,7 +69,7 @@ export function ScheduledSetsList({
           {/* Swipe hint - only show once */}
           {showSwipeHint && (
             <p className="text-xs text-gray-400 dark:text-gray-500 text-center mb-1">
-              Swipe right to complete • Swipe left to skip • Tap for details
+              Swipe right to complete • Swipe left to skip • Tap to edit details
             </p>
           )}
           {groupedSetsRemaining.map(group => (

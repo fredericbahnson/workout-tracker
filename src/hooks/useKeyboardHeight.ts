@@ -20,7 +20,8 @@
  * shrinks while the layout viewport stays the same, giving us the keyboard height.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 /** Keyboard visibility state */
 export interface KeyboardState {
@@ -44,10 +45,7 @@ export interface KeyboardHeightOptions {
  * Check if running on native platform (Capacitor).
  */
 function isNativePlatform(): boolean {
-  // TODO: When Capacitor is added:
-  // import { Capacitor } from '@capacitor/core';
-  // return Capacitor.isNativePlatform();
-  return false;
+  return Capacitor.isNativePlatform();
 }
 
 /**
@@ -98,34 +96,45 @@ export function useKeyboardHeight(options: KeyboardHeightOptions = {}): Keyboard
     }
   }, [minHeight, onVisibilityChange]);
 
+  // Store listener handles for cleanup
+  const listenersRef = useRef<{ remove: () => Promise<void> }[]>([]);
+
   /**
    * Set up native keyboard listeners (when Capacitor is available).
    */
   const setupNativeListeners = useCallback(() => {
     if (!isNativePlatform()) return undefined;
 
-    // TODO: When Capacitor is added:
-    // import { Keyboard, KeyboardInfo } from '@capacitor/keyboard';
-    //
-    // const showListener = Keyboard.addListener('keyboardWillShow', (info: KeyboardInfo) => {
-    //   setKeyboardHeight(info.keyboardHeight);
-    //   setIsKeyboardVisible(true);
-    //   onVisibilityChange?.(true, info.keyboardHeight);
-    // });
-    //
-    // const hideListener = Keyboard.addListener('keyboardWillHide', () => {
-    //   setKeyboardHeight(0);
-    //   setIsKeyboardVisible(false);
-    //   onVisibilityChange?.(false, 0);
-    // });
-    //
-    // return () => {
-    //   showListener.remove();
-    //   hideListener.remove();
-    // };
+    // Set up listeners asynchronously
+    const setupListeners = async () => {
+      try {
+        const { Keyboard } = await import('@capacitor/keyboard');
 
-    return undefined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onVisibilityChange will be used when Capacitor is added
+        const showHandle = await Keyboard.addListener('keyboardWillShow', info => {
+          setKeyboardHeight(info.keyboardHeight);
+          setIsKeyboardVisible(true);
+          onVisibilityChange?.(true, info.keyboardHeight);
+        });
+
+        const hideHandle = await Keyboard.addListener('keyboardWillHide', () => {
+          setKeyboardHeight(0);
+          setIsKeyboardVisible(false);
+          onVisibilityChange?.(false, 0);
+        });
+
+        listenersRef.current = [showHandle, hideHandle];
+      } catch {
+        // Silently fail - keyboard tracking is non-critical
+      }
+    };
+
+    setupListeners();
+
+    // Return cleanup function
+    return () => {
+      listenersRef.current.forEach(handle => handle.remove());
+      listenersRef.current = [];
+    };
   }, [onVisibilityChange]);
 
   /**
