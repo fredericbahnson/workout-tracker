@@ -138,7 +138,7 @@ export function WorkoutPreviewModal({
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         {target} {isTimeBased ? '' : 'reps'}
                         {targetWeight !== undefined && targetWeight > 0 && (
-                          <span className="ml-1 text-purple-600 dark:text-purple-400">
+                          <span className="ml-1 text-gray-500 dark:text-gray-400">
                             @{targetWeight} {getWeightUnitLabel()}
                           </span>
                         )}

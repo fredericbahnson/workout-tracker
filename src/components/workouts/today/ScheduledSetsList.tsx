@@ -138,7 +138,7 @@ export function ScheduledSetsList({
                                   : targetReps}
                             </span>
                             {targetWeight !== undefined && targetWeight > 0 && (
-                              <span className="text-gym-lg text-purple-600 dark:text-purple-400">
+                              <span className="text-gym-lg text-gray-500 dark:text-gray-400">
                                 @{targetWeight}
                               </span>
                             )}
