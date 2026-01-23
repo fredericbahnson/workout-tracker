@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
+import { TrialBanner } from '@/components/paywall';
+import { useEntitlement } from '@/contexts';
 import {
   AccountSection,
   AppearanceSection,
@@ -14,6 +16,7 @@ import {
 
 export function SettingsPage() {
   const [message, setMessage] = useState<SettingsMessage | null>(null);
+  const { trial, purchase } = useEntitlement();
 
   return (
     <>
@@ -43,6 +46,9 @@ export function SettingsPage() {
 
         {/* Account & Sync */}
         <AccountSection setMessage={setMessage} />
+
+        {/* Trial Banner - shown right after account info */}
+        {!purchase && (trial.isActive || trial.hasExpired) && <TrialBanner variant="full" />}
 
         {/* Appearance, App Mode, Font Size */}
         <AppearanceSection />

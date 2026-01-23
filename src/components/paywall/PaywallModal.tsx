@@ -8,10 +8,10 @@
 
 import { useState, useEffect } from 'react';
 import { Modal, Button } from '@/components/ui';
-import { useEntitlement } from '@/contexts';
+import { useEntitlement, useSyncedPreferences } from '@/contexts';
 import { entitlementService } from '@/services/entitlementService';
 import { iapService, type OfferingInfo } from '@/services/iapService';
-import { Check, Lock, Star, Zap, Clock, ExternalLink, Loader2 } from 'lucide-react';
+import { Check, Lock, Star, Zap, Clock, ExternalLink, Loader2, Settings } from 'lucide-react';
 import type { PurchaseTier, LockReason } from '@/types';
 
 interface PaywallModalProps {
@@ -23,11 +23,28 @@ interface PaywallModalProps {
 
 export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallModalProps) {
   const { trial, isNativePlatform, refreshEntitlement } = useEntitlement();
+  const { preferences, setAppMode } = useSyncedPreferences();
 
   // State for IAP
   const [offerings, setOfferings] = useState<OfferingInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if user is in trial and using standard mode (can enable advanced for free)
+  const canEnableAdvancedForFree = trial.isActive && preferences.appMode === 'standard';
+
+  // Handle enabling advanced mode for free during trial
+  const handleEnableAdvanced = async () => {
+    setLoading(true);
+    try {
+      await setAppMode('advanced');
+      onClose();
+    } catch {
+      setError('Failed to enable advanced mode. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load offerings when modal opens on native platform
   useEffect(() => {
@@ -95,8 +112,12 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
   };
 
   // Get contextual messages
-  const title = getTitle(reason);
-  const message = reason ? entitlementService.getLockMessage(reason) : '';
+  const title = canEnableAdvancedForFree ? 'Advanced Mode Required' : getTitle(reason);
+  const message = canEnableAdvancedForFree
+    ? 'This feature requires Advanced mode. You can turn it on for free in Settings during your free trial.'
+    : reason
+      ? entitlementService.getLockMessage(reason)
+      : '';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
@@ -104,24 +125,28 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
         {/* Status message */}
         <div className="text-center">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-8 h-8 text-white" />
+            {canEnableAdvancedForFree ? (
+              <Settings className="w-8 h-8 text-white" />
+            ) : (
+              <Lock className="w-8 h-8 text-white" />
+            )}
           </div>
           <p className="text-gray-600 dark:text-gray-400">{message}</p>
         </div>
 
         {/* Trial status banner */}
         {trial.hasExpired && (
-          <div className="bg-amber-900/30 border border-amber-600/50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-amber-200">
+          <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-600/50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-200">
               <Clock className="w-4 h-4 flex-shrink-0" />
               <p className="text-sm">Your 4-week free trial has ended.</p>
             </div>
           </div>
         )}
 
-        {trial.isActive && (
-          <div className="bg-blue-900/30 border border-blue-600/50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-blue-200">
+        {trial.isActive && !canEnableAdvancedForFree && (
+          <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-600/50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-200">
               <Clock className="w-4 h-4 flex-shrink-0" />
               <p className="text-sm">
                 {trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} left in your free
@@ -184,7 +209,31 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
 
         {/* Action buttons */}
         <div className="space-y-3">
-          {isNativePlatform ? (
+          {canEnableAdvancedForFree ? (
+            // User is in trial with standard mode - offer to enable advanced for free
+            <>
+              <Button
+                onClick={handleEnableAdvanced}
+                className="w-full"
+                variant="primary"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Enable Advanced Trial
+              </Button>
+              {isNativePlatform && (
+                <Button
+                  onClick={() => handlePurchase('$rc_lifetime')}
+                  className="w-full"
+                  variant="secondary"
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {getPackagePrice('$rc_lifetime') || 'Purchase Now'}
+                </Button>
+              )}
+            </>
+          ) : isNativePlatform ? (
             // Native: Show purchase buttons
             <>
               <Button
@@ -227,7 +276,7 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           )}
 
           <Button onClick={onClose} variant="ghost" className="w-full" disabled={loading}>
-            Maybe Later
+            {canEnableAdvancedForFree ? 'Cancel' : 'Maybe Later'}
           </Button>
         </div>
 
