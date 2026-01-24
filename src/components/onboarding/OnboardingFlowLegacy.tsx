@@ -30,7 +30,7 @@ const SLIDES = [
     icon: null, // Use app icon image instead
     title: 'Welcome to Ascend',
     description:
-      'Your personal progressive calisthenics coach. Track your workouts, follow RFEM-based programming, and watch your strength grow.',
+      'Your personal progressive fitness coach. Track your workouts, follow RFEM-based programming, and watch your strength grow.',
     gradient: 'from-indigo-500 to-cyan-500',
     useAppIcon: true,
   },

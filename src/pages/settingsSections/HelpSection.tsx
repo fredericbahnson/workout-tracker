@@ -62,9 +62,7 @@ export function HelpSection() {
         <CardContent>
           <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">About</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">Ascend v{APP_VERSION}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Progressive calisthenics strength training
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Progressive fitness training</p>
         </CardContent>
       </Card>
 

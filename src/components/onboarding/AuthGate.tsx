@@ -192,7 +192,7 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
             />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Ascend</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">
-              {mode === 'forgot' ? 'Reset your password' : 'Progressive calisthenics training'}
+              {mode === 'forgot' ? 'Reset your password' : 'Progressive fitness training'}
             </p>
           </div>
 
