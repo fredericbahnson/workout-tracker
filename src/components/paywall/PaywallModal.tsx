@@ -156,14 +156,19 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           </div>
         )}
 
-        {/* Feature comparison (when showing for Advanced) */}
-        {requiredTier === 'advanced' && (
+        {/* Feature comparison - show both tiers when not specifically requiring advanced */}
+        {!canEnableAdvancedForFree && requiredTier !== 'advanced' && reason !== 'standard_only' && (
           <div className="space-y-4">
             {/* Standard tier */}
-            <div className="border border-gray-700 rounded-lg p-4">
+            <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Star className="w-5 h-5 text-blue-400" />
-                <h3 className="font-semibold">Standard</h3>
+                <Star className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Standard</h3>
+                {isNativePlatform && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+                    {getPackagePrice('standard') || ''}
+                  </span>
+                )}
               </div>
               <ul className="space-y-2 text-sm">
                 <FeatureItem included>RFEM Training Cycles</FeatureItem>
@@ -178,10 +183,10 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
             {/* Advanced tier */}
             <div className="border-2 border-purple-500 rounded-lg p-4 bg-purple-500/10">
               <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-5 h-5 text-purple-400" />
-                <h3 className="font-semibold">Advanced</h3>
-                <span className="text-xs bg-purple-500 px-2 py-0.5 rounded ml-auto">
-                  Full Access
+                <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
+                <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded ml-auto">
+                  {isNativePlatform ? getPackagePrice('advanced') || 'Full Access' : 'Full Access'}
                 </span>
               </div>
               <ul className="space-y-2 text-sm">
@@ -199,6 +204,32 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
             </div>
           </div>
         )}
+
+        {/* Advanced only - when specifically requiring advanced tier */}
+        {!canEnableAdvancedForFree &&
+          (requiredTier === 'advanced' || reason === 'standard_only') && (
+            <div className="border-2 border-purple-500 rounded-lg p-4 bg-purple-500/10">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
+                <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded ml-auto">
+                  {isNativePlatform ? getPackagePrice('advanced') || 'Full Access' : 'Full Access'}
+                </span>
+              </div>
+              <ul className="space-y-2 text-sm">
+                <FeatureItem included>Everything in Standard</FeatureItem>
+                <FeatureItem included highlight>
+                  Simple Progression Cycles
+                </FeatureItem>
+                <FeatureItem included highlight>
+                  Mixed Mode Cycles
+                </FeatureItem>
+                <FeatureItem included highlight>
+                  Future premium features
+                </FeatureItem>
+              </ul>
+            </div>
+          )}
 
         {/* Error message */}
         {error && (
@@ -223,34 +254,60 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
               </Button>
               {isNativePlatform && (
                 <Button
-                  onClick={() => handlePurchase('$rc_lifetime')}
+                  onClick={() => handlePurchase('advanced')}
                   className="w-full"
                   variant="secondary"
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  {getPackagePrice('$rc_lifetime') || 'Purchase Now'}
+                  {getPackagePrice('advanced') || 'Purchase Advanced'}
                 </Button>
               )}
             </>
           ) : isNativePlatform ? (
-            // Native: Show purchase buttons
+            // Native: Show purchase buttons based on required tier
             <>
-              <Button
-                onClick={() => handlePurchase('$rc_lifetime')}
-                className="w-full"
-                variant="primary"
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                {getPackagePrice('$rc_lifetime') || 'Lifetime Access'}
-              </Button>
-              <Button
-                onClick={handleRestore}
-                variant="secondary"
-                className="w-full"
-                disabled={loading}
-              >
+              {/* Show both options when not specifically requiring advanced */}
+              {requiredTier !== 'advanced' && reason !== 'standard_only' && (
+                <>
+                  <Button
+                    onClick={() => handlePurchase('advanced')}
+                    className="w-full"
+                    variant="primary"
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    <Zap className="w-4 h-4 mr-2" />
+                    {getPackagePrice('advanced') || 'Get Advanced'}
+                  </Button>
+                  <Button
+                    onClick={() => handlePurchase('standard')}
+                    className="w-full"
+                    variant="secondary"
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    <Star className="w-4 h-4 mr-2" />
+                    {getPackagePrice('standard') || 'Get Standard'}
+                  </Button>
+                </>
+              )}
+              {/* Show only advanced option when requiring advanced tier */}
+              {(requiredTier === 'advanced' || reason === 'standard_only') && (
+                <Button
+                  onClick={() => handlePurchase('advanced')}
+                  className="w-full"
+                  variant="primary"
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  <Zap className="w-4 h-4 mr-2" />
+                  {reason === 'standard_only'
+                    ? getPackagePrice('advanced') || 'Upgrade to Advanced'
+                    : getPackagePrice('advanced') || 'Get Advanced'}
+                </Button>
+              )}
+              <Button onClick={handleRestore} variant="ghost" className="w-full" disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Restore Purchases
               </Button>
@@ -259,7 +316,7 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
             // Web: Direct to App Store (placeholder)
             <>
               <div className="text-center text-sm text-gray-500 dark:text-gray-400 mb-2">
-                Subscriptions are available in the iOS app.
+                Purchases are available in the iOS app.
               </div>
               <Button
                 onClick={() => {
