@@ -31,6 +31,13 @@ vi.mock('@/services/trialService', () => ({
   },
 }));
 
+// Mock useAuth hook
+vi.mock('@/contexts/auth', () => ({
+  useAuth: () => ({
+    user: null,
+  }),
+}));
+
 // Test component that uses the hook
 function TestConsumer({
   onMount,
