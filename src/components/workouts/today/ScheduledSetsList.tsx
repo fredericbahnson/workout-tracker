@@ -120,7 +120,7 @@ export function ScheduledSetsList({
                               </span>
                             )}
                             {isMaxTestSet && (
-                              <span className="text-xs px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
+                              <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
                                 Max Test
                               </span>
                             )}
@@ -129,7 +129,7 @@ export function ScheduledSetsList({
                         <div className="flex flex-col items-end">
                           <div className="flex items-baseline gap-1">
                             <span
-                              className={`text-gym-2xl ${isMaxTestSet ? 'text-purple-600 dark:text-purple-400' : isWarmupSet ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'}`}
+                              className={`text-gym-2xl ${isMaxTestSet ? 'text-blue-600 dark:text-blue-400' : isWarmupSet ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400'}`}
                             >
                               {isMaxTestSet
                                 ? 'MAX'

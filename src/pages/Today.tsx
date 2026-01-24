@@ -601,7 +601,7 @@ export function TodayPage() {
           </Card>
         )}
 
-        {activeCycle && (isShowingCompletedWorkout || (!displayWorkout && !isCycleComplete)) && (
+        {activeCycle && (isShowingCompletedWorkout || !displayWorkout) && (
           <Button
             variant="secondary"
             className="w-full"
@@ -768,12 +768,8 @@ export function TodayPage() {
           onDismiss={handleDismissCycleCompletion}
         />
       )}
-      {showMaxTestingWizard && completedCycleForModal && (
-        <MaxTestingWizard
-          completedCycle={completedCycleForModal}
-          onComplete={handleMaxTestingComplete}
-          onCancel={handleCancelMaxTesting}
-        />
+      {showMaxTestingWizard && (
+        <MaxTestingWizard onComplete={handleMaxTestingComplete} onCancel={handleCancelMaxTesting} />
       )}
 
       <Modal

@@ -1,9 +1,7 @@
 import { useState, useRef } from 'react';
-import { Download, Upload, Trash2, Wrench } from 'lucide-react';
+import { Download, Upload, Trash2 } from 'lucide-react';
 import { exportData, importData, db } from '@/data/db';
 import { createScopedLogger } from '@/utils/logger';
-import { ScheduledWorkoutRepo } from '@/data/repositories';
-import { useSyncItem } from '@/contexts';
 import { Card, CardContent, Button } from '@/components/ui';
 import { ClearDataModal } from '@/components/settings';
 import type { SettingsSectionProps } from './types';
@@ -11,12 +9,9 @@ import type { SettingsSectionProps } from './types';
 const log = createScopedLogger('DataSection');
 
 export function DataSection({ setMessage }: SettingsSectionProps) {
-  const { deleteItem, hardDeleteItem } = useSyncItem();
-
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
-  const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,56 +65,6 @@ export function DataSection({ setMessage }: SettingsSectionProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    }
-  };
-
-  const handleCleanupDuplicates = async () => {
-    setIsCleaningDuplicates(true);
-    setMessage({ type: 'success', text: '' }); // Clear any previous message
-    try {
-      const deletedIds = await ScheduledWorkoutRepo.cleanupDuplicates();
-
-      if (deletedIds.length > 0) {
-        // Hard delete from cloud so they don't come back
-        let successCount = 0;
-        let failCount = 0;
-        for (const id of deletedIds) {
-          try {
-            // Use hardDeleteItem for permanent removal from cloud
-            const success = await hardDeleteItem('scheduled_workouts', id);
-            if (success) {
-              successCount++;
-            } else {
-              // If hard delete fails, try soft delete as fallback
-              const softSuccess = await deleteItem('scheduled_workouts', id);
-              if (softSuccess) successCount++;
-              else failCount++;
-            }
-          } catch (error) {
-            log.error(error as Error);
-            failCount++;
-          }
-        }
-
-        if (failCount > 0) {
-          setMessage({
-            type: 'success',
-            text: `Removed ${deletedIds.length} duplicate(s). ${successCount} synced to cloud, ${failCount} may return on next sync.`,
-          });
-        } else {
-          setMessage({
-            type: 'success',
-            text: `Removed ${deletedIds.length} duplicate workout(s) and synced to cloud.`,
-          });
-        }
-      } else {
-        setMessage({ type: 'success', text: 'No duplicate workouts found.' });
-      }
-    } catch (error) {
-      log.error(error as Error);
-      setMessage({ type: 'error', text: 'Failed to cleanup duplicates.' });
-    } finally {
-      setIsCleaningDuplicates(false);
     }
   };
 
@@ -180,20 +125,6 @@ export function DataSection({ setMessage }: SettingsSectionProps) {
             onChange={handleImport}
             className="hidden"
           />
-
-          <hr className="border-gray-200 dark:border-dark-border" />
-
-          <p className="text-xs text-gray-500 dark:text-gray-400">Troubleshooting</p>
-
-          <Button
-            variant="secondary"
-            className="w-full justify-start"
-            onClick={handleCleanupDuplicates}
-            disabled={isCleaningDuplicates}
-          >
-            <Wrench className="w-4 h-4 mr-2" />
-            {isCleaningDuplicates ? 'Cleaning...' : 'Fix Duplicate Workouts'}
-          </Button>
 
           <hr className="border-gray-200 dark:border-dark-border" />
 

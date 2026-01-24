@@ -38,7 +38,6 @@ export interface SettingsState {
     exporting: boolean;
     importing: boolean;
     clearing: boolean;
-    cleaningDuplicates: boolean;
     deleting: boolean;
   };
 
@@ -91,7 +90,6 @@ const initialState: SettingsState = {
     exporting: false,
     importing: false,
     clearing: false,
-    cleaningDuplicates: false,
     deleting: false,
   },
   message: null,

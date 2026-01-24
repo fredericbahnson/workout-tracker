@@ -5,6 +5,26 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.2] - 2026-01-24
+
+### Fixed
+- **Max Testing Navigation**: Fixed bug where exiting max cycle creation after starting from cycle completion card would navigate to a random old workout instead of returning to the completion modal
+- **Max Testing Wizard Consistency**: Unified max testing wizard experience - both entry points (after cycle completion and from Create New Cycle) now show all exercises for selection rather than pre-populating from completed cycle
+
+### Changed
+- **Max Testing Visual Style**: Changed "MAX" indicator and "Max Test" badge from purple to blue to better match the app's color scheme
+- **Ad-Hoc Workouts in Max Testing**: Added "Log Ad-Hoc Workout" button to max testing cycles, matching standard workout behavior
+
+### Added
+- **Clear Workout History**: New option in Settings (Account & Sync section) to start fresh without losing exercises or max records
+  - Clears all completed sets, cycles, and scheduled workouts
+  - Preserves exercise library, personal records (PRs), account, and settings
+  - Syncs deletions to cloud for signed-in users
+  - Includes clear warning about permanent data loss
+
+### Removed
+- **Fix Duplicate Workouts**: Removed the temporary troubleshooting function from Settings that was added during an earlier bug fix
+
 ## [2.17.1] - 2026-01-23
 
 ### Fixed

@@ -96,8 +96,9 @@ export function useCycleCompletion({
   // Start max testing after cycle completion
   const handleStartMaxTesting = useCallback(async () => {
     if (completedCycleForModal) {
-      // Mark the cycle as completed when user explicitly chooses next action
-      await CycleRepo.update(completedCycleForModal.id, { status: 'completed' });
+      // Don't mark the cycle as completed here - the MaxTestingWizard
+      // will do it when the new cycle is actually created. This allows
+      // the user to cancel and return to the completion view.
       setShowCycleCompletionModal(false);
       setShowMaxTestingWizard(true);
       setCycleCompleteDismissed(false);
@@ -145,11 +146,12 @@ export function useCycleCompletion({
     // The max testing cycle is now active, user will see it
   }, []);
 
-  // Cancel max testing wizard
+  // Cancel max testing wizard - return to completion modal
   const handleCancelMaxTesting = useCallback(() => {
     setShowMaxTestingWizard(false);
-    setCompletedCycleForModal(null);
-    setCycleCompleteDismissed(false);
+    // Re-show the completion modal so user can choose what to do next
+    // Don't clear completedCycleForModal - we need it to show the modal
+    setShowCycleCompletionModal(true);
   }, []);
 
   // Open standalone max testing
