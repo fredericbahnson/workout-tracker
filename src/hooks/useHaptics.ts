@@ -22,6 +22,9 @@
 
 import { useCallback, useMemo } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { createScopedLogger } from '@/utils/logger';
+
+const log = createScopedLogger('Haptics');
 
 /** Impact style for physical feedback */
 export type ImpactStyle = 'light' | 'medium' | 'heavy';
@@ -93,8 +96,8 @@ export function useHaptics(options: HapticsOptions = {}) {
 
       try {
         navigator.vibrate(pattern);
-      } catch {
-        // Silently fail - haptics are non-critical
+      } catch (error) {
+        log.debug('Vibration failed', { error, pattern });
       }
     },
     [enabled]
@@ -118,8 +121,8 @@ export function useHaptics(options: HapticsOptions = {}) {
             heavy: CapImpactStyle.Heavy,
           };
           await Haptics.impact({ style: styleMap[style] });
-        } catch {
-          // Silently fail - haptics are non-critical
+        } catch (error) {
+          log.debug('Native impact haptic failed', { error, style });
         }
         return;
       }
@@ -148,8 +151,8 @@ export function useHaptics(options: HapticsOptions = {}) {
             error: CapNotificationType.Error,
           };
           await Haptics.notification({ type: typeMap[type] });
-        } catch {
-          // Silently fail - haptics are non-critical
+        } catch (error) {
+          log.debug('Native notification haptic failed', { error, type });
         }
         return;
       }
@@ -172,8 +175,8 @@ export function useHaptics(options: HapticsOptions = {}) {
         const { Haptics } = await import('@capacitor/haptics');
         await Haptics.selectionStart();
         await Haptics.selectionEnd();
-      } catch {
-        // Silently fail - haptics are non-critical
+      } catch (error) {
+        log.debug('Native selection haptic failed', { error });
       }
       return;
     }

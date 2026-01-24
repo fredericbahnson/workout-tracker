@@ -19,6 +19,22 @@ interface SwipeableSetCardProps {
   ariaLabel?: string;
 }
 
+/**
+ * Calculate swipe translation with resistance at edges.
+ * Shared logic for both touch and mouse move handlers.
+ */
+function calculateSwipeTranslation(diff: number): number {
+  const maxTranslate = SWIPE_MAX_TRANSLATE;
+
+  if (Math.abs(diff) > maxTranslate) {
+    return diff > 0
+      ? maxTranslate + (diff - maxTranslate) * SWIPE_RESISTANCE
+      : -maxTranslate + (diff + maxTranslate) * SWIPE_RESISTANCE;
+  }
+
+  return diff;
+}
+
 export function SwipeableSetCard({
   children,
   onSwipeRight,
@@ -72,11 +88,14 @@ export function SwipeableSetCard({
     [disabled, onTap, onSwipeRight, onSwipeLeft]
   );
 
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => {
+  /**
+   * Shared handler for drag start (touch or mouse).
+   */
+  const handleDragStart = useCallback(
+    (clientX: number, clientY: number) => {
       if (disabled) return;
-      startXRef.current = e.touches[0].clientX;
-      startYRef.current = e.touches[0].clientY;
+      startXRef.current = clientX;
+      startYRef.current = clientY;
       maxYMovementRef.current = 0;
       startTimeRef.current = Date.now();
       setIsDragging(true);
@@ -84,131 +103,34 @@ export function SwipeableSetCard({
     [disabled]
   );
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
+  /**
+   * Shared handler for drag move (touch or mouse).
+   */
+  const handleDragMove = useCallback(
+    (clientX: number, clientY: number) => {
       if (!isDragging || disabled) return;
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      const diff = currentX - startXRef.current;
 
-      // Track maximum vertical movement (for tap detection)
-      const yMovement = Math.abs(currentY - startYRef.current);
+      const diff = clientX - startXRef.current;
+      const yMovement = Math.abs(clientY - startYRef.current);
       maxYMovementRef.current = Math.max(maxYMovementRef.current, yMovement);
 
-      // Apply resistance at edges
-      const resistance = SWIPE_RESISTANCE;
-      const maxTranslate = SWIPE_MAX_TRANSLATE;
-
-      let newTranslate = diff;
-      if (Math.abs(diff) > maxTranslate) {
-        newTranslate =
-          diff > 0
-            ? maxTranslate + (diff - maxTranslate) * resistance
-            : -maxTranslate + (diff + maxTranslate) * resistance;
-      }
-
-      setTranslateX(newTranslate);
+      setTranslateX(calculateSwipeTranslation(diff));
     },
     [isDragging, disabled]
   );
 
-  const handleTouchEnd = useCallback(
-    (_e: React.TouchEvent) => {
-      if (!isDragging || disabled) return;
-
-      const endTime = Date.now();
-      const duration = endTime - startTimeRef.current;
-      const velocity = Math.abs(translateX) / duration;
-
-      // Check if it was a tap (minimal horizontal AND vertical movement, short duration)
-      const isMinimalXMovement = Math.abs(translateX) < TAP_THRESHOLD.movementX;
-      const isMinimalYMovement = maxYMovementRef.current < TAP_THRESHOLD.movementY;
-      const isShortDuration = duration < TAP_THRESHOLD.duration;
-
-      if (isMinimalXMovement && isMinimalYMovement && isShortDuration) {
-        setTranslateX(0);
-        setIsDragging(false);
-        onTap();
-        return;
-      }
-
-      // Check for swipe completion
-      const isSwipeRight = translateX > 0;
-      const meetsThreshold =
-        Math.abs(translateX) >= SWIPE_THRESHOLD || velocity >= VELOCITY_THRESHOLD;
-
-      if (meetsThreshold) {
-        if (isSwipeRight) {
-          // Animate off screen to the right then trigger action
-          setTranslateX(window.innerWidth);
-          setTimeout(() => {
-            onSwipeRight();
-            setTranslateX(0);
-          }, SWIPE_ANIMATION_DURATION);
-        } else {
-          // Animate off screen to the left then trigger action
-          setTranslateX(-window.innerWidth);
-          setTimeout(() => {
-            onSwipeLeft();
-            setTranslateX(0);
-          }, SWIPE_ANIMATION_DURATION);
-        }
-      } else {
-        // Snap back
-        setTranslateX(0);
-      }
-
-      setIsDragging(false);
-    },
-    [isDragging, translateX, disabled, onSwipeRight, onSwipeLeft, onTap]
-  );
-
-  // Mouse events for desktop testing
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (disabled) return;
-      startXRef.current = e.clientX;
-      startYRef.current = e.clientY;
-      maxYMovementRef.current = 0;
-      startTimeRef.current = Date.now();
-      setIsDragging(true);
-    },
-    [disabled]
-  );
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isDragging || disabled) return;
-      const diff = e.clientX - startXRef.current;
-
-      // Track maximum vertical movement (for tap detection)
-      const yMovement = Math.abs(e.clientY - startYRef.current);
-      maxYMovementRef.current = Math.max(maxYMovementRef.current, yMovement);
-
-      const resistance = SWIPE_RESISTANCE;
-      const maxTranslate = SWIPE_MAX_TRANSLATE;
-
-      let newTranslate = diff;
-      if (Math.abs(diff) > maxTranslate) {
-        newTranslate =
-          diff > 0
-            ? maxTranslate + (diff - maxTranslate) * resistance
-            : -maxTranslate + (diff + maxTranslate) * resistance;
-      }
-
-      setTranslateX(newTranslate);
-    },
-    [isDragging, disabled]
-  );
-
-  const handleMouseUp = useCallback(() => {
+  /**
+   * Shared handler for drag end (touch or mouse).
+   * Determines if gesture was a tap or swipe and triggers appropriate action.
+   */
+  const handleDragEnd = useCallback(() => {
     if (!isDragging || disabled) return;
 
     const endTime = Date.now();
     const duration = endTime - startTimeRef.current;
     const velocity = Math.abs(translateX) / duration;
 
-    // Check if it was a click (minimal horizontal AND vertical movement, short duration)
+    // Check if it was a tap (minimal movement, short duration)
     const isMinimalXMovement = Math.abs(translateX) < TAP_THRESHOLD.movementX;
     const isMinimalYMovement = maxYMovementRef.current < TAP_THRESHOLD.movementY;
     const isShortDuration = duration < TAP_THRESHOLD.duration;
@@ -220,30 +142,55 @@ export function SwipeableSetCard({
       return;
     }
 
+    // Check for swipe completion
     const isSwipeRight = translateX > 0;
     const meetsThreshold =
       Math.abs(translateX) >= SWIPE_THRESHOLD || velocity >= VELOCITY_THRESHOLD;
 
     if (meetsThreshold) {
-      if (isSwipeRight) {
-        setTranslateX(window.innerWidth);
-        setTimeout(() => {
+      const direction = isSwipeRight ? 1 : -1;
+      setTranslateX(direction * window.innerWidth);
+      setTimeout(() => {
+        if (isSwipeRight) {
           onSwipeRight();
-          setTranslateX(0);
-        }, SWIPE_ANIMATION_DURATION);
-      } else {
-        setTranslateX(-window.innerWidth);
-        setTimeout(() => {
+        } else {
           onSwipeLeft();
-          setTranslateX(0);
-        }, SWIPE_ANIMATION_DURATION);
-      }
+        }
+        setTranslateX(0);
+      }, SWIPE_ANIMATION_DURATION);
     } else {
+      // Snap back
       setTranslateX(0);
     }
 
     setIsDragging(false);
   }, [isDragging, translateX, disabled, onSwipeRight, onSwipeLeft, onTap]);
+
+  // Touch event handlers (delegate to shared handlers)
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY),
+    [handleDragStart]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX, e.touches[0].clientY),
+    [handleDragMove]
+  );
+
+  const handleTouchEnd = useCallback(() => handleDragEnd(), [handleDragEnd]);
+
+  // Mouse event handlers (delegate to shared handlers)
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => handleDragStart(e.clientX, e.clientY),
+    [handleDragStart]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => handleDragMove(e.clientX, e.clientY),
+    [handleDragMove]
+  );
+
+  const handleMouseUp = useCallback(() => handleDragEnd(), [handleDragEnd]);
 
   const handleMouseLeave = useCallback(() => {
     if (isDragging) {

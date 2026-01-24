@@ -118,6 +118,7 @@ Handles bidirectional sync between local IndexedDB and Supabase:
 - **Push**: Uploads local changes
 - **Conflict Resolution**: Remote wins (last-write-wins)
 - **Offline Support**: Queues changes when offline
+- **Retry Logic**: Exponential backoff for failed operations (configured in `constants/sync.ts`)
 
 ```typescript
 // Sync flow
@@ -126,6 +127,11 @@ SyncService.fullSync() → {
   pushLocalChanges()   // Send local changes
   resolveConflicts()   // Merge conflicts
 }
+
+// Retry configuration (constants/sync.ts)
+MAX_RETRY_COUNT = 5           // Max retry attempts
+RETRY_BASE_MS = 1000          // Base delay (1s)
+RETRY_MAX_MS = 30000          // Max delay (30s)
 ```
 
 ### 3. State Management
@@ -259,6 +265,7 @@ npm run format     # Format code
 # .env (not committed)
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=xxx
+VITE_REVENUECAT_API_KEY=xxx    # iOS In-App Purchases (RevenueCat)
 ```
 
 ## Deployment

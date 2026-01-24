@@ -11,6 +11,7 @@ import type {
 } from '@/types';
 import { now, toISOString, isAfter } from '@/utils/dateUtils';
 import { createScopedLogger } from '@/utils/logger';
+import { MAX_RETRY_COUNT, calculateRetryDelay } from '@/constants';
 import type {
   RemoteExercise,
   RemoteMaxRecord,
@@ -606,20 +607,20 @@ export const SyncService = {
 
         // Increment retry count and calculate exponential backoff
         const newRetryCount = queueItem.retryCount + 1;
-        if (newRetryCount >= 5) {
-          // Give up after 5 retries
+        if (newRetryCount >= MAX_RETRY_COUNT) {
+          // Give up after max retries
           await db.syncQueue.delete(queueItem.id);
           log.warn(`Giving up on queue item ${queueItem.id} after ${newRetryCount} retries`);
         } else {
-          // Exponential backoff: 1s, 2s, 4s, 8s (capped at 30s)
-          const delayMs = Math.min(1000 * Math.pow(2, newRetryCount - 1), 30000);
+          // Exponential backoff with configured delays
+          const delayMs = calculateRetryDelay(newRetryCount);
           const nextRetryAt = new Date(currentTime.getTime() + delayMs);
           await db.syncQueue.update(queueItem.id, {
             retryCount: newRetryCount,
             nextRetryAt,
           });
           log.debug(
-            `Queue item ${queueItem.id} will retry in ${delayMs / 1000}s (attempt ${newRetryCount}/5)`
+            `Queue item ${queueItem.id} will retry in ${delayMs / 1000}s (attempt ${newRetryCount}/${MAX_RETRY_COUNT})`
           );
         }
         failed++;
