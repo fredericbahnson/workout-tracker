@@ -205,13 +205,13 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                 <div className="flex items-center gap-2 mb-3">
                   <Star className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100">Standard</h3>
-                  {isNativePlatform && (
+                  {isNativePlatform && getPackagePrice('standard') && (
                     <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-                      {getPackagePrice('standard') || ''}
+                      {getPackagePrice('standard')}
                     </span>
                   )}
                 </div>
-                <ul className="space-y-2 text-sm">
+                <ul className="space-y-2 text-sm mb-4">
                   <FeatureItem included>RFEM Training Cycles</FeatureItem>
                   <FeatureItem included>Max Rep Testing</FeatureItem>
                   <FeatureItem included>Cloud Sync</FeatureItem>
@@ -219,6 +219,18 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                   <FeatureItem included={false}>Simple Progression Cycles</FeatureItem>
                   <FeatureItem included={false}>Mixed Cycles</FeatureItem>
                 </ul>
+                {isNativePlatform && (
+                  <Button
+                    onClick={() => handlePurchase('standard')}
+                    className="w-full"
+                    variant="secondary"
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Purchase Standard{' '}
+                    {getPackagePrice('standard') ? `(${getPackagePrice('standard')})` : ''}
+                  </Button>
+                )}
               </div>
 
               {/* Advanced tier */}
@@ -227,12 +239,12 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                   <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
                   <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded ml-auto">
-                    {isNativePlatform
-                      ? getPackagePrice('advanced') || 'Full Access'
+                    {isNativePlatform && getPackagePrice('advanced')
+                      ? getPackagePrice('advanced')
                       : 'Full Access'}
                   </span>
                 </div>
-                <ul className="space-y-2 text-sm">
+                <ul className="space-y-2 text-sm mb-4">
                   <FeatureItem included>Everything in Standard</FeatureItem>
                   <FeatureItem included highlight>
                     Simple Progression Cycles
@@ -244,6 +256,18 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                     Future premium features
                   </FeatureItem>
                 </ul>
+                {isNativePlatform && (
+                  <Button
+                    onClick={() => handlePurchase('advanced')}
+                    className="w-full"
+                    variant="primary"
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Purchase Advanced{' '}
+                    {getPackagePrice('advanced') ? `(${getPackagePrice('advanced')})` : ''}
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -257,10 +281,12 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                 <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
                 <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded ml-auto">
-                  {isNativePlatform ? getPackagePrice('advanced') || 'Full Access' : 'Full Access'}
+                  {isNativePlatform && getPackagePrice('advanced')
+                    ? getPackagePrice('advanced')
+                    : 'Full Access'}
                 </span>
               </div>
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-2 text-sm mb-4">
                 <FeatureItem included>Everything in Standard</FeatureItem>
                 <FeatureItem included highlight>
                   Simple Progression Cycles
@@ -272,6 +298,18 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                   Future premium features
                 </FeatureItem>
               </ul>
+              {isNativePlatform && (
+                <Button
+                  onClick={() => handlePurchase('advanced')}
+                  className="w-full"
+                  variant="primary"
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {reason === 'standard_only' ? 'Upgrade to Advanced' : 'Purchase Advanced'}{' '}
+                  {getPackagePrice('advanced') ? `(${getPackagePrice('advanced')})` : ''}
+                </Button>
+              )}
             </div>
           )}
 
@@ -316,58 +354,17 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  {getPackagePrice('advanced') || 'Purchase Advanced'}
+                  Purchase Advanced{' '}
+                  {getPackagePrice('advanced') ? `(${getPackagePrice('advanced')})` : ''}
                 </Button>
               )}
             </>
           ) : isNativePlatform ? (
-            // Native: Show purchase buttons based on required tier
-            <>
-              {/* Show both options when not specifically requiring advanced */}
-              {requiredTier !== 'advanced' && reason !== 'standard_only' && (
-                <>
-                  <Button
-                    onClick={() => handlePurchase('advanced')}
-                    className="w-full"
-                    variant="primary"
-                    disabled={loading}
-                  >
-                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    <Zap className="w-4 h-4 mr-2" />
-                    {getPackagePrice('advanced') || 'Get Advanced'}
-                  </Button>
-                  <Button
-                    onClick={() => handlePurchase('standard')}
-                    className="w-full"
-                    variant="secondary"
-                    disabled={loading}
-                  >
-                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    <Star className="w-4 h-4 mr-2" />
-                    {getPackagePrice('standard') || 'Get Standard'}
-                  </Button>
-                </>
-              )}
-              {/* Show only advanced option when requiring advanced tier */}
-              {(requiredTier === 'advanced' || reason === 'standard_only') && (
-                <Button
-                  onClick={() => handlePurchase('advanced')}
-                  className="w-full"
-                  variant="primary"
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  <Zap className="w-4 h-4 mr-2" />
-                  {reason === 'standard_only'
-                    ? getPackagePrice('advanced') || 'Upgrade to Advanced'
-                    : getPackagePrice('advanced') || 'Get Advanced'}
-                </Button>
-              )}
-              <Button onClick={handleRestore} variant="ghost" className="w-full" disabled={loading}>
-                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Restore Purchases
-              </Button>
-            </>
+            // Native: Show restore purchases (purchase buttons are now in tier cards)
+            <Button onClick={handleRestore} variant="ghost" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Restore Purchases
+            </Button>
           ) : (
             // Web: Direct to App Store (placeholder)
             <>
