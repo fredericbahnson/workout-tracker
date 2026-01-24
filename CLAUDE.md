@@ -11,11 +11,14 @@ Ascend is a Progressive Web App (PWA) for calisthenics and bodyweight strength t
 ```bash
 npm run dev          # Start dev server at localhost:5173
 npm run build        # TypeScript check + Vite build
+npm run preview      # Preview production build locally
 npm test             # Run Vitest in watch mode
 npm test -- --run    # Run tests once (no watch)
+npm test -- --ui     # Interactive test UI
 npm run lint         # ESLint check
 npm run lint:fix     # ESLint auto-fix
 npm run format       # Prettier format
+npm run prepare      # Install husky git hooks (run once after clone)
 ```
 
 ### iOS Development (Capacitor)
@@ -50,6 +53,8 @@ React → Repositories → Dexie (IndexedDB) ↔ SyncService ↔ Supabase
 **`services/syncService.ts`** - Bidirectional sync between IndexedDB and Supabase. Uses last-write-wins conflict resolution. Offline changes queue in `syncQueue` table with exponential backoff retry.
 
 **`data/repositories/`** - Data access layer. All CRUD operations go through repository classes (ExerciseRepo, CycleRepo, CompletedSetRepo, etc.).
+
+**`data/db.ts`** - Dexie database schema with versioned migrations (currently v3). Schema changes require incrementing the version number and adding a new version block.
 
 ### State Management
 - **Zustand** (`stores/appStore.ts`): Theme, font size, onboarding status
