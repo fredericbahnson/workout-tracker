@@ -13,6 +13,9 @@
 
 import type { TrialStatus } from '@/types/entitlement';
 import { TRIAL_CONFIG } from '@/types/entitlement';
+import { createScopedLogger } from '@/utils/logger';
+
+const log = createScopedLogger('Trial');
 
 const TRIAL_DURATION_MS = TRIAL_CONFIG.DURATION_DAYS * 24 * 60 * 60 * 1000;
 
@@ -39,7 +42,7 @@ function setTrialStart(date: Date): void {
   try {
     localStorage.setItem(TRIAL_CONFIG.STORAGE_KEY, date.toISOString());
   } catch (error) {
-    console.error('[Trial] Failed to store trial start:', error);
+    log.error('Failed to store trial start', { error });
   }
 }
 
@@ -57,7 +60,7 @@ export const trialService = {
     if (!existing) {
       const now = new Date();
       setTrialStart(now);
-      console.warn('[Trial] Started free trial:', now.toISOString());
+      log.debug('Started free trial', { startedAt: now.toISOString() });
     }
     return this.getTrialStatus();
   },
@@ -126,7 +129,7 @@ export const trialService = {
     if (import.meta.env.DEV) {
       try {
         localStorage.removeItem(TRIAL_CONFIG.STORAGE_KEY);
-        console.warn('[Trial] Trial reset (dev only)');
+        log.debug('Trial reset (dev only)');
       } catch {
         // Ignore
       }
@@ -143,7 +146,7 @@ export const trialService = {
         Date.now() - (TRIAL_CONFIG.DURATION_DAYS + 1) * 24 * 60 * 60 * 1000
       );
       setTrialStart(expiredStart);
-      console.warn('[Trial] Trial force expired (dev only)');
+      log.debug('Trial force expired (dev only)');
     }
   },
 };

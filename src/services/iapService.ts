@@ -7,8 +7,11 @@
 
 import { Capacitor } from '@capacitor/core';
 import type { PurchaseInfo, PurchaseTier } from '@/types/entitlement';
+import { createScopedLogger } from '@/utils/logger';
 
-const REVENUECAT_API_KEY = 'appl_FzyVmSTxDfrngLBHrppMWcgmiSs';
+const log = createScopedLogger('IAP');
+
+const REVENUECAT_API_KEY = import.meta.env.VITE_REVENUECAT_API_KEY || '';
 
 /** RevenueCat SDK types (dynamically imported) */
 type Purchases = typeof import('@revenuecat/purchases-capacitor').Purchases;
@@ -46,12 +49,12 @@ class IAPService {
    */
   async initialize(): Promise<void> {
     if (!this.isNative) {
-      console.log('[IAP] Skipping initialization - not on native platform');
+      log.debug('Skipping initialization - not on native platform');
       return;
     }
 
     if (this.initialized) {
-      console.log('[IAP] Already initialized');
+      log.debug('Already initialized');
       return;
     }
 
@@ -64,9 +67,9 @@ class IAPService {
       });
 
       this.initialized = true;
-      console.log('[IAP] RevenueCat initialized successfully');
+      log.debug('RevenueCat initialized successfully');
     } catch (error) {
-      console.error('[IAP] Failed to initialize RevenueCat:', error);
+      log.error('Failed to initialize RevenueCat', { error });
       throw error;
     }
   }
@@ -91,7 +94,7 @@ class IAPService {
       const { customerInfo } = await this.purchases.getCustomerInfo();
       return this.mapCustomerInfoToPurchaseInfo(customerInfo);
     } catch (error) {
-      console.error('[IAP] Failed to get purchase info:', error);
+      log.error('Failed to get purchase info', { error });
       return null;
     }
   }
@@ -108,7 +111,7 @@ class IAPService {
       const offerings = await this.purchases.getOfferings();
       return this.mapOfferings(offerings);
     } catch (error) {
-      console.error('[IAP] Failed to get offerings:', error);
+      log.error('Failed to get offerings', { error });
       return null;
     }
   }
@@ -136,7 +139,7 @@ class IAPService {
 
       return this.mapCustomerInfoToPurchaseInfo(customerInfo);
     } catch (error) {
-      console.error('[IAP] Purchase failed:', error);
+      log.error('Purchase failed', { error });
       throw error;
     }
   }
@@ -151,10 +154,10 @@ class IAPService {
 
     try {
       const { customerInfo } = await this.purchases.restorePurchases();
-      console.log('[IAP] Purchases restored successfully');
+      log.debug('Purchases restored successfully');
       return this.mapCustomerInfoToPurchaseInfo(customerInfo);
     } catch (error) {
-      console.error('[IAP] Restore purchases failed:', error);
+      log.error('Restore purchases failed', { error });
       throw error;
     }
   }
@@ -169,9 +172,9 @@ class IAPService {
 
     try {
       await this.purchases.logIn({ appUserID: userId });
-      console.log('[IAP] User ID set:', userId);
+      log.debug('User ID set', { userId });
     } catch (error) {
-      console.error('[IAP] Failed to set user ID:', error);
+      log.error('Failed to set user ID', { error, userId });
       throw error;
     }
   }
@@ -186,9 +189,9 @@ class IAPService {
 
     try {
       await this.purchases.logOut();
-      console.log('[IAP] User ID cleared');
+      log.debug('User ID cleared');
     } catch (error) {
-      console.error('[IAP] Failed to clear user ID:', error);
+      log.error('Failed to clear user ID', { error });
       throw error;
     }
   }

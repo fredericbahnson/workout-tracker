@@ -37,17 +37,44 @@ const SettingsPage = lazy(() =>
 
 /**
  * Paywall container that renders the modal based on entitlement context state.
+ * Wrapped in ErrorBoundary to handle payment flow errors gracefully.
  */
 function PaywallContainer() {
   const { paywall, closePaywall } = useEntitlement();
 
   return (
-    <PaywallModal
-      isOpen={paywall.isOpen}
-      onClose={closePaywall}
-      requiredTier={paywall.requiredTier}
-      reason={paywall.reason}
-    />
+    <ErrorBoundary level="component" fallback={<PaywallErrorFallback onClose={closePaywall} />}>
+      <PaywallModal
+        isOpen={paywall.isOpen}
+        onClose={closePaywall}
+        requiredTier={paywall.requiredTier}
+        reason={paywall.reason}
+      />
+    </ErrorBoundary>
+  );
+}
+
+/**
+ * Fallback UI when paywall encounters an error.
+ */
+function PaywallErrorFallback({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 m-4 max-w-sm text-center">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          Something went wrong
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          We couldn't load the purchase options. Please try again later.
+        </p>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
   );
 }
 
