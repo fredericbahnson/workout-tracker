@@ -5,6 +5,11 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.8] - 2026-01-24
+
+### Fixed
+- **RFEM Calculator Slider**: Fixed interactive slider not responding to touch on iOS by improving touch event handling and adding proper thumb styling for WebKit
+
 ## [2.18.7] - 2026-01-24
 
 ### Changed
