@@ -22,7 +22,7 @@ interface PaywallModalProps {
 }
 
 export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallModalProps) {
-  const { trial, isNativePlatform, refreshEntitlement } = useEntitlement();
+  const { trial, purchase, isNativePlatform, refreshEntitlement } = useEntitlement();
   const { preferences, setAppMode } = useSyncedPreferences();
 
   // State for IAP
@@ -30,10 +30,19 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Check if user has paid for Advanced but is in Standard mode
+  // They just need to switch app mode, no purchase needed
+  const hasPurchasedAdvanced = purchase?.tier === 'advanced';
+  const isInStandardMode = preferences.appMode === 'standard';
+  const canSwitchToAdvanced = hasPurchasedAdvanced && isInStandardMode;
+
   // Check if user is in trial and using standard mode (can enable advanced for free)
   // Don't show this option when reason is 'not_purchased' - user explicitly wants to purchase
   const canEnableAdvancedForFree =
-    trial.isActive && preferences.appMode === 'standard' && reason !== 'not_purchased';
+    !canSwitchToAdvanced &&
+    trial.isActive &&
+    preferences.appMode === 'standard' &&
+    reason !== 'not_purchased';
 
   // Handle enabling advanced mode for free during trial
   const handleEnableAdvanced = async () => {
@@ -113,21 +122,48 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
     return null;
   };
 
+  // Handle switching to advanced mode (for users who already purchased)
+  const handleSwitchToAdvanced = async () => {
+    setLoading(true);
+    try {
+      await setAppMode('advanced');
+      onClose();
+    } catch {
+      setError('Failed to switch to advanced mode. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Get contextual messages
-  const title = canEnableAdvancedForFree ? 'Advanced Mode Required' : getTitle(reason);
-  const message = canEnableAdvancedForFree
-    ? 'This feature requires Advanced mode. You can turn it on for free in Settings during your free trial.'
-    : reason
-      ? entitlementService.getLockMessage(reason)
-      : '';
+  const title = canSwitchToAdvanced
+    ? 'Switch to Advanced Mode?'
+    : canEnableAdvancedForFree
+      ? 'Advanced Mode Required'
+      : getTitle(reason);
+  const message = canSwitchToAdvanced
+    ? 'You have already purchased Advanced. Would you like to enable Advanced mode to access this feature?'
+    : canEnableAdvancedForFree
+      ? 'This feature requires Advanced mode. You can turn it on for free in Settings during your free trial.'
+      : reason
+        ? entitlementService.getLockMessage(reason)
+        : '';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div className="space-y-6">
         {/* Status message */}
         <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
-            {canEnableAdvancedForFree ? (
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              canSwitchToAdvanced
+                ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                : 'bg-gradient-to-br from-amber-500 to-orange-500'
+            }`}
+          >
+            {canSwitchToAdvanced ? (
+              <Zap className="w-8 h-8 text-white" />
+            ) : canEnableAdvancedForFree ? (
               <Settings className="w-8 h-8 text-white" />
             ) : (
               <Lock className="w-8 h-8 text-white" />
@@ -136,8 +172,8 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           <p className="text-gray-600 dark:text-gray-400">{message}</p>
         </div>
 
-        {/* Trial status banner */}
-        {trial.hasExpired && (
+        {/* Trial status banner - don't show if user already purchased */}
+        {!canSwitchToAdvanced && trial.hasExpired && (
           <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-600/50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-200">
               <Clock className="w-4 h-4 flex-shrink-0" />
@@ -146,7 +182,7 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           </div>
         )}
 
-        {trial.isActive && !canEnableAdvancedForFree && (
+        {!canSwitchToAdvanced && trial.isActive && !canEnableAdvancedForFree && (
           <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-600/50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-blue-700 dark:text-blue-200">
               <Clock className="w-4 h-4 flex-shrink-0" />
@@ -159,56 +195,62 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
         )}
 
         {/* Feature comparison - show both tiers when not specifically requiring advanced */}
-        {!canEnableAdvancedForFree && requiredTier !== 'advanced' && reason !== 'standard_only' && (
-          <div className="space-y-4">
-            {/* Standard tier */}
-            <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Star className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Standard</h3>
-                {isNativePlatform && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-                    {getPackagePrice('standard') || ''}
-                  </span>
-                )}
+        {!canSwitchToAdvanced &&
+          !canEnableAdvancedForFree &&
+          requiredTier !== 'advanced' &&
+          reason !== 'standard_only' && (
+            <div className="space-y-4">
+              {/* Standard tier */}
+              <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Star className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Standard</h3>
+                  {isNativePlatform && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+                      {getPackagePrice('standard') || ''}
+                    </span>
+                  )}
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <FeatureItem included>RFEM Training Cycles</FeatureItem>
+                  <FeatureItem included>Max Rep Testing</FeatureItem>
+                  <FeatureItem included>Cloud Sync</FeatureItem>
+                  <FeatureItem included>Progress Tracking</FeatureItem>
+                  <FeatureItem included={false}>Simple Progression Cycles</FeatureItem>
+                  <FeatureItem included={false}>Mixed Cycles</FeatureItem>
+                </ul>
               </div>
-              <ul className="space-y-2 text-sm">
-                <FeatureItem included>RFEM Training Cycles</FeatureItem>
-                <FeatureItem included>Max Rep Testing</FeatureItem>
-                <FeatureItem included>Cloud Sync</FeatureItem>
-                <FeatureItem included>Progress Tracking</FeatureItem>
-                <FeatureItem included={false}>Simple Progression Cycles</FeatureItem>
-                <FeatureItem included={false}>Mixed Cycles</FeatureItem>
-              </ul>
-            </div>
 
-            {/* Advanced tier */}
-            <div className="border-2 border-purple-500 rounded-lg p-4 bg-purple-500/10">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
-                <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded ml-auto">
-                  {isNativePlatform ? getPackagePrice('advanced') || 'Full Access' : 'Full Access'}
-                </span>
+              {/* Advanced tier */}
+              <div className="border-2 border-purple-500 rounded-lg p-4 bg-purple-500/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
+                  <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded ml-auto">
+                    {isNativePlatform
+                      ? getPackagePrice('advanced') || 'Full Access'
+                      : 'Full Access'}
+                  </span>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <FeatureItem included>Everything in Standard</FeatureItem>
+                  <FeatureItem included highlight>
+                    Simple Progression Cycles
+                  </FeatureItem>
+                  <FeatureItem included highlight>
+                    Mixed Mode Cycles
+                  </FeatureItem>
+                  <FeatureItem included highlight>
+                    Future premium features
+                  </FeatureItem>
+                </ul>
               </div>
-              <ul className="space-y-2 text-sm">
-                <FeatureItem included>Everything in Standard</FeatureItem>
-                <FeatureItem included highlight>
-                  Simple Progression Cycles
-                </FeatureItem>
-                <FeatureItem included highlight>
-                  Mixed Mode Cycles
-                </FeatureItem>
-                <FeatureItem included highlight>
-                  Future premium features
-                </FeatureItem>
-              </ul>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Advanced only - when specifically requiring advanced tier */}
-        {!canEnableAdvancedForFree &&
+        {!canSwitchToAdvanced &&
+          !canEnableAdvancedForFree &&
           (requiredTier === 'advanced' || reason === 'standard_only') && (
             <div className="border-2 border-purple-500 rounded-lg p-4 bg-purple-500/10">
               <div className="flex items-center gap-2 mb-3">
@@ -242,7 +284,19 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
 
         {/* Action buttons */}
         <div className="space-y-3">
-          {canEnableAdvancedForFree ? (
+          {canSwitchToAdvanced ? (
+            // User has purchased Advanced but is in Standard mode - just offer to switch
+            <Button
+              onClick={handleSwitchToAdvanced}
+              className="w-full"
+              variant="primary"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              <Zap className="w-4 h-4 mr-2" />
+              Enable Advanced Mode
+            </Button>
+          ) : canEnableAdvancedForFree ? (
             // User is in trial with standard mode - offer to enable advanced for free
             <>
               <Button
@@ -335,7 +389,7 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           )}
 
           <Button onClick={onClose} variant="ghost" className="w-full" disabled={loading}>
-            {canEnableAdvancedForFree ? 'Cancel' : 'Maybe Later'}
+            {canSwitchToAdvanced || canEnableAdvancedForFree ? 'Cancel' : 'Maybe Later'}
           </Button>
         </div>
 
