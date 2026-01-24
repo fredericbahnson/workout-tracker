@@ -86,14 +86,16 @@ export function TrialBanner({ variant = 'compact', className = '' }: TrialBanner
                 ? 'Subscribe now to keep all features.'
                 : 'Enjoy full access to all features.'}
             </p>
-            {isEnding && (
-              <button
-                onClick={() => showPaywall('advanced', 'not_purchased')}
-                className="mt-3 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white dark:text-black font-medium text-sm rounded-lg transition-colors"
-              >
-                View Plans
-              </button>
-            )}
+            <button
+              onClick={() => showPaywall('standard', 'not_purchased')}
+              className={`mt-3 px-4 py-1.5 font-medium text-sm rounded-lg transition-colors ${
+                isEnding
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white dark:text-black'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+            >
+              {isEnding ? 'View Plans' : 'Buy Now'}
+            </button>
           </div>
         </div>
       </div>

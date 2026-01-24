@@ -139,7 +139,7 @@ export function TodayPage() {
     isCycleComplete: !!isCycleComplete,
     activeCycle,
     showCycleWizard: modals.showCycleWizard,
-    onShowCycleWizard: () => modals.openCycleWizard(),
+    onShowCycleWizard: () => modals.openCycleTypeSelector(),
   });
 
   // Ad-hoc workout management

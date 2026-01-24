@@ -136,13 +136,13 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
           ) : user ? (
             <>
               <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-500" />
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <User className="w-4 h-4 text-gray-500 flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
                     {user.email}
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"

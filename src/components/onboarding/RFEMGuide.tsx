@@ -6,15 +6,7 @@
  */
 
 import { useState } from 'react';
-import {
-  ArrowRight,
-  ArrowLeft,
-  AlertTriangle,
-  Target,
-  TrendingUp,
-  Repeat,
-  Layers,
-} from 'lucide-react';
+import { ArrowRight, ArrowLeft, Target, TrendingUp, Repeat, Layers } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { OnboardingSlide } from './OnboardingSlide';
 import { OnboardingProgress } from './OnboardingProgress';
@@ -69,10 +61,16 @@ export function RFEMGuide({
       case 0:
         return (
           <OnboardingSlide
-            icon={<AlertTriangle className="w-10 h-10" />}
+            icon={
+              <img
+                src="/app-icon-80.png"
+                alt="Ascend"
+                className="w-16 h-16 rounded-2xl shadow-lg"
+              />
+            }
             headline="What If You Could Get Stronger... Without Burning Out?"
             variant="rfem"
-            gradient="from-orange-500 to-red-500"
+            gradient="from-emerald-500 to-teal-500"
             body={
               <div className="space-y-3">
                 <p>Most people train to failure every set. It feels productive, but it actually:</p>
@@ -234,38 +232,54 @@ export function RFEMGuide({
                     >
                       RFEM
                     </text>
-                    {/* Wave line - precomputed smooth curve */}
+                    {/* Wave line - smooth curve through all data points */}
+                    {/* Points: (25,70) (62,42.5) (99,15) (136,42.5) (173,70) (211,42.5) (248,15) (285,42.5) */}
                     <path
-                      d="M 25 70 Q 43.75 70, 53.125 56.25 Q 62.5 42.5, 71.875 42.5 Q 81.25 42.5, 90.625 28.75 Q 100 15, 109.375 15 Q 118.75 15, 128.125 28.75 Q 137.5 42.5, 146.875 42.5 Q 156.25 42.5, 165.625 56.25 Q 175 70, 184.375 70 Q 193.75 70, 203.125 56.25 Q 212.5 42.5, 221.875 42.5 Q 231.25 42.5, 240.625 28.75 Q 250 15, 259.375 15 Q 268.75 15, 278.125 28.75 Q 287.5 42.5, 285 42.5"
+                      d="M 25 70
+                         C 25 70, 44 70, 62 42.5
+                         C 80 15, 80 15, 99 15
+                         C 118 15, 118 15, 136 42.5
+                         C 154 70, 154 70, 173 70
+                         C 192 70, 192 70, 211 42.5
+                         C 229 15, 229 15, 248 15
+                         C 267 15, 267 15, 285 42.5"
                       fill="none"
                       stroke="#10b981"
                       strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    {/* Data points */}
+                    {/* Data points - dots at all workouts, larger at peaks/nadirs */}
                     {[
-                      { x: 25, y: 70 },
-                      { x: 62.14, y: 42.5 },
-                      { x: 99.29, y: 15 },
-                      { x: 136.43, y: 42.5 },
-                      { x: 173.57, y: 70 },
-                      { x: 210.71, y: 42.5 },
-                      { x: 247.86, y: 15 },
-                      { x: 285, y: 42.5 },
-                    ].map((point, index) => (
-                      <g key={index}>
-                        <circle cx={point.x} cy={point.y} r={4} className="fill-emerald-500" />
-                        <text
-                          x={point.x}
-                          y={85}
-                          textAnchor="middle"
-                          className="fill-gray-500 dark:fill-gray-400 text-[9px]"
-                        >
-                          #{index + 1}
-                        </text>
-                      </g>
-                    ))}
+                      { x: 25, y: 70, rfem: 3 },
+                      { x: 62, y: 42.5, rfem: 4 },
+                      { x: 99, y: 15, rfem: 5 },
+                      { x: 136, y: 42.5, rfem: 4 },
+                      { x: 173, y: 70, rfem: 3 },
+                      { x: 211, y: 42.5, rfem: 4 },
+                      { x: 248, y: 15, rfem: 5 },
+                      { x: 285, y: 42.5, rfem: 4 },
+                    ].map((point, index) => {
+                      const isPeakOrNadir = point.rfem === 3 || point.rfem === 5;
+                      return (
+                        <g key={index}>
+                          <circle
+                            cx={point.x}
+                            cy={point.y}
+                            r={isPeakOrNadir ? 5 : 3.5}
+                            className="fill-emerald-500"
+                          />
+                          <text
+                            x={point.x}
+                            y={85}
+                            textAnchor="middle"
+                            className="fill-gray-500 dark:fill-gray-400 text-[9px]"
+                          >
+                            #{index + 1}
+                          </text>
+                        </g>
+                      );
+                    })}
                   </svg>
                   <div className="mt-2 text-center">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
