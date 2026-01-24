@@ -5,6 +5,16 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.3] - 2026-01-24
+
+### Changed
+- **Settings Reorganization**: Consolidated all data management actions into a single "Data Management" section
+  - Moved "Clear Workout History" and "Delete Account" from Account section to Data Management
+  - Ordered actions by increasing impact: Clear Workout History → Clear All App Data → Delete Account
+  - Renamed "Clear All Data" to "Clear All App Data" for clarity
+  - Added "Danger Zone" label for destructive actions
+  - Moved Data Management section to bottom of Settings (after Help & Guides)
+
 ## [2.18.2] - 2026-01-24
 
 ### Fixed

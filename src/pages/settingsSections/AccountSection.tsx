@@ -1,25 +1,9 @@
 import { useState } from 'react';
-import {
-  Cloud,
-  CloudOff,
-  RefreshCw,
-  User,
-  LogOut,
-  UserX,
-  Key,
-  AlertCircle,
-  RotateCcw,
-} from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, User, LogOut, Key, AlertCircle } from 'lucide-react';
 import { createScopedLogger } from '@/utils/logger';
-import { useAuth, useSync, useSyncItem } from '@/contexts';
-import { db } from '@/data/db';
+import { useAuth, useSync } from '@/contexts';
 import { Card, CardContent, Button } from '@/components/ui';
-import {
-  AuthModal,
-  DeleteAccountModal,
-  ChangePasswordModal,
-  ClearHistoryModal,
-} from '@/components/settings';
+import { AuthModal, ChangePasswordModal } from '@/components/settings';
 import type { SettingsSectionProps } from './types';
 
 const log = createScopedLogger('AccountSection');
@@ -32,11 +16,9 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
     signIn,
     signUp,
     signOut,
-    deleteAccount,
     updatePassword,
   } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
-  const { hardDeleteItem } = useSyncItem();
 
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -45,14 +27,6 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
-
-  // Delete account modal state
-  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Clear history modal state
-  const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
-  const [isClearingHistory, setIsClearingHistory] = useState(false);
 
   // Change password modal state
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -90,24 +64,6 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
     setMessage({ type: 'success', text: 'Signed out successfully.' });
   };
 
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true);
-    try {
-      const result = await deleteAccount();
-      if (result.error) {
-        setMessage({ type: 'error', text: `Failed to delete account: ${result.error.message}` });
-      } else {
-        setMessage({ type: 'success', text: 'Account and data deleted successfully.' });
-      }
-    } catch (error) {
-      log.error(error as Error);
-      setMessage({ type: 'error', text: 'Failed to delete account.' });
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteAccountConfirm(false);
-    }
-  };
-
   const handleChangePassword = async () => {
     if (newPassword.length < 6) {
       setMessage({ type: 'error', text: 'Password must be at least 6 characters.' });
@@ -134,64 +90,6 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
       setMessage({ type: 'error', text: 'Failed to change password.' });
     } finally {
       setIsChangingPassword(false);
-    }
-  };
-
-  const handleClearHistory = async () => {
-    setIsClearingHistory(true);
-    try {
-      // Get all IDs to delete from cloud
-      const completedSets = await db.completedSets.toArray();
-      const cycles = await db.cycles.toArray();
-      const scheduledWorkouts = await db.scheduledWorkouts.toArray();
-
-      // Delete from cloud if user is signed in
-      if (user) {
-        // Delete completed sets from cloud
-        for (const set of completedSets) {
-          try {
-            await hardDeleteItem('completed_sets', set.id);
-          } catch (error) {
-            log.error(error as Error, { operation: 'clearHistory', table: 'completed_sets' });
-          }
-        }
-
-        // Delete scheduled workouts from cloud
-        for (const workout of scheduledWorkouts) {
-          try {
-            await hardDeleteItem('scheduled_workouts', workout.id);
-          } catch (error) {
-            log.error(error as Error, { operation: 'clearHistory', table: 'scheduled_workouts' });
-          }
-        }
-
-        // Delete cycles from cloud
-        for (const cycle of cycles) {
-          try {
-            await hardDeleteItem('cycles', cycle.id);
-          } catch (error) {
-            log.error(error as Error, { operation: 'clearHistory', table: 'cycles' });
-          }
-        }
-      }
-
-      // Clear local tables (keep exercises and maxRecords)
-      await db.transaction('rw', [db.completedSets, db.cycles, db.scheduledWorkouts], async () => {
-        await db.completedSets.clear();
-        await db.cycles.clear();
-        await db.scheduledWorkouts.clear();
-      });
-
-      setShowClearHistoryConfirm(false);
-      setMessage({
-        type: 'success',
-        text: 'Workout history cleared. Your exercises and records are preserved.',
-      });
-    } catch (error) {
-      log.error(error as Error);
-      setMessage({ type: 'error', text: 'Failed to clear workout history.' });
-    } finally {
-      setIsClearingHistory(false);
     }
   };
 
@@ -272,23 +170,6 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
               {syncError && (
                 <p className="text-xs text-red-600 dark:text-red-400 mt-1">{syncError}</p>
               )}
-
-              <div className="pt-3 border-t border-gray-200 dark:border-dark-border space-y-3">
-                <button
-                  onClick={() => setShowClearHistoryConfirm(true)}
-                  className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Clear workout history
-                </button>
-                <button
-                  onClick={() => setShowDeleteAccountConfirm(true)}
-                  className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                >
-                  <UserX className="w-4 h-4" />
-                  Delete account and all data
-                </button>
-              </div>
             </>
           ) : (
             <div className="space-y-2">
@@ -341,13 +222,6 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
         }}
       />
 
-      <DeleteAccountModal
-        isOpen={showDeleteAccountConfirm}
-        isDeleting={isDeleting}
-        onConfirm={handleDeleteAccount}
-        onClose={() => setShowDeleteAccountConfirm(false)}
-      />
-
       <ChangePasswordModal
         isOpen={showChangePassword}
         newPassword={newPassword}
@@ -357,13 +231,6 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
         onConfirmPasswordChange={setConfirmPassword}
         onConfirm={handleChangePassword}
         onClose={() => setShowChangePassword(false)}
-      />
-
-      <ClearHistoryModal
-        isOpen={showClearHistoryConfirm}
-        isClearing={isClearingHistory}
-        onConfirm={handleClearHistory}
-        onClose={() => setShowClearHistoryConfirm(false)}
       />
     </>
   );

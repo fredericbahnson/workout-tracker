@@ -62,11 +62,11 @@ export function SettingsPage() {
         {/* Rest Timer Settings */}
         <TimerSection />
 
-        {/* Data Management */}
-        <DataSection setMessage={setMessage} />
-
         {/* Help & About */}
         <HelpSection />
+
+        {/* Data Management */}
+        <DataSection setMessage={setMessage} />
       </div>
     </>
   );
