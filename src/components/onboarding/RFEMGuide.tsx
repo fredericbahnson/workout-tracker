@@ -61,13 +61,7 @@ export function RFEMGuide({
       case 0:
         return (
           <OnboardingSlide
-            icon={
-              <img
-                src="/app-icon-80.png"
-                alt="Ascend"
-                className="w-16 h-16 rounded-2xl shadow-lg"
-              />
-            }
+            image="/app-icon-80.png"
             headline="What If You Could Get Stronger... Without Burning Out?"
             variant="rfem"
             gradient="from-emerald-500 to-teal-500"

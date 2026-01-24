@@ -63,6 +63,14 @@ export function HelpSection() {
           <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">About</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">Ascend v{APP_VERSION}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Progressive fitness training</p>
+          <a
+            href="https://www.fredericbahnson.com/ascend"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+          >
+            www.fredericbahnson.com/ascend
+          </a>
         </CardContent>
       </Card>
 
