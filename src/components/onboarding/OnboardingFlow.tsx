@@ -224,8 +224,9 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         <RFEMGuide
           onComplete={handleRFEMComplete}
           onBack={handleBackFromRFEM}
-          showProgress={false}
-          showSkip={false}
+          showProgress={true}
+          showSkip={true}
+          onSkip={onSkip}
           standalone={false}
         />
       );
@@ -235,8 +236,9 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         <AppTour
           onComplete={handleTourComplete}
           onBack={handleBackFromTour}
-          showProgress={false}
-          showSkip={false}
+          showProgress={true}
+          showSkip={true}
+          onSkip={onSkip}
           standalone={false}
         />
       );

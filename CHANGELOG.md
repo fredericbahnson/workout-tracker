@@ -5,6 +5,11 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.10] - 2026-01-24
+
+### Fixed
+- **Onboarding Exit Available on All Slides**: Exit button now appears on every slide of RFEM Guide and App Tour modules, not just the welcome screen
+
 ## [2.18.9] - 2026-01-24
 
 ### Added
