@@ -181,7 +181,8 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
     <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col z-50 safe-area-top safe-area-bottom">
       {/* Scrollable content area for keyboard visibility on mobile */}
       <div className="flex-1 overflow-y-auto">
-        <div className="min-h-full flex flex-col items-center justify-center px-6 py-12">
+        {/* Use pt for top spacing and pb-64 to allow scrolling above mobile keyboard */}
+        <div className="flex flex-col items-center px-6 pt-12 pb-64">
           {/* Logo */}
           <div className="mb-8 flex flex-col items-center">
             <img

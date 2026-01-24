@@ -31,7 +31,9 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
   const [error, setError] = useState<string | null>(null);
 
   // Check if user is in trial and using standard mode (can enable advanced for free)
-  const canEnableAdvancedForFree = trial.isActive && preferences.appMode === 'standard';
+  // Don't show this option when reason is 'not_purchased' - user explicitly wants to purchase
+  const canEnableAdvancedForFree =
+    trial.isActive && preferences.appMode === 'standard' && reason !== 'not_purchased';
 
   // Handle enabling advanced mode for free during trial
   const handleEnableAdvanced = async () => {
