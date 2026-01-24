@@ -29,7 +29,14 @@ export function DeleteAccountModal({
           <li>Your account and login credentials</li>
           <li>All cloud-synced data</li>
           <li>All local data on this device</li>
+          <li>Any in-app purchases (Standard/Advanced)</li>
         </ul>
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            <strong>Warning:</strong> If you have purchased Standard or Advanced, you will lose
+            access and need to re-purchase if you create a new account.
+          </p>
+        </div>
         <p className="text-sm text-red-600 dark:text-red-400 font-medium">
           This action cannot be undone.
         </p>
