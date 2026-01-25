@@ -8,7 +8,7 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ onAuthComplete }: AuthGateProps) {
-  const { signIn, signUp, resetPassword, isConfigured } = useAuth();
+  const { signIn, signUp, resetPassword, resendVerificationEmail, isConfigured } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +18,8 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [showResetSent, setShowResetSent] = useState(false);
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,8 +82,26 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
   const handleBackToSignIn = () => {
     setShowVerificationMessage(false);
     setShowResetSent(false);
+    setResendSuccess(false);
     setMode('signin');
     setError(null);
+  };
+
+  const handleResendVerification = async () => {
+    setIsResendingEmail(true);
+    setError(null);
+    setResendSuccess(false);
+
+    try {
+      const result = await resendVerificationEmail(email);
+      if (result.error) {
+        setError(result.error.message);
+      } else {
+        setResendSuccess(true);
+      }
+    } finally {
+      setIsResendingEmail(false);
+    }
   };
 
   const toggleMode = () => {
@@ -149,6 +169,14 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
             </div>
           )}
 
+          {resendSuccess && (
+            <div className="p-3 mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm text-green-700 dark:text-green-400">
+                Verification email sent! Check your inbox.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-3">
             <Button
               onClick={handleCheckVerification}
@@ -164,6 +192,14 @@ export function AuthGate({ onAuthComplete }: AuthGateProps) {
                 </>
               )}
             </Button>
+
+            <button
+              onClick={handleResendVerification}
+              disabled={isResendingEmail}
+              className="w-full py-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 disabled:opacity-50"
+            >
+              {isResendingEmail ? 'Sending...' : "Didn't receive email? Resend"}
+            </button>
 
             <button
               onClick={handleBackToSignIn}
