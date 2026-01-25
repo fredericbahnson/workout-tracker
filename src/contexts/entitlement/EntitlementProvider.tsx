@@ -11,6 +11,7 @@ import type { EntitlementStatus, PurchaseTier, LockReason } from '@/types/entitl
 import { entitlementService } from '@/services/entitlementService';
 import { trialService } from '@/services/trialService';
 import { useAuth } from '@/contexts/auth';
+import { useSyncedPreferences } from '@/contexts/preferences';
 import { EntitlementContext } from './EntitlementContext';
 import { defaultEntitlementStatus, type PaywallState } from './types';
 
@@ -20,6 +21,7 @@ interface EntitlementProviderProps {
 
 export function EntitlementProvider({ children }: EntitlementProviderProps) {
   const { user } = useAuth();
+  const { preferences } = useSyncedPreferences();
   const [entitlement, setEntitlement] = useState<EntitlementStatus>(defaultEntitlementStatus);
   const [paywall, setPaywall] = useState<PaywallState>({
     isOpen: false,
@@ -57,7 +59,7 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
       try {
         // Small delay to allow RevenueCat to sync with new user ID
         await new Promise(resolve => setTimeout(resolve, 500));
-        const status = await entitlementService.getEntitlementStatus();
+        const status = await entitlementService.getEntitlementStatus(preferences.appMode);
         setEntitlement(status);
       } catch (error) {
         console.error('[Entitlement] Failed to refresh on user change:', error);
@@ -68,17 +70,17 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
     if (!entitlement.isLoading) {
       refreshOnUserChange();
     }
-  }, [user?.id]); // Refresh when user ID changes
+  }, [user?.id, preferences.appMode]); // Refresh when user ID or app mode changes
 
   // Refresh entitlement status
   const refreshEntitlement = useCallback(async () => {
     try {
-      const status = await entitlementService.getEntitlementStatus();
+      const status = await entitlementService.getEntitlementStatus(preferences.appMode);
       setEntitlement(status);
     } catch (error) {
       console.error('[Entitlement] Failed to refresh:', error);
     }
-  }, []);
+  }, [preferences.appMode]);
 
   // Show paywall modal
   const showPaywall = useCallback((tier: PurchaseTier, reason?: LockReason) => {

@@ -36,22 +36,43 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
   const isInStandardMode = preferences.appMode === 'standard';
   const canSwitchToAdvanced = hasPurchasedAdvanced && isInStandardMode;
 
+  // Check if standard purchaser can resume their trial for advanced features
+  const canResumeTrialForAdvanced = reason === 'standard_can_use_trial';
+
   // Check if user is in trial and using standard mode (can enable advanced for free)
   // Don't show this option when reason is 'not_purchased' - user explicitly wants to purchase
+  // Also don't show if they're a standard purchaser (use canResumeTrialForAdvanced instead)
   const canEnableAdvancedForFree =
     !canSwitchToAdvanced &&
+    !canResumeTrialForAdvanced &&
     trial.isActive &&
     preferences.appMode === 'standard' &&
-    reason !== 'not_purchased';
+    reason !== 'not_purchased' &&
+    !purchase;
 
   // Handle enabling advanced mode for free during trial
   const handleEnableAdvanced = async () => {
     setLoading(true);
     try {
       await setAppMode('advanced');
+      await refreshEntitlement();
       onClose();
     } catch {
       setError('Failed to enable advanced mode. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle resuming trial for standard purchasers
+  const handleResumeTrial = async () => {
+    setLoading(true);
+    try {
+      await setAppMode('advanced');
+      await refreshEntitlement();
+      onClose();
+    } catch {
+      setError('Failed to resume trial. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -78,7 +99,15 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
     setError(null);
 
     try {
-      await iapService.purchase(packageId);
+      const purchaseInfo = await iapService.purchase(packageId);
+
+      // Auto-set mode to match purchased tier
+      if (purchaseInfo?.tier === 'standard') {
+        await setAppMode('standard');
+      } else if (purchaseInfo?.tier === 'advanced') {
+        await setAppMode('advanced');
+      }
+
       await refreshEntitlement();
       onClose();
     } catch (err) {
@@ -138,16 +167,20 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
   // Get contextual messages
   const title = canSwitchToAdvanced
     ? 'Switch to Advanced Mode?'
-    : canEnableAdvancedForFree
-      ? 'Advanced Mode Required'
-      : getTitle(reason);
+    : canResumeTrialForAdvanced
+      ? 'Resume Advanced Trial?'
+      : canEnableAdvancedForFree
+        ? 'Advanced Mode Required'
+        : getTitle(reason);
   const message = canSwitchToAdvanced
     ? 'You have already purchased Advanced. Would you like to enable Advanced mode to access this feature?'
-    : canEnableAdvancedForFree
-      ? 'This feature requires Advanced mode. You can turn it on for free in Settings during your free trial.'
-      : reason
-        ? entitlementService.getLockMessage(reason)
-        : '';
+    : canResumeTrialForAdvanced
+      ? `This feature requires Advanced mode. You have ${trial.daysRemaining} day${trial.daysRemaining !== 1 ? 's' : ''} left in your free trial to use Advanced features.`
+      : canEnableAdvancedForFree
+        ? 'This feature requires Advanced mode. You can turn it on for free in Settings during your free trial.'
+        : reason
+          ? entitlementService.getLockMessage(reason)
+          : '';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
@@ -156,12 +189,14 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
         <div className="text-center">
           <div
             className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              canSwitchToAdvanced
+              canSwitchToAdvanced || canResumeTrialForAdvanced
                 ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                : 'bg-gradient-to-br from-amber-500 to-orange-500'
+                : canEnableAdvancedForFree
+                  ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                  : 'bg-gradient-to-br from-amber-500 to-orange-500'
             }`}
           >
-            {canSwitchToAdvanced ? (
+            {canSwitchToAdvanced || canResumeTrialForAdvanced ? (
               <Zap className="w-8 h-8 text-white" />
             ) : canEnableAdvancedForFree ? (
               <Settings className="w-8 h-8 text-white" />
@@ -172,8 +207,8 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           <p className="text-gray-600 dark:text-gray-400">{message}</p>
         </div>
 
-        {/* Trial status banner - don't show if user already purchased */}
-        {!canSwitchToAdvanced && trial.hasExpired && (
+        {/* Trial status banner - don't show if user already purchased or can resume trial */}
+        {!canSwitchToAdvanced && !canResumeTrialForAdvanced && trial.hasExpired && (
           <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-600/50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-200">
               <Clock className="w-4 h-4 flex-shrink-0" />
@@ -182,20 +217,24 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           </div>
         )}
 
-        {!canSwitchToAdvanced && trial.isActive && !canEnableAdvancedForFree && (
-          <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-600/50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-200">
-              <Clock className="w-4 h-4 flex-shrink-0" />
-              <p className="text-sm">
-                {trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} left in your free
-                trial.
-              </p>
+        {!canSwitchToAdvanced &&
+          !canResumeTrialForAdvanced &&
+          trial.isActive &&
+          !canEnableAdvancedForFree && (
+            <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-600/50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-200">
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <p className="text-sm">
+                  {trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} left in your free
+                  trial.
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Feature comparison - show both tiers when not specifically requiring advanced */}
         {!canSwitchToAdvanced &&
+          !canResumeTrialForAdvanced &&
           !canEnableAdvancedForFree &&
           requiredTier !== 'advanced' &&
           reason !== 'standard_only' && (
@@ -274,6 +313,7 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
 
         {/* Advanced only - when specifically requiring advanced tier */}
         {!canSwitchToAdvanced &&
+          !canResumeTrialForAdvanced &&
           !canEnableAdvancedForFree &&
           (requiredTier === 'advanced' || reason === 'standard_only') && (
             <div className="border-2 border-purple-500 rounded-lg p-4 bg-purple-500/10">
@@ -334,6 +374,32 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
               <Zap className="w-4 h-4 mr-2" />
               Enable Advanced Mode
             </Button>
+          ) : canResumeTrialForAdvanced ? (
+            // Standard purchaser with active trial - offer to resume trial for advanced
+            <>
+              <Button
+                onClick={handleResumeTrial}
+                className="w-full"
+                variant="primary"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                <Clock className="w-4 h-4 mr-2" />
+                Resume Trial ({trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} left)
+              </Button>
+              {isNativePlatform && (
+                <Button
+                  onClick={() => handlePurchase('advanced')}
+                  className="w-full"
+                  variant="secondary"
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  Upgrade to Advanced{' '}
+                  {getPackagePrice('advanced') ? `(${getPackagePrice('advanced')})` : ''}
+                </Button>
+              )}
+            </>
           ) : canEnableAdvancedForFree ? (
             // User is in trial with standard mode - offer to enable advanced for free
             <>
@@ -386,7 +452,9 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
           )}
 
           <Button onClick={onClose} variant="ghost" className="w-full" disabled={loading}>
-            {canSwitchToAdvanced || canEnableAdvancedForFree ? 'Cancel' : 'Maybe Later'}
+            {canSwitchToAdvanced || canResumeTrialForAdvanced || canEnableAdvancedForFree
+              ? 'Cancel'
+              : 'Maybe Later'}
           </Button>
         </div>
 
@@ -430,6 +498,8 @@ function getTitle(reason: LockReason | null): string {
       return 'Trial Ended';
     case 'standard_only':
       return 'Upgrade Required';
+    case 'standard_can_use_trial':
+      return 'Resume Advanced Trial?';
     case 'not_purchased':
       return 'Premium Feature';
     default:

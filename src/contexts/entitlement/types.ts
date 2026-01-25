@@ -31,6 +31,7 @@ export const defaultEntitlementStatus: EntitlementStatus = {
   effectiveLevel: 'none',
   canAccessStandard: false,
   canAccessAdvanced: false,
+  canUseTrialForAdvanced: false,
   isNativePlatform: false,
   isLoading: true,
 };

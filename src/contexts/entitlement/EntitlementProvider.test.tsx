@@ -38,6 +38,15 @@ vi.mock('@/contexts/auth', () => ({
   }),
 }));
 
+// Mock useSyncedPreferences hook
+vi.mock('@/contexts/preferences', () => ({
+  useSyncedPreferences: () => ({
+    preferences: {
+      appMode: 'advanced',
+    },
+  }),
+}));
+
 // Test component that uses the hook
 function TestConsumer({
   onMount,
@@ -90,6 +99,7 @@ describe('EntitlementProvider', () => {
     effectiveLevel: 'advanced',
     canAccessStandard: true,
     canAccessAdvanced: true,
+    canUseTrialForAdvanced: false,
     isNativePlatform: false,
     isLoading: false,
   };

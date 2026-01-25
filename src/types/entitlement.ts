@@ -68,6 +68,8 @@ export interface EntitlementStatus {
   canAccessStandard: boolean;
   /** Whether user can access Advanced features */
   canAccessAdvanced: boolean;
+  /** Whether standard purchaser can use remaining trial for advanced features */
+  canUseTrialForAdvanced: boolean;
   /** Whether we're running on a native platform with IAP */
   isNativePlatform: boolean;
   /** Whether entitlement data is still loading */
@@ -79,7 +81,8 @@ export interface EntitlementStatus {
  */
 export type LockReason =
   | 'trial_expired' // Trial ended, no purchase
-  | 'standard_only' // Has Standard purchase, needs Advanced
+  | 'standard_only' // Has Standard purchase, needs Advanced (trial expired)
+  | 'standard_can_use_trial' // Has Standard purchase, can use remaining trial for advanced
   | 'not_purchased'; // No purchase and no trial
 
 /**

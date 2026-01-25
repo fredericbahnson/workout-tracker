@@ -237,13 +237,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: new Error('Supabase not configured') };
     }
 
-    const { error } = await supabase.auth.resend({
+    log.debug('Resending verification email to:', email);
+
+    const { data, error } = await supabase.auth.resend({
       type: 'signup',
       email,
       options: {
         emailRedirectTo: 'https://fredericbahnson.com/ascend/confirm',
       },
     });
+
+    log.debug('Resend result:', { data, error: error?.message });
 
     return { error: error as Error | null };
   };
