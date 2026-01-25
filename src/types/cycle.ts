@@ -14,6 +14,18 @@ import type { ExerciseType, ExerciseProgressionMode, ProgressionInterval } from 
 export type CycleType = 'training' | 'max_testing';
 
 /**
+ * Scheduling mode for workouts in a cycle.
+ * - sequence: Workouts completed in order at user's own pace (default)
+ * - date: Workouts assigned to specific days of the week
+ */
+export type SchedulingMode = 'sequence' | 'date';
+
+/**
+ * Day of week (0 = Sunday, 6 = Saturday).
+ */
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
  * Progression mode for the entire cycle.
  * - rfem: Reps From Established Max (default)
  * - simple: Linear progression with increments
@@ -102,6 +114,17 @@ export interface Cycle {
   includeWarmupSets?: boolean;
   /** Include warmups for time-based exercises (when warmups enabled) */
   includeTimedWarmups?: boolean;
+  /**
+   * Scheduling mode - defaults to 'sequence' for backwards compatibility.
+   * - sequence: Workouts completed in order at user's own pace
+   * - date: Workouts assigned to specific days of the week
+   */
+  schedulingMode?: SchedulingMode;
+  /**
+   * Days of the week for workouts (only used when schedulingMode is 'date').
+   * 0 = Sunday, 6 = Saturday.
+   */
+  selectedDays?: DayOfWeek[];
   status: 'planning' | 'active' | 'completed';
   createdAt: Date;
   updatedAt: Date;

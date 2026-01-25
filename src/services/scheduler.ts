@@ -9,12 +9,80 @@ import type {
   Group,
   ExerciseAssignment,
   ProgressionInterval,
+  DayOfWeek,
 } from '@/types';
 import { getProgressionMode, getExerciseProgressionMode, getSetProgressionMode } from '@/types';
 import { WARMUP, RFEM, WEIGHT, CONDITIONING } from '@/constants/training';
 import { createScopedLogger } from '@/utils/logger';
 
 const log = createScopedLogger('Scheduler');
+
+/**
+ * Calculates dates for all workouts in a date-based schedule.
+ *
+ * Generates an array of dates based on the selected days of the week and number of weeks.
+ * Handles the first week partial case - only includes days at or after the start date.
+ *
+ * @param startDate - The date the cycle starts
+ * @param numberOfWeeks - Total number of weeks in the cycle
+ * @param selectedDays - Array of days of the week (0=Sunday, 6=Saturday) when workouts occur
+ * @returns Array of Date objects for each workout in chronological order
+ *
+ * @example
+ * ```ts
+ * // Starting Thursday Jan 2nd, 4 weeks, Mon/Wed/Fri selected
+ * const dates = calculateWorkoutDates(new Date('2025-01-02'), 4, [1, 3, 5]);
+ * // Returns: Jan 3 (Fri), Jan 6 (Mon), Jan 8 (Wed), Jan 10 (Fri), ...
+ * ```
+ */
+export function calculateWorkoutDates(
+  startDate: Date,
+  numberOfWeeks: number,
+  selectedDays: DayOfWeek[]
+): Date[] {
+  if (selectedDays.length === 0) {
+    return [];
+  }
+
+  // Sort selected days for consistent ordering within each week
+  const sortedDays = [...selectedDays].sort((a, b) => a - b);
+  const dates: Date[] = [];
+
+  // Get the day of week for the start date (0-6)
+  const startDayOfWeek = startDate.getDay() as DayOfWeek;
+
+  // Create a normalized start date at midnight local time
+  const normalizedStart = new Date(startDate);
+  normalizedStart.setHours(0, 0, 0, 0);
+
+  for (let week = 0; week < numberOfWeeks; week++) {
+    for (const dayOfWeek of sortedDays) {
+      let daysFromStart: number;
+
+      if (week === 0) {
+        // First week: only include days at or after the start day of week
+        if (dayOfWeek < startDayOfWeek) {
+          continue;
+        }
+        daysFromStart = dayOfWeek - startDayOfWeek;
+      } else {
+        // Subsequent weeks: calculate from the start of that calendar week
+        // Days to reach end of first calendar week (Sunday)
+        const daysToEndOfFirstWeek = 7 - startDayOfWeek;
+        // Add complete weeks
+        const fullWeeksDays = (week - 1) * 7;
+        // Add the day within the target week
+        daysFromStart = daysToEndOfFirstWeek + fullWeeksDays + dayOfWeek;
+      }
+
+      const workoutDate = new Date(normalizedStart);
+      workoutDate.setDate(normalizedStart.getDate() + daysFromStart);
+      dates.push(workoutDate);
+    }
+  }
+
+  return dates;
+}
 
 /**
  * Input configuration for schedule generation.
@@ -70,6 +138,15 @@ export function generateSchedule(input: SchedulerInput): Omit<ScheduledWorkout, 
   const workouts: Omit<ScheduledWorkout, 'id'>[] = [];
   let sequenceNumber = 1;
 
+  // Calculate workout dates if using date-based scheduling
+  const isDateBased = cycle.schedulingMode === 'date' && cycle.selectedDays?.length;
+  const workoutDates = isDateBased
+    ? calculateWorkoutDates(cycle.startDate, cycle.numberOfWeeks, cycle.selectedDays!)
+    : [];
+
+  // Track which date index we're at (for date-based scheduling)
+  let dateIndex = 0;
+
   // For each week in the cycle
   for (let week = 1; week <= cycle.numberOfWeeks; week++) {
     const weekWorkouts = generateWeekSchedule(cycle, week, exercises, sequenceNumber);
@@ -77,7 +154,17 @@ export function generateSchedule(input: SchedulerInput): Omit<ScheduledWorkout, 
     // Only add workouts at or after startFromWorkout
     for (const workout of weekWorkouts) {
       if (sequenceNumber >= startFromWorkout) {
+        // Assign scheduled date if using date-based scheduling
+        if (isDateBased && dateIndex < workoutDates.length) {
+          (workout as Omit<ScheduledWorkout, 'id'>).scheduledDate = workoutDates[dateIndex];
+        }
         workouts.push(workout);
+        dateIndex++;
+      } else {
+        // Still need to increment date index for skipped workouts
+        if (isDateBased) {
+          dateIndex++;
+        }
       }
       sequenceNumber++;
     }

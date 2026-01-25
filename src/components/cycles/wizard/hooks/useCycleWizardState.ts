@@ -21,6 +21,8 @@ import type {
   ExerciseType,
   ProgressionMode,
   ExerciseCycleDefaults,
+  SchedulingMode,
+  DayOfWeek,
 } from '@/types';
 import { type WizardStep, type EditMode, type ValidationResult, getStepsForMode } from '../types';
 
@@ -97,6 +99,16 @@ export function useCycleWizardState({
   const [includeTimedWarmups, setIncludeTimedWarmups] = useState<boolean>(() => {
     if (editCycle) return editCycle.includeTimedWarmups ?? false;
     return false;
+  });
+
+  // Scheduling settings
+  const [schedulingMode, setSchedulingMode] = useState<SchedulingMode>(() => {
+    if (editCycle) return editCycle.schedulingMode ?? 'sequence';
+    return 'sequence';
+  });
+  const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(() => {
+    if (editCycle?.selectedDays) return editCycle.selectedDays;
+    return [1, 3, 5]; // Default: Mon, Wed, Fri
   });
 
   // Data queries
@@ -309,6 +321,9 @@ export function useCycleWizardState({
     switch (currentStep) {
       case 'basics':
         return !!(name.trim() && numberOfWeeks >= 1 && workoutDaysPerWeek >= 1);
+      case 'schedule':
+        // Date mode requires at least 1 day selected; sequence mode always valid
+        return schedulingMode === 'sequence' || selectedDays.length > 0;
       case 'groups':
         return groups.length > 0 && groups.some(g => g.exerciseAssignments.length > 0);
       case 'progression':
@@ -337,6 +352,8 @@ export function useCycleWizardState({
     name,
     numberOfWeeks,
     workoutDaysPerWeek,
+    schedulingMode,
+    selectedDays,
     groups,
     exerciseMap,
     progressionMode,
@@ -525,6 +542,8 @@ export function useCycleWizardState({
           conditioningWeeklyRepIncrement,
           includeWarmupSets,
           includeTimedWarmups,
+          schedulingMode,
+          selectedDays: schedulingMode === 'date' ? selectedDays : undefined,
           updatedAt: new Date(),
         };
         await CycleRepo.update(editCycle.id, updatedCycle);
@@ -604,6 +623,8 @@ export function useCycleWizardState({
           conditioningWeeklyRepIncrement,
           includeWarmupSets,
           includeTimedWarmups,
+          schedulingMode,
+          selectedDays: schedulingMode === 'date' ? selectedDays : undefined,
           status: 'active',
         });
 
@@ -649,6 +670,8 @@ export function useCycleWizardState({
     conditioningWeeklyRepIncrement,
     includeWarmupSets,
     includeTimedWarmups,
+    schedulingMode,
+    selectedDays,
     exerciseMap,
     saveLastCycleSettings,
     onComplete,
@@ -701,6 +724,10 @@ export function useCycleWizardState({
     setIncludeWarmupSets,
     includeTimedWarmups,
     setIncludeTimedWarmups,
+    schedulingMode,
+    setSchedulingMode,
+    selectedDays,
+    setSelectedDays,
 
     // Data
     exercises,

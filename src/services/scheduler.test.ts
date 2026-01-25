@@ -5,6 +5,7 @@ import {
   calculateSimpleTargetReps,
   calculateSimpleTargetWeight,
   validateCycle,
+  calculateWorkoutDates,
 } from './scheduler';
 import type {
   Cycle,
@@ -14,6 +15,7 @@ import type {
   MaxRecord,
   ProgressionInterval,
   Group,
+  DayOfWeek,
 } from '@/types';
 
 // ============================================================================
@@ -2240,5 +2242,248 @@ describe('Mixed Mode', () => {
         expect(percentages).toEqual([20, 40]);
       });
     });
+  });
+});
+
+// ============================================================================
+// Date-Based Scheduling Tests
+// ============================================================================
+
+describe('calculateWorkoutDates', () => {
+  it('returns empty array when no days selected', () => {
+    const startDate = new Date(2025, 0, 6); // Monday Jan 6, 2025
+    const dates = calculateWorkoutDates(startDate, 4, []);
+    expect(dates).toHaveLength(0);
+  });
+
+  it('generates correct dates for Mon/Wed/Fri schedule starting on Monday', () => {
+    const startDate = new Date(2025, 0, 6); // Monday Jan 6, 2025
+    const selectedDays: DayOfWeek[] = [1, 3, 5]; // Mon, Wed, Fri
+
+    const dates = calculateWorkoutDates(startDate, 2, selectedDays);
+
+    expect(dates).toHaveLength(6); // 3 days × 2 weeks
+
+    // Week 1
+    expect(dates[0].getDate()).toBe(6); // Mon
+    expect(dates[1].getDate()).toBe(8); // Wed
+    expect(dates[2].getDate()).toBe(10); // Fri
+
+    // Week 2
+    expect(dates[3].getDate()).toBe(13); // Mon
+    expect(dates[4].getDate()).toBe(15); // Wed
+    expect(dates[5].getDate()).toBe(17); // Fri
+  });
+
+  it('handles first week partial when starting mid-week (Thursday)', () => {
+    const startDate = new Date(2025, 0, 2); // Thursday Jan 2, 2025
+    const selectedDays: DayOfWeek[] = [1, 3, 5]; // Mon, Wed, Fri
+
+    const dates = calculateWorkoutDates(startDate, 2, selectedDays);
+
+    // First week: only Friday (days before Thursday are skipped)
+    // Second week: Mon, Wed, Fri
+    expect(dates).toHaveLength(4);
+
+    expect(dates[0].getDate()).toBe(3); // Fri (first week)
+    expect(dates[1].getDate()).toBe(6); // Mon (week 2)
+    expect(dates[2].getDate()).toBe(8); // Wed (week 2)
+    expect(dates[3].getDate()).toBe(10); // Fri (week 2)
+  });
+
+  it('handles Sunday start with Tue/Thu/Sat schedule', () => {
+    // Use explicit local date construction to avoid timezone issues
+    const startDate = new Date(2025, 0, 5); // Jan 5, 2025 - Sunday
+    const selectedDays: DayOfWeek[] = [2, 4, 6]; // Tue, Thu, Sat
+
+    const dates = calculateWorkoutDates(startDate, 1, selectedDays);
+
+    expect(dates).toHaveLength(3);
+    // Check day of month to avoid timezone issues
+    expect(dates[0].getDate()).toBe(7); // Tue Jan 7
+    expect(dates[1].getDate()).toBe(9); // Thu Jan 9
+    expect(dates[2].getDate()).toBe(11); // Sat Jan 11
+  });
+
+  it('handles single day per week', () => {
+    const startDate = new Date(2025, 0, 6); // Jan 6, 2025 - Monday
+    const selectedDays: DayOfWeek[] = [3]; // Wednesday only
+
+    const dates = calculateWorkoutDates(startDate, 3, selectedDays);
+
+    expect(dates).toHaveLength(3);
+    expect(dates[0].getDate()).toBe(8); // Week 1 Wed
+    expect(dates[1].getDate()).toBe(15); // Week 2 Wed
+    expect(dates[2].getDate()).toBe(22); // Week 3 Wed
+  });
+
+  it('handles every day of the week starting Monday', () => {
+    const startDate = new Date(2025, 0, 6); // Jan 6, 2025 - Monday
+    const selectedDays: DayOfWeek[] = [0, 1, 2, 3, 4, 5, 6]; // All days
+
+    const dates = calculateWorkoutDates(startDate, 1, selectedDays);
+
+    // Starting Monday with 1 week: Mon-Sat (6 days)
+    // Sunday (day 0) is before Monday (day 1), so it's skipped in week 0
+    expect(dates).toHaveLength(6);
+    expect(dates[0].getDate()).toBe(6); // Mon
+    expect(dates[5].getDate()).toBe(11); // Sat
+  });
+
+  it('handles every day of the week starting Sunday', () => {
+    const startDate = new Date(2025, 0, 5); // Jan 5, 2025 - Sunday
+    const selectedDays: DayOfWeek[] = [0, 1, 2, 3, 4, 5, 6]; // All days
+
+    const dates = calculateWorkoutDates(startDate, 1, selectedDays);
+
+    // Starting Sunday with all days: full week Sun-Sat (7 days)
+    expect(dates).toHaveLength(7);
+    expect(dates[0].getDate()).toBe(5); // Sun
+    expect(dates[6].getDate()).toBe(11); // Sat
+  });
+
+  it('skips entire first week if no selected days remain', () => {
+    const startDate = new Date(2025, 0, 11); // Jan 11, 2025 - Saturday
+    const selectedDays: DayOfWeek[] = [1, 3, 5]; // Mon, Wed, Fri
+
+    const dates = calculateWorkoutDates(startDate, 2, selectedDays);
+
+    // First week: no days (Saturday is after Friday)
+    // Second week: Mon, Wed, Fri
+    expect(dates).toHaveLength(3);
+    expect(dates[0].getDate()).toBe(13); // Mon (week 2)
+    expect(dates[1].getDate()).toBe(15); // Wed (week 2)
+    expect(dates[2].getDate()).toBe(17); // Fri (week 2)
+  });
+
+  it('includes same day if start day matches selected day', () => {
+    const startDate = new Date(2025, 0, 8); // Wednesday Jan 8, 2025
+    const selectedDays: DayOfWeek[] = [3]; // Wednesday
+
+    const dates = calculateWorkoutDates(startDate, 2, selectedDays);
+
+    expect(dates).toHaveLength(2);
+    expect(dates[0].getDate()).toBe(8); // Wed (start day)
+    expect(dates[1].getDate()).toBe(15); // Wed (week 2)
+  });
+});
+
+describe('generateSchedule with date-based scheduling', () => {
+  let exercises: Map<string, Exercise>;
+
+  beforeEach(() => {
+    exercises = new Map();
+    exercises.set(
+      'push-1',
+      createMockExercise({
+        id: 'push-1',
+        name: 'Push-ups',
+        type: 'push',
+      })
+    );
+  });
+
+  it('assigns scheduledDate to workouts when using date mode', () => {
+    const cycle = createMockCycle({
+      numberOfWeeks: 2,
+      workoutDaysPerWeek: 3,
+      schedulingMode: 'date',
+      selectedDays: [1, 3, 5], // Mon, Wed, Fri
+      startDate: new Date(2025, 0, 6), // Monday Jan 6, 2025
+      groups: [
+        createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
+      ],
+      groupRotation: ['group-a'],
+    });
+
+    const workouts = generateSchedule({ cycle, exercises });
+
+    expect(workouts).toHaveLength(6);
+
+    // All workouts should have scheduledDate
+    workouts.forEach(w => {
+      expect(w.scheduledDate).toBeDefined();
+    });
+
+    // Check dates using getDate() to avoid timezone issues
+    expect(workouts[0].scheduledDate?.getDate()).toBe(6); // Mon
+    expect(workouts[1].scheduledDate?.getDate()).toBe(8); // Wed
+    expect(workouts[2].scheduledDate?.getDate()).toBe(10); // Fri
+  });
+
+  it('does not assign scheduledDate when using sequence mode', () => {
+    const cycle = createMockCycle({
+      numberOfWeeks: 2,
+      workoutDaysPerWeek: 3,
+      schedulingMode: 'sequence',
+      startDate: new Date(2025, 0, 6),
+      groups: [
+        createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
+      ],
+      groupRotation: ['group-a'],
+    });
+
+    const workouts = generateSchedule({ cycle, exercises });
+
+    workouts.forEach(w => {
+      expect(w.scheduledDate).toBeUndefined();
+    });
+  });
+
+  it('does not assign scheduledDate when schedulingMode is undefined (backwards compat)', () => {
+    const cycle = createMockCycle({
+      numberOfWeeks: 2,
+      workoutDaysPerWeek: 3,
+      startDate: new Date(2025, 0, 6),
+      groups: [
+        createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
+      ],
+      groupRotation: ['group-a'],
+    });
+    // Explicitly remove schedulingMode to test backwards compatibility
+    delete (cycle as { schedulingMode?: string }).schedulingMode;
+
+    const workouts = generateSchedule({ cycle, exercises });
+
+    workouts.forEach(w => {
+      expect(w.scheduledDate).toBeUndefined();
+    });
+  });
+
+  it('handles startFromWorkout with date-based scheduling', () => {
+    const cycle = createMockCycle({
+      numberOfWeeks: 2,
+      workoutDaysPerWeek: 3,
+      schedulingMode: 'date',
+      selectedDays: [1, 3, 5],
+      startDate: new Date(2025, 0, 6),
+      groups: [
+        createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
+      ],
+      groupRotation: ['group-a'],
+    });
+
+    const workouts = generateSchedule({ cycle, exercises, startFromWorkout: 4 });
+
+    expect(workouts).toHaveLength(3); // Workouts 4, 5, 6
+    expect(workouts[0].sequenceNumber).toBe(4);
+
+    // Should have the dates for workouts 4, 5, 6
+    // Workout 4 is Mon of week 2
+    expect(workouts[0].scheduledDate?.getDate()).toBe(13); // Mon
+    expect(workouts[1].scheduledDate?.getDate()).toBe(15); // Wed
+    expect(workouts[2].scheduledDate?.getDate()).toBe(17); // Fri
   });
 });

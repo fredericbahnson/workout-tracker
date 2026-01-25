@@ -3,6 +3,7 @@ export { useWorkoutDisplay } from './useWorkoutDisplay';
 export { useCycleCompletion } from './useCycleCompletion';
 export { useAdHocWorkout } from './useAdHocWorkout';
 export { useSettingsState } from './useSettingsState';
+export { useScheduledWorkoutStatus } from './useScheduledWorkoutStatus';
 export type { SettingsState } from './useSettingsState';
 
 // iOS preparation hooks (with web fallbacks)

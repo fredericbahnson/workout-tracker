@@ -16,6 +16,7 @@ import {
   EditModeModal,
   StartStep,
   BasicsStep,
+  ScheduleStep,
   GroupsStep,
   ProgressionStep,
   GoalsStep,
@@ -66,6 +67,11 @@ export function CycleWizard({
     setIncludeWarmupSets,
     includeTimedWarmups,
     setIncludeTimedWarmups,
+    schedulingMode,
+    setSchedulingMode,
+    selectedDays,
+    setSelectedDays,
+    startDate,
 
     // Data
     exercises,
@@ -125,6 +131,19 @@ export function CycleWizard({
             setNumberOfWeeks={setNumberOfWeeks}
             workoutDaysPerWeek={workoutDaysPerWeek}
             setWorkoutDaysPerWeek={setWorkoutDaysPerWeek}
+          />
+        )}
+
+        {currentStep === 'schedule' && (
+          <ScheduleStep
+            schedulingMode={schedulingMode}
+            setSchedulingMode={setSchedulingMode}
+            selectedDays={selectedDays}
+            setSelectedDays={setSelectedDays}
+            workoutDaysPerWeek={workoutDaysPerWeek}
+            setWorkoutDaysPerWeek={setWorkoutDaysPerWeek}
+            startDate={startDate}
+            numberOfWeeks={numberOfWeeks}
           />
         )}
 

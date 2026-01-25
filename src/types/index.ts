@@ -19,7 +19,15 @@ export type {
 } from './exercise';
 
 // Cycle types
-export type { CycleType, ProgressionMode, ExerciseAssignment, Group, Cycle } from './cycle';
+export type {
+  CycleType,
+  ProgressionMode,
+  SchedulingMode,
+  DayOfWeek,
+  ExerciseAssignment,
+  Group,
+  Cycle,
+} from './cycle';
 
 // Workout types
 export type { ScheduledSet, ScheduledWorkout, CompletedSet } from './workout';

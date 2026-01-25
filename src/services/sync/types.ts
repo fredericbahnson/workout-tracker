@@ -114,6 +114,8 @@ export interface RemoteCycle {
   conditioning_weekly_time_increment: number | null;
   include_warmup_sets: boolean | null;
   include_timed_warmups: boolean | null;
+  scheduling_mode: string | null;
+  selected_days: unknown | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -136,6 +138,8 @@ export interface RemoteScheduledWorkout {
   scheduled_sets: unknown;
   status: string;
   completed_at: string | null;
+  scheduled_date: string | null;
+  skip_reason: string | null;
   deleted_at: string | null;
 }
 

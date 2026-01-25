@@ -21,6 +21,7 @@ export { ExerciseProgressionEditor } from './components/ExerciseProgressionEdito
 // Step Components
 export { StartStep } from './steps/StartStep';
 export { BasicsStep } from './steps/BasicsStep';
+export { ScheduleStep } from './steps/ScheduleStep';
 export { GroupsStep } from './steps/GroupsStep';
 export { ProgressionStep } from './steps/ProgressionStep';
 export { GoalsStep } from './steps/GoalsStep';

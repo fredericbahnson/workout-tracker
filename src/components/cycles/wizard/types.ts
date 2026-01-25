@@ -11,10 +11,19 @@ import type {
   ExerciseAssignment,
   ExerciseType,
   ProgressionMode,
+  SchedulingMode,
+  DayOfWeek,
 } from '@/types';
 
 // Wizard step definitions
-export type WizardStep = 'start' | 'basics' | 'groups' | 'progression' | 'goals' | 'review';
+export type WizardStep =
+  | 'start'
+  | 'basics'
+  | 'schedule'
+  | 'groups'
+  | 'progression'
+  | 'goals'
+  | 'review';
 
 export interface StepDefinition {
   key: WizardStep;
@@ -25,6 +34,7 @@ export interface StepDefinition {
 export const RFEM_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
   { key: 'basics', label: 'Basics' },
+  { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Groups' },
   { key: 'goals', label: 'Goals' },
   { key: 'review', label: 'Review' },
@@ -33,6 +43,7 @@ export const RFEM_STEPS: StepDefinition[] = [
 export const SIMPLE_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
   { key: 'basics', label: 'Basics' },
+  { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Groups' },
   { key: 'progression', label: 'Targets' },
   { key: 'goals', label: 'Goals' },
@@ -42,6 +53,7 @@ export const SIMPLE_STEPS: StepDefinition[] = [
 export const MIXED_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
   { key: 'basics', label: 'Basics' },
+  { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Exercises' },
   { key: 'goals', label: 'Goals' },
   { key: 'review', label: 'Review' },
@@ -101,6 +113,17 @@ export interface BasicsStepProps {
   setNumberOfWeeks: (v: number) => void;
   workoutDaysPerWeek: number;
   setWorkoutDaysPerWeek: (v: number) => void;
+}
+
+export interface ScheduleStepProps {
+  schedulingMode: SchedulingMode;
+  setSchedulingMode: (v: SchedulingMode) => void;
+  selectedDays: DayOfWeek[];
+  setSelectedDays: (v: DayOfWeek[]) => void;
+  workoutDaysPerWeek: number;
+  setWorkoutDaysPerWeek: (v: number) => void;
+  startDate: string;
+  numberOfWeeks: number;
 }
 
 export interface GroupsStepProps {

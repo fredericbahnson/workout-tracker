@@ -94,6 +94,10 @@ export interface ScheduledWorkout {
   isAdHoc?: boolean;
   /** User-editable name for ad-hoc workouts */
   customName?: string;
+  /** Target date for this workout (only when cycle.schedulingMode is 'date') */
+  scheduledDate?: Date;
+  /** User-provided reason when skipping an overdue workout */
+  skipReason?: string;
 }
 
 /**

@@ -12,7 +12,13 @@ import {
 import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/scheduler';
 import { useSyncedPreferences } from '@/contexts';
 import { useSyncItem } from '@/contexts';
-import { useWorkoutDisplay, useCycleCompletion, useAdHocWorkout, useTodayModals } from '@/hooks';
+import {
+  useWorkoutDisplay,
+  useCycleCompletion,
+  useAdHocWorkout,
+  useTodayModals,
+  useScheduledWorkoutStatus,
+} from '@/hooks';
 import { PageHeader } from '@/components/layout';
 import { Button, Modal, EmptyState, Card } from '@/components/ui';
 import { QuickLogForm, RestTimer } from '@/components/workouts';
@@ -33,6 +39,9 @@ import {
   CancelAdHocConfirmModal,
   ExercisePickerModal,
   RenameWorkoutModal,
+  OverdueBanner,
+  OverdueWorkoutModal,
+  RestDayCard,
 } from '@/components/workouts/today';
 import {
   CycleWizard,
@@ -61,8 +70,17 @@ export function TodayPage() {
   // Track dismissed workout to force query refresh
   const [dismissedWorkoutId, setDismissedWorkoutId] = useState<string | null>(null);
 
+  // Overdue workout modal state
+  const [showOverdueModal, setShowOverdueModal] = useState(false);
+
   // Live queries
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
+
+  // All workouts for scheduled workout status (overdue/rest day detection)
+  const allCycleWorkouts = useLiveQuery(async () => {
+    if (!activeCycle) return undefined;
+    return ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
+  }, [activeCycle?.id]);
 
   const lastCompletedWorkout = useLiveQuery(async () => {
     if (!activeCycle) return null;
@@ -152,6 +170,12 @@ export function TodayPage() {
     markWorkoutCompleted,
     dismissCompletionView,
     resetCompletionState,
+  });
+
+  // Date-based scheduling status
+  const scheduledStatus = useScheduledWorkoutStatus({
+    cycle: activeCycle,
+    workouts: allCycleWorkouts,
   });
 
   const todaysSets = useLiveQuery(() => CompletedSetRepo.getForToday(), []);
@@ -474,6 +498,28 @@ export function TodayPage() {
 
   const currentGroup = activeCycle?.groups.find(g => g.id === displayWorkout?.groupId);
 
+  // Overdue workout handlers
+  const overdueWorkout = scheduledStatus.overdueWorkouts[0] || null;
+  const overdueGroupName = overdueWorkout
+    ? activeCycle?.groups.find(g => g.id === overdueWorkout.groupId)?.name
+    : undefined;
+
+  const handleDoOverdueWorkout = () => {
+    // Close modal - the overdue workout will become the next pending workout
+    setShowOverdueModal(false);
+  };
+
+  const handleSkipOverdueWorkout = async (reason?: string) => {
+    if (!overdueWorkout) return;
+    await ScheduledWorkoutRepo.updateSkipReason(overdueWorkout.id, reason);
+    setShowOverdueModal(false);
+  };
+
+  // Get group name for next scheduled workout (for rest day card)
+  const nextScheduledGroupName = scheduledStatus.nextScheduledWorkout
+    ? activeCycle?.groups.find(g => g.id === scheduledStatus.nextScheduledWorkout?.groupId)?.name
+    : undefined;
+
   return (
     <>
       <PageHeader
@@ -498,6 +544,27 @@ export function TodayPage() {
           hasActiveWorkout={!!displayWorkout && !isShowingCompletedWorkout}
           onCreateCycle={modals.openCycleTypeSelector}
         />
+
+        {/* Overdue workouts banner for date-based scheduling */}
+        {scheduledStatus.overdueWorkouts.length > 0 && (
+          <OverdueBanner
+            count={scheduledStatus.overdueWorkouts.length}
+            oldestDate={new Date(scheduledStatus.overdueWorkouts[0].scheduledDate!)}
+            onReview={() => setShowOverdueModal(true)}
+          />
+        )}
+
+        {/* Rest day card for date-based scheduling */}
+        {scheduledStatus.isDateBased &&
+          scheduledStatus.isRestDay &&
+          !displayWorkout &&
+          !isShowingCompletedWorkout && (
+            <RestDayCard
+              nextWorkout={scheduledStatus.nextScheduledWorkout}
+              nextGroupName={nextScheduledGroupName}
+              onWorkOutAnyway={adHocWorkout.handleStartAdHocWorkout}
+            />
+          )}
 
         {displayWorkout && (
           <Card className="overflow-hidden">
@@ -805,6 +872,14 @@ export function TodayPage() {
         isDeleting={adHocWorkout.isCancellingAdHoc}
         onClose={adHocWorkout.closeCancelConfirm}
         onConfirm={adHocWorkout.handleCancelAdHocWorkout}
+      />
+      <OverdueWorkoutModal
+        workout={showOverdueModal ? overdueWorkout : null}
+        groupName={overdueGroupName}
+        remainingCount={scheduledStatus.overdueWorkouts.length - 1}
+        onDoWorkout={handleDoOverdueWorkout}
+        onSkip={handleSkipOverdueWorkout}
+        onClose={() => setShowOverdueModal(false)}
       />
     </>
   );

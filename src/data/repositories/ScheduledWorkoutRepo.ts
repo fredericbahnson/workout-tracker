@@ -2,12 +2,12 @@ import { db, generateId } from '@/data/db';
 import type { ScheduledWorkout } from '@/types';
 import { now, normalizeDates, compareDates } from '@/utils/dateUtils';
 
-// ScheduledWorkout has optional completedAt
-const DATE_FIELDS: (keyof ScheduledWorkout)[] = ['completedAt'];
+// ScheduledWorkout has optional completedAt and scheduledDate
+const DATE_FIELDS: (keyof ScheduledWorkout)[] = ['completedAt', 'scheduledDate'];
 
 function normalizeWorkout(workout: ScheduledWorkout): ScheduledWorkout {
-  // Only normalize completedAt if it exists
-  if (workout.completedAt) {
+  // Normalize date fields if they exist
+  if (workout.completedAt || workout.scheduledDate) {
     return normalizeDates(workout, DATE_FIELDS);
   }
   return workout;
@@ -161,5 +161,70 @@ export const ScheduledWorkoutRepo = {
     const completed = regularWorkouts.filter(w => w.status === 'completed').length;
     const skipped = regularWorkouts.filter(w => w.status === 'skipped').length;
     return { completed, skipped, passed: completed + skipped, total: regularWorkouts.length };
+  },
+
+  /**
+   * Retrieves pending workouts scheduled for a specific date.
+   * @param cycleId - The cycle UUID
+   * @param date - The target date
+   * @returns Promise resolving to array of workouts scheduled for that date
+   */
+  async getByScheduledDate(cycleId: string, date: Date): Promise<ScheduledWorkout[]> {
+    const workouts = await this.getByCycleId(cycleId);
+    // Compare date portion only (ignore time)
+    const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    return workouts.filter(w => {
+      if (!w.scheduledDate) return false;
+      const schedDate = new Date(
+        w.scheduledDate.getFullYear(),
+        w.scheduledDate.getMonth(),
+        w.scheduledDate.getDate()
+      );
+      return schedDate.getTime() === targetDate.getTime();
+    });
+  },
+
+  /**
+   * Retrieves overdue workouts (pending with scheduledDate before today).
+   * Returns workouts sorted by scheduledDate ascending (oldest first).
+   * @param cycleId - The cycle UUID
+   * @returns Promise resolving to array of overdue workouts
+   */
+  async getOverdue(cycleId: string): Promise<ScheduledWorkout[]> {
+    const workouts = await this.getByCycleId(cycleId);
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    const overdue = workouts.filter(w => {
+      if (!w.scheduledDate || w.status !== 'pending') return false;
+      const schedDate = new Date(
+        w.scheduledDate.getFullYear(),
+        w.scheduledDate.getMonth(),
+        w.scheduledDate.getDate()
+      );
+      return schedDate.getTime() < todayStart.getTime();
+    });
+
+    // Sort by scheduledDate ascending (oldest first)
+    return overdue.sort((a, b) => {
+      if (!a.scheduledDate || !b.scheduledDate) return 0;
+      return a.scheduledDate.getTime() - b.scheduledDate.getTime();
+    });
+  },
+
+  /**
+   * Updates a workout's skip reason and marks it as skipped.
+   * @param id - The workout UUID
+   * @param reason - The reason for skipping (optional)
+   */
+  async updateSkipReason(id: string, reason?: string): Promise<void> {
+    const existing = await this.getById(id);
+    if (existing) {
+      await db.scheduledWorkouts.put({
+        ...existing,
+        status: 'skipped',
+        skipReason: reason,
+      });
+    }
   },
 };

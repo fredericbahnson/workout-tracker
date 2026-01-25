@@ -5,18 +5,27 @@ import type { ScheduledWorkout } from '@/types';
 
 interface WorkoutCalendarProps {
   workouts: ScheduledWorkout[];
+  /** Future scheduled workouts (pending with scheduledDate) */
+  scheduledWorkouts?: ScheduledWorkout[];
   onSelectDate: (date: Date, workouts: ScheduledWorkout[]) => void;
 }
 
-export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps) {
+export function WorkoutCalendar({
+  workouts,
+  scheduledWorkouts = [],
+  onSelectDate,
+}: WorkoutCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
   // Build a map of date string -> workouts for that day
+  // Includes both completed workouts (by completedAt) and scheduled future workouts (by scheduledDate)
   const workoutsByDate = useMemo(() => {
     const map = new Map<string, ScheduledWorkout[]>();
+
+    // Add completed workouts
     workouts.forEach(workout => {
       if (workout.completedAt) {
         const date = new Date(workout.completedAt);
@@ -26,8 +35,23 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
         map.set(dateKey, existing);
       }
     });
+
+    // Add future scheduled workouts (pending with scheduledDate)
+    scheduledWorkouts.forEach(workout => {
+      if (workout.scheduledDate && workout.status === 'pending') {
+        const date = new Date(workout.scheduledDate);
+        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        const existing = map.get(dateKey) || [];
+        // Only add if not already in the list (avoid duplicates)
+        if (!existing.some(w => w.id === workout.id)) {
+          existing.push(workout);
+          map.set(dateKey, existing);
+        }
+      }
+    });
+
     return map;
-  }, [workouts]);
+  }, [workouts, scheduledWorkouts]);
 
   // Get calendar grid for current month
   const calendarDays = useMemo(() => {
@@ -136,13 +160,13 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
         {calendarDays.map((date, index) => {
           const dayWorkouts = getWorkoutsForDate(date);
           const hasWorkout = dayWorkouts.length > 0;
-          const hasMultiple = dayWorkouts.length > 1;
           const inCurrentMonth = isCurrentMonth(date);
           const today = isToday(date);
 
-          // Check if any workout is ad-hoc
-          const hasAdHoc = dayWorkouts.some(w => w.isAdHoc);
-          const hasRegular = dayWorkouts.some(w => !w.isAdHoc);
+          // Check workout types
+          const hasAdHoc = dayWorkouts.some(w => w.isAdHoc && w.status === 'completed');
+          const hasCompleted = dayWorkouts.some(w => !w.isAdHoc && w.status === 'completed');
+          const hasScheduled = dayWorkouts.some(w => w.status === 'pending' && w.scheduledDate);
 
           return (
             <button
@@ -170,15 +194,11 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
               {/* Workout indicators */}
               {hasWorkout && (
                 <div className="flex gap-0.5 mt-0.5">
-                  {hasRegular && (
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full bg-green-500 ${hasMultiple ? '' : ''}`}
-                    />
+                  {hasCompleted && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+                  {hasScheduled && (
+                    <div className="w-1.5 h-1.5 rounded-full border border-primary-500 bg-primary-100 dark:bg-primary-900/30" />
                   )}
-                  {hasAdHoc && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                  {hasMultiple && !hasAdHoc && dayWorkouts.length > 1 && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  )}
+                  {hasAdHoc && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
                 </div>
               )}
             </button>
@@ -190,10 +210,14 @@ export function WorkoutCalendar({ workouts, onSelectDate }: WorkoutCalendarProps
       <div className="flex items-center justify-center gap-4 px-4 py-2 border-t border-gray-200 dark:border-dark-border text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-green-500" />
-          <span>Workout</span>
+          <span>Completed</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <div className="w-2 h-2 rounded-full border border-primary-500 bg-primary-100 dark:bg-primary-900/30" />
+          <span>Scheduled</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-purple-500" />
           <span>Ad Hoc</span>
         </div>
       </div>

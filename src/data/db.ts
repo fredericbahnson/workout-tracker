@@ -68,6 +68,17 @@ class AscendDatabase extends Dexie {
       syncQueue: 'id, [table+itemId], createdAt',
       userPreferences: 'id',
     });
+
+    // Version 4: Add scheduledDate index for date-based workout scheduling
+    this.version(4).stores({
+      exercises: 'id, type, mode, name, createdAt',
+      maxRecords: 'id, exerciseId, recordedAt',
+      completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
+      cycles: 'id, status, startDate',
+      scheduledWorkouts: 'id, cycleId, sequenceNumber, status, scheduledDate',
+      syncQueue: 'id, [table+itemId], createdAt',
+      userPreferences: 'id',
+    });
   }
 }
 

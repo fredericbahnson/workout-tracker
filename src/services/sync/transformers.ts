@@ -16,6 +16,8 @@ import type {
   UserPreferences,
   WeeklySetGoals,
   AppMode,
+  SchedulingMode,
+  DayOfWeek,
 } from '@/types';
 import type {
   RemoteExercise,
@@ -107,6 +109,8 @@ export function remoteToLocalCycle(remote: RemoteCycle): Cycle {
     conditioningWeeklyTimeIncrement: remote.conditioning_weekly_time_increment ?? undefined,
     includeWarmupSets: remote.include_warmup_sets ?? undefined,
     includeTimedWarmups: remote.include_timed_warmups ?? undefined,
+    schedulingMode: (remote.scheduling_mode as SchedulingMode) ?? undefined,
+    selectedDays: (remote.selected_days as DayOfWeek[]) ?? undefined,
     status: remote.status as Cycle['status'],
     createdAt: toDateRequired(remote.created_at),
     updatedAt: toDateRequired(remote.updated_at),
@@ -128,6 +132,8 @@ export function remoteToLocalScheduledWorkout(remote: RemoteScheduledWorkout): S
     scheduledSets: remote.scheduled_sets as ScheduledWorkout['scheduledSets'],
     status: remote.status as ScheduledWorkout['status'],
     completedAt: toDate(remote.completed_at),
+    scheduledDate: toDate(remote.scheduled_date),
+    skipReason: remote.skip_reason ?? undefined,
   };
 }
 
@@ -215,6 +221,8 @@ export function localToRemoteCycle(local: Cycle, userId: string) {
     conditioning_weekly_time_increment: local.conditioningWeeklyTimeIncrement || null,
     include_warmup_sets: local.includeWarmupSets ?? false,
     include_timed_warmups: local.includeTimedWarmups ?? false,
+    scheduling_mode: local.schedulingMode || null,
+    selected_days: local.selectedDays || null,
     status: local.status,
     created_at: toISOString(local.createdAt),
     updated_at: toISOString(local.updatedAt),
@@ -237,6 +245,8 @@ export function localToRemoteScheduledWorkout(local: ScheduledWorkout, userId: s
     scheduled_sets: local.scheduledSets,
     status: local.status,
     completed_at: local.completedAt ? toISOString(local.completedAt) : null,
+    scheduled_date: local.scheduledDate ? toISOString(local.scheduledDate) : null,
+    skip_reason: local.skipReason || null,
   };
 }
 

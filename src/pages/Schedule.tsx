@@ -322,6 +322,7 @@ export function SchedulePage() {
         {showCalendarView && (allCompletedWorkouts?.length || 0) > 0 && (
           <WorkoutCalendar
             workouts={allCompletedWorkouts || []}
+            scheduledWorkouts={activeCycle?.schedulingMode === 'date' ? pendingWorkouts : undefined}
             onSelectDate={handleCalendarDateSelect}
           />
         )}
@@ -688,8 +689,18 @@ function WorkoutSection({
                       ) : (
                         'In progress'
                       )
+                    ) : workout.scheduledDate ? (
+                      // Date-based scheduling: show scheduled date
+                      <>
+                        {new Date(workout.scheduledDate).toLocaleDateString(undefined, {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        })}{' '}
+                        • {workout.scheduledSets.filter(s => !s.isWarmup).length} sets
+                      </>
                     ) : (
-                      // Upcoming/skipped workouts show week/RFEM info
+                      // Sequence-based scheduling: show week/RFEM info
                       <>
                         Week {workout.weekNumber} • RFEM -{workout.rfem} •{' '}
                         {workout.scheduledSets.filter(s => !s.isWarmup).length} sets
