@@ -47,8 +47,8 @@ export function SettingsPage() {
         {/* Account & Sync */}
         <AccountSection setMessage={setMessage} />
 
-        {/* Trial Banner - shown right after account info */}
-        {!purchase && (trial.isActive || trial.hasExpired) && <TrialBanner variant="full" />}
+        {/* Trial Banner - shown when trial is active (even with standard purchase) or expired without purchase */}
+        {(trial.isActive || (!purchase && trial.hasExpired)) && <TrialBanner variant="full" />}
 
         {/* Appearance, App Mode, Font Size */}
         <AppearanceSection />
