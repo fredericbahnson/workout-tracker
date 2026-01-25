@@ -232,6 +232,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const resendVerificationEmail = async (email: string) => {
+    if (!isConfigured) {
+      return { error: new Error('Supabase not configured') };
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: 'https://fredericbahnson.com/ascend/confirm',
+      },
+    });
+
+    return { error: error as Error | null };
+  };
+
   const clearNewUserFlag = () => {
     setIsNewUser(false);
   };
@@ -250,6 +266,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deleteAccount,
         resetPassword,
         updatePassword,
+        resendVerificationEmail,
         clearNewUserFlag,
       }}
     >

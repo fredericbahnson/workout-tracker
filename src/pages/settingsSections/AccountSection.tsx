@@ -17,12 +17,13 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
     signUp,
     signOut,
     updatePassword,
+    resendVerificationEmail,
   } = useAuth();
   const { status: syncStatus, lastSyncTime, lastError: syncError, sync, isSyncing } = useSync();
 
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'verify'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -43,19 +44,39 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
         authMode === 'signin' ? await signIn(email, password) : await signUp(email, password);
 
       if (result.error) {
-        setAuthError(result.error.message);
-      } else {
-        setShowAuthModal(false);
-        setEmail('');
-        setPassword('');
-        if (authMode === 'signup') {
-          setMessage({ type: 'success', text: 'Account created! Check your email to verify.' });
+        // Check if the error is due to unverified email
+        const errorMessage = result.error.message.toLowerCase();
+        if (
+          errorMessage.includes('email not confirmed') ||
+          errorMessage.includes('not confirmed')
+        ) {
+          setAuthMode('verify');
+          setAuthError(null);
         } else {
+          setAuthError(result.error.message);
+        }
+      } else {
+        if (authMode === 'signup') {
+          // Switch to verification screen after successful signup
+          setAuthMode('verify');
+          setPassword('');
+        } else {
+          setShowAuthModal(false);
+          setEmail('');
+          setPassword('');
           setMessage({ type: 'success', text: 'Signed in successfully!' });
         }
       }
     } finally {
       setIsAuthSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setAuthError(null);
+    const result = await resendVerificationEmail(email);
+    if (result.error) {
+      setAuthError(result.error.message);
     }
   };
 
@@ -216,9 +237,11 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
           setAuthError(null);
         }}
         onSubmit={handleAuthSubmit}
+        onResendVerification={handleResendVerification}
         onClose={() => {
           setShowAuthModal(false);
           setAuthError(null);
+          setAuthMode('signin');
         }}
       />
 
