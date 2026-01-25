@@ -53,9 +53,6 @@ export function SettingsPage() {
         {/* Appearance, App Mode, Font Size */}
         <AppearanceSection />
 
-        {/* Subscription Status */}
-        <SubscriptionSection />
-
         {/* Training Defaults & Display Settings */}
         <TrainingSection />
 
@@ -64,6 +61,9 @@ export function SettingsPage() {
 
         {/* Help & About */}
         <HelpSection />
+
+        {/* Subscription Status */}
+        <SubscriptionSection />
 
         {/* Data Management */}
         <DataSection setMessage={setMessage} />

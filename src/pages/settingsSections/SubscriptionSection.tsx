@@ -19,8 +19,8 @@ export function SubscriptionSection() {
           <span
             className={`ml-auto text-xs px-2 py-0.5 rounded font-medium ${
               purchase.tier === 'advanced'
-                ? 'bg-purple-500/20 text-purple-300'
-                : 'bg-gray-500/20 text-gray-300'
+                ? 'bg-purple-500/20 text-purple-700 dark:text-purple-300'
+                : 'bg-gray-500/20 text-gray-700 dark:text-gray-300'
             }`}
           >
             {purchase.tier === 'advanced' ? 'Advanced' : 'Standard'}

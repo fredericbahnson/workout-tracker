@@ -762,40 +762,9 @@ export function validateCycle(
     }
   }
 
-  // Check that weekly set goals can be met
-  const exerciseTypes: ExerciseType[] = [
-    'push',
-    'pull',
-    'legs',
-    'core',
-    'balance',
-    'mobility',
-    'other',
-  ];
-
-  for (const type of exerciseTypes) {
-    const goalSets = cycle.weeklySetGoals[type] || 0;
-    if (goalSets === 0) continue;
-
-    // Count exercises of this type across all groups
-    let hasType = false;
-    for (const group of cycle.groups) {
-      for (const assignment of group.exerciseAssignments) {
-        const exercise = exercises.get(assignment.exerciseId);
-        if (exercise && exercise.type === type) {
-          hasType = true;
-          break;
-        }
-      }
-      if (hasType) break;
-    }
-
-    if (!hasType) {
-      warnings.push(
-        `Weekly goal of ${goalSets} ${type} sets cannot be met: no ${type} exercises in any group`
-      );
-    }
-  }
+  // Note: Weekly set goals for exercise types not included in the cycle
+  // are silently ignored - no warning needed as the cycle proceeds with
+  // the exercises the user selected.
 
   return {
     valid: errors.length === 0,

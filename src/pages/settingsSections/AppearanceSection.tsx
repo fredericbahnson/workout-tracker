@@ -178,7 +178,7 @@ export function AppearanceSection() {
                   </p>
                 </div>
                 {!canAccessAdvanced && (
-                  <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">
+                  <span className="text-xs bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded">
                     Upgrade
                   </span>
                 )}

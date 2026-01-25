@@ -886,8 +886,8 @@ describe('validateCycle', () => {
     expect(result.warnings).toContain('Group "Empty Group" has no exercises');
   });
 
-  it('warns when set goals cannot be met', () => {
-    // Only push exercises available, but goals set for pull
+  it('silently ignores set goals for exercise types not in cycle', () => {
+    // Only push exercises available, but goals set for pull - should NOT warn
     const cycle = {
       name: 'Test',
       cycleType: 'training' as const,
@@ -896,7 +896,7 @@ describe('validateCycle', () => {
       workoutDaysPerWeek: 3,
       weeklySetGoals: {
         push: 0,
-        pull: 10, // Goal for pull
+        pull: 10, // Goal for pull (not in cycle - should be ignored)
         legs: 0,
         core: 0,
         balance: 0,
@@ -917,7 +917,11 @@ describe('validateCycle', () => {
 
     const result = validateCycle(cycle, exercises);
 
-    expect(result.warnings.some(w => w.includes('pull') && w.includes('cannot be met'))).toBe(true);
+    // Should NOT warn about set goals for types not in cycle
+    expect(result.warnings.some(w => w.includes('pull') && w.includes('cannot be met'))).toBe(
+      false
+    );
+    expect(result.valid).toBe(true);
   });
 });
 
