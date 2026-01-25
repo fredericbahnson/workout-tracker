@@ -44,6 +44,10 @@ async function getPurchaseInfo(): Promise<PurchaseInfo | null> {
   return iapService.getPurchaseInfo();
 }
 
+import { createScopedLogger } from '@/utils/logger';
+
+const log = createScopedLogger('Entitlement');
+
 /**
  * Entitlement Service singleton.
  */
@@ -53,13 +57,18 @@ export const entitlementService = {
    * Call once at app startup.
    */
   async initialize(): Promise<EntitlementStatus> {
+    // ALWAYS start trial first - this must happen regardless of IAP status
+    trialService.startTrialIfNeeded();
+
     // Initialize IAP service on native platforms
     if (isNativePlatform()) {
-      await iapService.initialize();
+      try {
+        await iapService.initialize();
+      } catch (error) {
+        log.error('IAP initialization failed, continuing with trial only', { error });
+        // Continue - trial is already started, we can still function
+      }
     }
-
-    // Start trial if this is first launch
-    trialService.startTrialIfNeeded();
 
     // Get current status
     return this.getEntitlementStatus();

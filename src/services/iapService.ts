@@ -87,12 +87,22 @@ class IAPService {
    */
   async getPurchaseInfo(): Promise<PurchaseInfo | null> {
     if (!this.isAvailable() || !this.purchases) {
+      log.debug('getPurchaseInfo: IAP not available');
       return null;
     }
 
     try {
       const { customerInfo } = await this.purchases.getCustomerInfo();
-      return this.mapCustomerInfoToPurchaseInfo(customerInfo);
+      log.debug('Customer info - ID:', customerInfo.originalAppUserId);
+      log.debug(
+        'Customer info - Active entitlements:',
+        Object.keys(customerInfo.entitlements.active)
+      );
+
+      const purchaseInfo = this.mapCustomerInfoToPurchaseInfo(customerInfo);
+      log.debug('Mapped purchase info:', purchaseInfo);
+
+      return purchaseInfo;
     } catch (error) {
       log.error('Failed to get purchase info', { error });
       return null;
@@ -154,8 +164,22 @@ class IAPService {
 
     try {
       const { customerInfo } = await this.purchases.restorePurchases();
-      log.debug('Purchases restored successfully');
-      return this.mapCustomerInfoToPurchaseInfo(customerInfo);
+
+      // Log detailed info for debugging
+      log.debug('Restore result - Customer ID:', customerInfo.originalAppUserId);
+      log.debug(
+        'Restore result - Active entitlements:',
+        Object.keys(customerInfo.entitlements.active)
+      );
+      log.debug(
+        'Restore result - All entitlements:',
+        JSON.stringify(customerInfo.entitlements, null, 2)
+      );
+
+      const purchaseInfo = this.mapCustomerInfoToPurchaseInfo(customerInfo);
+      log.debug('Mapped purchase info:', purchaseInfo);
+
+      return purchaseInfo;
     } catch (error) {
       log.error('Restore purchases failed', { error });
       throw error;
