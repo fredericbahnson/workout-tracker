@@ -36,12 +36,14 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const handleAuthSubmit = async () => {
+    // Capture the current mode at the start (before async operations)
+    const isSignup = authMode === 'signup';
+
     setAuthError(null);
     setIsAuthSubmitting(true);
 
     try {
-      const result =
-        authMode === 'signin' ? await signIn(email, password) : await signUp(email, password);
+      const result = isSignup ? await signUp(email, password) : await signIn(email, password);
 
       if (result.error) {
         // Check if the error is due to unverified email
@@ -56,7 +58,7 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
           setAuthError(result.error.message);
         }
       } else {
-        if (authMode === 'signup') {
+        if (isSignup) {
           // Switch to verification screen after successful signup
           setAuthMode('verify');
           setPassword('');
