@@ -18,3 +18,4 @@ export {
   StatsCardSkeleton,
   PageSkeleton,
 } from './Skeleton';
+export { WheelPicker } from './WheelPicker';

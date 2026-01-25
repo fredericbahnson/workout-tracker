@@ -15,7 +15,17 @@ import { CycleRepo, ExerciseRepo, MaxRecordRepo, ScheduledWorkoutRepo } from '@/
 import { useSyncItem } from '@/contexts';
 import { generateId } from '@/data/db';
 import { createScopedLogger } from '@/utils/logger';
-import type { Cycle, Exercise, Group, ScheduledSet, ScheduledWorkout, ExerciseType } from '@/types';
+import type {
+  Cycle,
+  Exercise,
+  Group,
+  ScheduledSet,
+  ScheduledWorkout,
+  ExerciseType,
+  SchedulingMode,
+  DayOfWeek,
+} from '@/types';
+import { ScheduleModeStep } from './wizard/steps/ScheduleModeStep';
 
 const log = createScopedLogger('MaxTestingWizard');
 
@@ -38,7 +48,7 @@ interface ExerciseToTest {
   groupName: string;
 }
 
-type Step = 'select_exercises' | 'conditioning_baselines' | 'review';
+type Step = 'select_exercises' | 'schedule_mode' | 'conditioning_baselines' | 'review';
 
 export function MaxTestingWizard({
   completedCycle,
@@ -55,6 +65,9 @@ export function MaxTestingWizard({
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [maxTestingCycleCount, setMaxTestingCycleCount] = useState(0);
+  const [schedulingMode, setSchedulingMode] = useState<SchedulingMode>('sequence');
+  // Selected days for date mode (not currently used in UI but stored for future use)
+  const [selectedDays] = useState<DayOfWeek[]>([1, 3, 5]); // Mon, Wed, Fri default
 
   // Load exercises and their current maxes
   useEffect(() => {
@@ -196,6 +209,8 @@ export function MaxTestingWizard({
     const hasConditioning = exercisesToTest.some(e => e.included && e.isConditioning);
 
     if (step === 'select_exercises') {
+      setStep('schedule_mode');
+    } else if (step === 'schedule_mode') {
       if (hasConditioning) {
         setStep('conditioning_baselines');
       } else {
@@ -216,14 +231,16 @@ export function MaxTestingWizard({
       } else {
         onCancel();
       }
+    } else if (step === 'schedule_mode') {
+      setStep('select_exercises');
     } else if (step === 'review') {
       if (hasConditioning) {
         setStep('conditioning_baselines');
       } else {
-        setStep('select_exercises');
+        setStep('schedule_mode');
       }
     } else if (step === 'conditioning_baselines') {
-      setStep('select_exercises');
+      setStep('schedule_mode');
     }
   };
 
@@ -349,6 +366,8 @@ export function MaxTestingWizard({
         groupRotation: groupIds,
         rfemRotation: [0], // RFEM 0 = max testing
         conditioningWeeklyRepIncrement: 0,
+        schedulingMode,
+        selectedDays: schedulingMode === 'date' ? selectedDays : undefined,
         status: 'active',
       });
 
@@ -472,13 +491,22 @@ export function MaxTestingWizard({
             Select
           </div>
           <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+          <div
+            className={`flex items-center gap-1 ${step === 'schedule_mode' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}
+          >
+            <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">
+              2
+            </span>
+            Schedule
+          </div>
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
           {exercisesToTest.some(e => e.included && e.isConditioning) && (
             <>
               <div
                 className={`flex items-center gap-1 ${step === 'conditioning_baselines' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}
               >
                 <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">
-                  2
+                  3
                 </span>
                 Conditioning
               </div>
@@ -489,7 +517,7 @@ export function MaxTestingWizard({
             className={`flex items-center gap-1 ${step === 'review' ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-500'}`}
           >
             <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs">
-              {exercisesToTest.some(e => e.included && e.isConditioning) ? '3' : '2'}
+              {exercisesToTest.some(e => e.included && e.isConditioning) ? '4' : '3'}
             </span>
             Review
           </div>
@@ -581,6 +609,10 @@ export function MaxTestingWizard({
               </div>
             )}
           </div>
+        )}
+
+        {step === 'schedule_mode' && (
+          <ScheduleModeStep schedulingMode={schedulingMode} onSelectMode={setSchedulingMode} />
         )}
 
         {step === 'conditioning_baselines' && (

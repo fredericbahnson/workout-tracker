@@ -60,7 +60,7 @@ export function useCycleWizardState({
 
   // Skip 'start' step if editing an existing cycle or if mode was pre-selected
   const [currentStep, setCurrentStep] = useState<WizardStep>(
-    editCycle || initialProgressionMode ? 'basics' : 'start'
+    editCycle || initialProgressionMode ? 'schedule_mode' : 'start'
   );
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -188,7 +188,7 @@ export function useCycleWizardState({
       setIncludeWarmupSets(sourceCycle.includeWarmupSets ?? false);
       setIncludeTimedWarmups(sourceCycle.includeTimedWarmups ?? false);
       setName(getDefaultCycleName());
-      setCurrentStep('basics');
+      setCurrentStep('schedule_mode');
     },
     [getDefaultCycleName]
   );
@@ -210,7 +210,7 @@ export function useCycleWizardState({
     setRfemRotation([4, 3, 2]);
     setWeeklySetGoals({ ...preferences.weeklySetGoals });
     setConditioningWeeklyRepIncrement(preferences.conditioningWeeklyIncrement);
-    setCurrentStep('basics');
+    setCurrentStep('schedule_mode');
   }, [exercises, preferences, getDefaultCycleName]);
 
   // Initialize default groups when exercises load
@@ -275,7 +275,7 @@ export function useCycleWizardState({
       setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
       setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
       setName(`Workout Cycle ${completedCount + 1}`);
-      setCurrentStep('basics');
+      setCurrentStep('schedule_mode');
     }
   }, [allCycles, editCycle, currentStep]);
 
@@ -319,11 +319,15 @@ export function useCycleWizardState({
   // Can proceed to next step?
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
-      case 'basics':
-        return !!(name.trim() && numberOfWeeks >= 1 && workoutDaysPerWeek >= 1);
+      case 'schedule_mode':
+        // Always valid - user just needs to select a mode (default is already set)
+        return true;
       case 'schedule':
-        // Date mode requires at least 1 day selected; sequence mode always valid
-        return schedulingMode === 'sequence' || selectedDays.length > 0;
+        // Name is required, and date mode requires at least 1 day selected
+        if (!name.trim()) return false;
+        if (schedulingMode === 'date') return selectedDays.length > 0;
+        // Flexible mode: requires valid weeks and days per week
+        return numberOfWeeks >= 1 && workoutDaysPerWeek >= 1;
       case 'groups':
         return groups.length > 0 && groups.some(g => g.exerciseAssignments.length > 0);
       case 'progression':

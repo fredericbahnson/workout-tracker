@@ -19,6 +19,7 @@ import type {
 export type WizardStep =
   | 'start'
   | 'basics'
+  | 'schedule_mode'
   | 'schedule'
   | 'groups'
   | 'progression'
@@ -33,7 +34,7 @@ export interface StepDefinition {
 // Step configuration by progression mode
 export const RFEM_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
-  { key: 'basics', label: 'Basics' },
+  { key: 'schedule_mode', label: 'Mode' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Groups' },
   { key: 'goals', label: 'Goals' },
@@ -42,7 +43,7 @@ export const RFEM_STEPS: StepDefinition[] = [
 
 export const SIMPLE_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
-  { key: 'basics', label: 'Basics' },
+  { key: 'schedule_mode', label: 'Mode' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Groups' },
   { key: 'progression', label: 'Targets' },
@@ -52,7 +53,7 @@ export const SIMPLE_STEPS: StepDefinition[] = [
 
 export const MIXED_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
-  { key: 'basics', label: 'Basics' },
+  { key: 'schedule_mode', label: 'Mode' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Exercises' },
   { key: 'goals', label: 'Goals' },
@@ -106,24 +107,26 @@ export interface StartStepProps {
   onCancel: () => void;
 }
 
-export interface BasicsStepProps {
-  name: string;
-  setName: (v: string) => void;
-  numberOfWeeks: number;
-  setNumberOfWeeks: (v: number) => void;
-  workoutDaysPerWeek: number;
-  setWorkoutDaysPerWeek: (v: number) => void;
+export interface ScheduleModeStepProps {
+  schedulingMode: SchedulingMode;
+  onSelectMode: (mode: SchedulingMode) => void;
 }
 
 export interface ScheduleStepProps {
+  // Name field (merged from BasicsStep)
+  name: string;
+  setName: (v: string) => void;
+  // Scheduling mode (read-only, set in previous step)
   schedulingMode: SchedulingMode;
-  setSchedulingMode: (v: SchedulingMode) => void;
+  // Fixed days mode
   selectedDays: DayOfWeek[];
   setSelectedDays: (v: DayOfWeek[]) => void;
+  // Flexible mode / shared
   workoutDaysPerWeek: number;
   setWorkoutDaysPerWeek: (v: number) => void;
-  startDate: string;
   numberOfWeeks: number;
+  setNumberOfWeeks: (v: number) => void;
+  startDate: string;
 }
 
 export interface GroupsStepProps {

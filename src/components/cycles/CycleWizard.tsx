@@ -15,7 +15,7 @@ import {
   WizardNavigation,
   EditModeModal,
   StartStep,
-  BasicsStep,
+  ScheduleModeStep,
   ScheduleStep,
   GroupsStep,
   ProgressionStep,
@@ -123,27 +123,22 @@ export function CycleWizard({
           />
         )}
 
-        {currentStep === 'basics' && (
-          <BasicsStep
-            name={name}
-            setName={setName}
-            numberOfWeeks={numberOfWeeks}
-            setNumberOfWeeks={setNumberOfWeeks}
-            workoutDaysPerWeek={workoutDaysPerWeek}
-            setWorkoutDaysPerWeek={setWorkoutDaysPerWeek}
-          />
+        {currentStep === 'schedule_mode' && (
+          <ScheduleModeStep schedulingMode={schedulingMode} onSelectMode={setSchedulingMode} />
         )}
 
         {currentStep === 'schedule' && (
           <ScheduleStep
+            name={name}
+            setName={setName}
             schedulingMode={schedulingMode}
-            setSchedulingMode={setSchedulingMode}
             selectedDays={selectedDays}
             setSelectedDays={setSelectedDays}
             workoutDaysPerWeek={workoutDaysPerWeek}
             setWorkoutDaysPerWeek={setWorkoutDaysPerWeek}
-            startDate={startDate}
             numberOfWeeks={numberOfWeeks}
+            setNumberOfWeeks={setNumberOfWeeks}
+            startDate={startDate}
           />
         )}
 
@@ -217,7 +212,7 @@ export function CycleWizard({
           isCreating={isCreating}
           isEditing={!!editCycle}
           onBack={
-            currentStep === 'basics' && !editCycle
+            currentStep === 'schedule_mode' && !editCycle
               ? initialProgressionMode
                 ? onCancel // Exit wizard if came from cycle type selector
                 : () => setCurrentStep('start') // Go to start step if started fresh

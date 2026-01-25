@@ -19,11 +19,11 @@ export function WizardNavigation({
   onSubmit,
 }: WizardNavigationProps) {
   const isReviewStep = currentStep === 'review';
-  const isBasicsStep = currentStep === 'basics';
+  const isScheduleModeStep = currentStep === 'schedule_mode';
 
   return (
     <div className="flex gap-3 p-4 border-t border-gray-200 dark:border-dark-border">
-      {isBasicsStep ? (
+      {isScheduleModeStep ? (
         <Button variant="secondary" onClick={onCancel} className="flex-1">
           {isEditing ? (
             'Cancel'
