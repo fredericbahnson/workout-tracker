@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type ReactNode, type KeyboardEvent } from 'react';
+import { useState, useRef, useCallback, memo, type ReactNode, type KeyboardEvent } from 'react';
 import { CheckCircle, X } from 'lucide-react';
 import {
   SWIPE_THRESHOLD,
@@ -35,7 +35,7 @@ function calculateSwipeTranslation(diff: number): number {
   return diff;
 }
 
-export function SwipeableSetCard({
+export const SwipeableSetCard = memo(function SwipeableSetCard({
   children,
   onSwipeRight,
   onSwipeLeft,
@@ -270,4 +270,4 @@ export function SwipeableSetCard({
       </div>
     </div>
   );
-}
+});

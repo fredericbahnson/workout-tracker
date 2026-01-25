@@ -130,7 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: 'https://fredericbahnson.com/ascend/confirm',
+        emailRedirectTo:
+          import.meta.env.VITE_EMAIL_REDIRECT_URL || 'https://fredericbahnson.com/ascend/confirm',
       },
     });
 
@@ -243,7 +244,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: 'https://fredericbahnson.com/ascend/confirm',
+        emailRedirectTo:
+          import.meta.env.VITE_EMAIL_REDIRECT_URL || 'https://fredericbahnson.com/ascend/confirm',
       },
     });
 

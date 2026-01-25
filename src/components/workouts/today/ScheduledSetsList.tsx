@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, Edit2 } from 'lucide-react';
 import { SwipeableSetCard } from '@/components/workouts/SwipeableSetCard';
 import { getWeightUnitLabel } from '@/constants';
@@ -47,7 +48,7 @@ interface ScheduledSetsListProps {
  * Remaining sets are swipeable (right to complete, left to skip).
  * Completed sets are tappable to edit.
  */
-export function ScheduledSetsList({
+export const ScheduledSetsList = memo(function ScheduledSetsList({
   groupedSetsRemaining,
   groupedSetsCompleted,
   exerciseMap,
@@ -251,4 +252,4 @@ export function ScheduledSetsList({
       )}
     </>
   );
-}
+});

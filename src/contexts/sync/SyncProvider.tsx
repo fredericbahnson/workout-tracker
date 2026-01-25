@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import { SyncService, type SyncStatus } from '@/services/syncService';
 import { useAuth } from '../auth';
 import { createScopedLogger } from '@/utils/logger';
@@ -13,6 +13,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [lastError, setLastError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [queueCount, setQueueCount] = useState(0);
+
+  // Use ref to track syncing state to avoid stale closure in useCallback
+  const isSyncingRef = useRef(false);
 
   // Update queue count
   const updateQueueCount = useCallback(async () => {
@@ -130,8 +133,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // Manual sync function
   const sync = useCallback(async () => {
-    if (!user || !isConfigured || isSyncing) return;
+    if (!user || !isConfigured || isSyncingRef.current) return;
 
+    isSyncingRef.current = true;
     setIsSyncing(true);
     setLastError(null);
     try {
@@ -145,9 +149,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       log.error(err as Error);
       setLastError(err instanceof Error ? err.message : 'Sync failed');
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [user, isConfigured, isSyncing, updateQueueCount]);
+  }, [user, isConfigured, updateQueueCount]);
 
   return (
     <SyncContext.Provider value={{ status, lastSyncTime, lastError, sync, isSyncing, queueCount }}>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { isToday } from '@/utils';
 import type { ScheduledWorkout } from '@/types';
@@ -10,7 +10,7 @@ interface WorkoutCalendarProps {
   onSelectDate: (date: Date, workouts: ScheduledWorkout[]) => void;
 }
 
-export function WorkoutCalendar({
+export const WorkoutCalendar = memo(function WorkoutCalendar({
   workouts,
   scheduledWorkouts = [],
   onSelectDate,
@@ -223,4 +223,4 @@ export function WorkoutCalendar({
       </div>
     </div>
   );
-}
+});

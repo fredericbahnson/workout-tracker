@@ -37,6 +37,34 @@ import {
 
 const log = createScopedLogger('SyncService');
 
+// Transform local item to remote format based on table type
+function transformLocalToRemote(
+  table:
+    | 'exercises'
+    | 'max_records'
+    | 'completed_sets'
+    | 'cycles'
+    | 'scheduled_workouts'
+    | 'user_preferences',
+  item: unknown,
+  userId: string
+) {
+  switch (table) {
+    case 'exercises':
+      return localToRemoteExercise(item as Exercise, userId);
+    case 'max_records':
+      return localToRemoteMaxRecord(item as MaxRecord, userId);
+    case 'completed_sets':
+      return localToRemoteCompletedSet(item as CompletedSet, userId);
+    case 'cycles':
+      return localToRemoteCycle(item as Cycle, userId);
+    case 'scheduled_workouts':
+      return localToRemoteScheduledWorkout(item as ScheduledWorkout, userId);
+    case 'user_preferences':
+      return localToRemoteUserPreferences(item as UserPreferences, userId);
+  }
+}
+
 // Track sync status
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
 
@@ -385,28 +413,7 @@ export const SyncService = {
     }
 
     try {
-      let remoteItem;
-      switch (table) {
-        case 'exercises':
-          remoteItem = localToRemoteExercise(item as Exercise, userId);
-          break;
-        case 'max_records':
-          remoteItem = localToRemoteMaxRecord(item as MaxRecord, userId);
-          break;
-        case 'completed_sets':
-          remoteItem = localToRemoteCompletedSet(item as CompletedSet, userId);
-          break;
-        case 'cycles':
-          remoteItem = localToRemoteCycle(item as Cycle, userId);
-          break;
-        case 'scheduled_workouts':
-          remoteItem = localToRemoteScheduledWorkout(item as ScheduledWorkout, userId);
-          break;
-        case 'user_preferences':
-          remoteItem = localToRemoteUserPreferences(item as UserPreferences, userId);
-          break;
-      }
-
+      const remoteItem = transformLocalToRemote(table, item, userId);
       await supabase.from(table).upsert(remoteItem, { onConflict: 'id' });
     } catch (error) {
       log.error(error as Error, { operation: 'sync', table });
@@ -566,30 +573,7 @@ export const SyncService = {
 
       try {
         if (queueItem.operation === 'upsert' && queueItem.data) {
-          let remoteItem;
-          switch (queueItem.table) {
-            case 'exercises':
-              remoteItem = localToRemoteExercise(queueItem.data as Exercise, userId);
-              break;
-            case 'max_records':
-              remoteItem = localToRemoteMaxRecord(queueItem.data as MaxRecord, userId);
-              break;
-            case 'completed_sets':
-              remoteItem = localToRemoteCompletedSet(queueItem.data as CompletedSet, userId);
-              break;
-            case 'cycles':
-              remoteItem = localToRemoteCycle(queueItem.data as Cycle, userId);
-              break;
-            case 'scheduled_workouts':
-              remoteItem = localToRemoteScheduledWorkout(
-                queueItem.data as ScheduledWorkout,
-                userId
-              );
-              break;
-            case 'user_preferences':
-              remoteItem = localToRemoteUserPreferences(queueItem.data as UserPreferences, userId);
-              break;
-          }
+          const remoteItem = transformLocalToRemote(queueItem.table, queueItem.data, userId);
           await supabase.from(queueItem.table).upsert(remoteItem, { onConflict: 'id' });
         } else if (queueItem.operation === 'delete') {
           await supabase

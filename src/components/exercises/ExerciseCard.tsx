@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { Card, Badge } from '@/components/ui';
@@ -10,7 +11,11 @@ interface ExerciseCardProps {
   onClick?: () => void;
 }
 
-export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps) {
+export const ExerciseCard = memo(function ExerciseCard({
+  exercise,
+  latestMax,
+  onClick,
+}: ExerciseCardProps) {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -107,4 +112,4 @@ export function ExerciseCard({ exercise, latestMax, onClick }: ExerciseCardProps
       </div>
     </Card>
   );
-}
+});

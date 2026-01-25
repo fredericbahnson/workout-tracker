@@ -148,20 +148,23 @@ export function SchedulePage() {
     return summary;
   }, []);
 
-  const handleWorkoutClick = (workout: ScheduledWorkout) => setPreviewWorkout(workout);
+  const handleWorkoutClick = useCallback(
+    (workout: ScheduledWorkout) => setPreviewWorkout(workout),
+    []
+  );
 
-  const handleHistoryClick = async (workout: ScheduledWorkout) => {
+  const handleHistoryClick = useCallback(async (workout: ScheduledWorkout) => {
     const sets = await CompletedSetRepo.getForScheduledWorkout(workout.id);
     setHistoryCompletedSets(sets);
     setHistoryWorkout(workout);
-  };
+  }, []);
 
-  const handleCalendarDateSelect = (date: Date, workouts: ScheduledWorkout[]) => {
+  const handleCalendarDateSelect = useCallback((date: Date, workouts: ScheduledWorkout[]) => {
     setSelectedCalendarDate(date);
     setSelectedDateWorkouts(workouts);
-  };
+  }, []);
 
-  const handleDeleteWorkout = async () => {
+  const handleDeleteWorkout = useCallback(async () => {
     if (!workoutToDelete) return;
     setIsDeleting(true);
     try {
@@ -175,9 +178,9 @@ export function SchedulePage() {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [workoutToDelete, deleteItem]);
 
-  const handleStartAdHocWorkout = async () => {
+  const handleStartAdHocWorkout = useCallback(async () => {
     if (!activeCycle) return;
 
     // Count existing ad-hoc workouts in this cycle
@@ -208,7 +211,7 @@ export function SchedulePage() {
 
     await syncItem('scheduled_workouts', adHocWorkout);
     navigate('/');
-  };
+  }, [activeCycle, syncItem, navigate]);
 
   // Empty state
   if (!activeCycle) {

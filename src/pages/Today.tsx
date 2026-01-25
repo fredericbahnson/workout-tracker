@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell, Trophy, Target, Calendar, AlertTriangle } from 'lucide-react';
@@ -210,40 +210,46 @@ export function TodayPage() {
     [displayWorkout?.scheduledSets, completedScheduledSetIds]
   );
 
-  // Helper functions
-  const getTargetReps = (set: ScheduledSet, workout: ScheduledWorkout): number => {
-    if (!activeCycle) return 0;
-    const maxRecord = maxRecords?.get(set.exerciseId);
-    return calculateTargetReps(
-      set,
-      workout,
-      maxRecord,
-      activeCycle.conditioningWeeklyRepIncrement,
-      activeCycle.conditioningWeeklyTimeIncrement || 5,
-      preferences.defaultMaxReps,
-      activeCycle
-    );
-  };
+  // Helper functions - memoized to prevent unnecessary re-renders
+  const getTargetReps = useCallback(
+    (set: ScheduledSet, workout: ScheduledWorkout): number => {
+      if (!activeCycle) return 0;
+      const maxRecord = maxRecords?.get(set.exerciseId);
+      return calculateTargetReps(
+        set,
+        workout,
+        maxRecord,
+        activeCycle.conditioningWeeklyRepIncrement,
+        activeCycle.conditioningWeeklyTimeIncrement || 5,
+        preferences.defaultMaxReps,
+        activeCycle
+      );
+    },
+    [activeCycle, maxRecords, preferences.defaultMaxReps]
+  );
 
-  const getTargetWeight = (set: ScheduledSet, workout: ScheduledWorkout): number | undefined => {
-    if (!activeCycle) return undefined;
+  const getTargetWeight = useCallback(
+    (set: ScheduledSet, workout: ScheduledWorkout): number | undefined => {
+      if (!activeCycle) return undefined;
 
-    const cycleMode = getProgressionMode(activeCycle);
-    // For mixed mode, check the per-exercise mode; otherwise use cycle mode
-    const effectiveMode = cycleMode === 'mixed' ? set.progressionMode || 'rfem' : cycleMode;
+      const cycleMode = getProgressionMode(activeCycle);
+      // For mixed mode, check the per-exercise mode; otherwise use cycle mode
+      const effectiveMode = cycleMode === 'mixed' ? set.progressionMode || 'rfem' : cycleMode;
 
-    if (effectiveMode === 'simple') {
-      return calculateSimpleTargetWeight(set, workout, activeCycle);
-    }
+      if (effectiveMode === 'simple') {
+        return calculateSimpleTargetWeight(set, workout, activeCycle);
+      }
 
-    // For RFEM mode, return exercise.defaultWeight if weightEnabled
-    const exercise = exerciseMap.get(set.exerciseId);
-    if (exercise?.weightEnabled && exercise.defaultWeight) {
-      return exercise.defaultWeight;
-    }
+      // For RFEM mode, return exercise.defaultWeight if weightEnabled
+      const exercise = exerciseMap.get(set.exerciseId);
+      if (exercise?.weightEnabled && exercise.defaultWeight) {
+        return exercise.defaultWeight;
+      }
 
-    return undefined;
-  };
+      return undefined;
+    },
+    [activeCycle, exerciseMap]
+  );
 
   const groupSetsByType = useMemo(
     () => (sets: ScheduledSet[]) => {
@@ -291,14 +297,14 @@ export function TodayPage() {
     [adHocCompletedSets, exerciseMap]
   );
 
-  // Event handlers
-  const handleSkipWorkout = async () => {
+  // Event handlers - memoized to prevent unnecessary re-renders of child components
+  const handleSkipWorkout = useCallback(async () => {
     if (!nextPendingWorkout) return;
     await ScheduledWorkoutRepo.updateStatus(nextPendingWorkout.id, 'skipped');
     modals.closeSkipWorkoutConfirm();
-  };
+  }, [nextPendingWorkout, modals]);
 
-  const handleEndWorkout = async () => {
+  const handleEndWorkout = useCallback(async () => {
     if (!displayWorkout || isShowingCompletedWorkout) return;
     const status = scheduledSetsCompleted.length > 0 ? 'partial' : 'skipped';
     await ScheduledWorkoutRepo.updateStatus(
@@ -307,63 +313,86 @@ export function TodayPage() {
     );
     if (status === 'partial') markWorkoutCompleted(displayWorkout.id);
     modals.closeEndWorkoutConfirm();
-  };
+  }, [
+    displayWorkout,
+    isShowingCompletedWorkout,
+    scheduledSetsCompleted.length,
+    markWorkoutCompleted,
+    modals,
+  ]);
 
-  const handleSelectScheduledSet = (set: ScheduledSet) => {
-    if (!displayWorkout || isShowingCompletedWorkout) return;
-    const exercise = exerciseMap.get(set.exerciseId);
-    if (exercise) {
-      const targetReps = set.isMaxTest
-        ? set.previousMaxReps || 0
-        : getTargetReps(set, displayWorkout);
-      const targetWeight = getTargetWeight(set, displayWorkout);
-      modals.openScheduledSetModal({ set, workout: displayWorkout, targetReps, targetWeight });
-    }
-  };
-
-  const handleQuickComplete = async (set: ScheduledSet) => {
-    if (!displayWorkout || isShowingCompletedWorkout) return;
-    if (set.isMaxTest) {
-      handleSelectScheduledSet(set);
-      return;
-    }
-
-    const targetReps = getTargetReps(set, displayWorkout);
-    await CompletedSetRepo.createFromScheduled(
-      set.id,
-      displayWorkout.id,
-      set.exerciseId,
-      targetReps,
-      targetReps,
-      '',
-      {}
-    );
-
-    // Query actual count from DB to avoid race conditions with React state
-    const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
-      displayWorkout.id
-    );
-    if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
-      await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-      markWorkoutCompleted(displayWorkout.id);
-    } else {
-      await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-      if (preferences.restTimer.enabled) {
-        const duration = set.isWarmup
-          ? Math.round(preferences.restTimer.durationSeconds * 0.5)
-          : preferences.restTimer.durationSeconds;
-        modals.openRestTimer(duration);
+  const handleSelectScheduledSet = useCallback(
+    (set: ScheduledSet) => {
+      if (!displayWorkout || isShowingCompletedWorkout) return;
+      const exercise = exerciseMap.get(set.exerciseId);
+      if (exercise) {
+        const targetReps = set.isMaxTest
+          ? set.previousMaxReps || 0
+          : getTargetReps(set, displayWorkout);
+        const targetWeight = getTargetWeight(set, displayWorkout);
+        modals.openScheduledSetModal({ set, workout: displayWorkout, targetReps, targetWeight });
       }
-    }
-  };
+    },
+    [displayWorkout, isShowingCompletedWorkout, exerciseMap, getTargetReps, getTargetWeight, modals]
+  );
 
-  const handleInitiateSkipSet = (set: ScheduledSet) => {
-    if (!displayWorkout || isShowingCompletedWorkout) return;
-    const targetReps = getTargetReps(set, displayWorkout);
-    modals.openSkipSetConfirm({ set, workout: displayWorkout, targetReps });
-  };
+  const handleQuickComplete = useCallback(
+    async (set: ScheduledSet) => {
+      if (!displayWorkout || isShowingCompletedWorkout) return;
+      if (set.isMaxTest) {
+        handleSelectScheduledSet(set);
+        return;
+      }
 
-  const handleConfirmSkipSet = async () => {
+      const targetReps = getTargetReps(set, displayWorkout);
+      await CompletedSetRepo.createFromScheduled(
+        set.id,
+        displayWorkout.id,
+        set.exerciseId,
+        targetReps,
+        targetReps,
+        '',
+        {}
+      );
+
+      // Query actual count from DB to avoid race conditions with React state
+      const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
+        displayWorkout.id
+      );
+      if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
+        await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+        markWorkoutCompleted(displayWorkout.id);
+      } else {
+        await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+        if (preferences.restTimer.enabled) {
+          const duration = set.isWarmup
+            ? Math.round(preferences.restTimer.durationSeconds * 0.5)
+            : preferences.restTimer.durationSeconds;
+          modals.openRestTimer(duration);
+        }
+      }
+    },
+    [
+      displayWorkout,
+      isShowingCompletedWorkout,
+      getTargetReps,
+      handleSelectScheduledSet,
+      markWorkoutCompleted,
+      preferences.restTimer,
+      modals,
+    ]
+  );
+
+  const handleInitiateSkipSet = useCallback(
+    (set: ScheduledSet) => {
+      if (!displayWorkout || isShowingCompletedWorkout) return;
+      const targetReps = getTargetReps(set, displayWorkout);
+      modals.openSkipSetConfirm({ set, workout: displayWorkout, targetReps });
+    },
+    [displayWorkout, isShowingCompletedWorkout, getTargetReps, modals]
+  );
+
+  const handleConfirmSkipSet = useCallback(async () => {
     if (!modals.setToSkip || !displayWorkout) return;
 
     await CompletedSetRepo.createFromScheduled(
@@ -387,25 +416,29 @@ export function TodayPage() {
       await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
     }
     modals.closeSkipSetConfirm();
-  };
+  }, [modals, displayWorkout, markWorkoutCompleted]);
 
-  const handleEditCompletedSet = (
-    completedSet: NonNullable<typeof workoutCompletedSets>[number]
-  ) => {
-    const exercise = exerciseMap.get(completedSet.exerciseId);
-    if (exercise) modals.openEditCompletedSet({ completedSet, exercise });
-  };
+  const handleEditCompletedSet = useCallback(
+    (completedSet: NonNullable<typeof workoutCompletedSets>[number]) => {
+      const exercise = exerciseMap.get(completedSet.exerciseId);
+      if (exercise) modals.openEditCompletedSet({ completedSet, exercise });
+    },
+    [exerciseMap, modals]
+  );
 
-  const handleSaveEditedSet = async (reps: number, weight: number | undefined, notes: string) => {
-    if (!modals.editingCompletedSet) return;
-    await CompletedSetRepo.update(modals.editingCompletedSet.completedSet.id, {
-      actualReps: reps,
-      weight,
-      notes,
-    });
-  };
+  const handleSaveEditedSet = useCallback(
+    async (reps: number, weight: number | undefined, notes: string) => {
+      if (!modals.editingCompletedSet) return;
+      await CompletedSetRepo.update(modals.editingCompletedSet.completedSet.id, {
+        actualReps: reps,
+        weight,
+        notes,
+      });
+    },
+    [modals.editingCompletedSet]
+  );
 
-  const handleDeleteCompletedSet = async () => {
+  const handleDeleteCompletedSet = useCallback(async () => {
     if (!modals.editingCompletedSet) return;
     await CompletedSetRepo.delete(modals.editingCompletedSet.completedSet.id);
 
@@ -417,84 +450,95 @@ export function TodayPage() {
         await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
       }
     }
-  };
+  }, [modals.editingCompletedSet, displayWorkout, workoutCompletedSets?.length]);
 
-  const handleLogSet = async (
-    reps: number,
-    notes: string,
-    parameters: Record<string, string | number>,
-    weight?: number
-  ) => {
-    modals.setIsLogging(true);
-    let shouldShowTimer = false;
-    let timerDuration = preferences.restTimer.durationSeconds;
+  const handleLogSet = useCallback(
+    async (
+      reps: number,
+      notes: string,
+      parameters: Record<string, string | number>,
+      weight?: number
+    ) => {
+      modals.setIsLogging(true);
+      let shouldShowTimer = false;
+      let timerDuration = preferences.restTimer.durationSeconds;
 
-    try {
-      if (modals.selectedScheduledSet) {
-        const { set, workout, targetReps } = modals.selectedScheduledSet;
+      try {
+        if (modals.selectedScheduledSet) {
+          const { set, workout, targetReps } = modals.selectedScheduledSet;
 
-        await CompletedSetRepo.createFromScheduled(
-          set.id,
-          workout.id,
-          set.exerciseId,
-          targetReps,
-          reps,
-          notes,
-          parameters,
-          weight
-        );
-
-        if (set.isMaxTest && reps > 0) {
-          const exercise = exerciseMap.get(set.exerciseId);
-          const isTimeBased = exercise?.measurementType === 'time';
-          const newMaxRecord = await MaxRecordRepo.create(
+          await CompletedSetRepo.createFromScheduled(
+            set.id,
+            workout.id,
             set.exerciseId,
-            isTimeBased ? undefined : reps,
-            isTimeBased ? reps : undefined,
-            'Max test result',
+            targetReps,
+            reps,
+            notes,
+            parameters,
             weight
           );
-          await syncItem('max_records', newMaxRecord);
-        }
 
-        // Query actual count from DB to avoid race conditions with React state
-        const totalSets = displayWorkout?.scheduledSets.length || 0;
-        const actualCompletedCount = displayWorkout
-          ? await CompletedSetRepo.countCompletedScheduledSets(displayWorkout.id)
-          : 0;
+          if (set.isMaxTest && reps > 0) {
+            const exercise = exerciseMap.get(set.exerciseId);
+            const isTimeBased = exercise?.measurementType === 'time';
+            const newMaxRecord = await MaxRecordRepo.create(
+              set.exerciseId,
+              isTimeBased ? undefined : reps,
+              isTimeBased ? reps : undefined,
+              'Max test result',
+              weight
+            );
+            await syncItem('max_records', newMaxRecord);
+          }
 
-        if (actualCompletedCount >= totalSets && displayWorkout) {
-          await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-          markWorkoutCompleted(displayWorkout.id);
-        } else if (actualCompletedCount > 0 && displayWorkout) {
-          await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-          if (set.isMaxTest && preferences.maxTestRestTimer.enabled) {
+          // Query actual count from DB to avoid race conditions with React state
+          const totalSets = displayWorkout?.scheduledSets.length || 0;
+          const actualCompletedCount = displayWorkout
+            ? await CompletedSetRepo.countCompletedScheduledSets(displayWorkout.id)
+            : 0;
+
+          if (actualCompletedCount >= totalSets && displayWorkout) {
+            await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+            markWorkoutCompleted(displayWorkout.id);
+          } else if (actualCompletedCount > 0 && displayWorkout) {
+            await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+            if (set.isMaxTest && preferences.maxTestRestTimer.enabled) {
+              shouldShowTimer = true;
+              timerDuration = preferences.maxTestRestTimer.durationSeconds;
+            } else if (!set.isMaxTest && preferences.restTimer.enabled) {
+              shouldShowTimer = true;
+              timerDuration = set.isWarmup
+                ? Math.round(preferences.restTimer.durationSeconds * 0.5)
+                : preferences.restTimer.durationSeconds;
+            }
+          }
+          modals.closeScheduledSetModal();
+        } else if (modals.selectedExercise) {
+          await CompletedSetRepo.create(
+            { exerciseId: modals.selectedExercise.id, reps, weight, notes, parameters },
+            displayWorkout?.id
+          );
+          modals.clearSelectedExercise();
+          if (preferences.restTimer.enabled) {
             shouldShowTimer = true;
-            timerDuration = preferences.maxTestRestTimer.durationSeconds;
-          } else if (!set.isMaxTest && preferences.restTimer.enabled) {
-            shouldShowTimer = true;
-            timerDuration = set.isWarmup
-              ? Math.round(preferences.restTimer.durationSeconds * 0.5)
-              : preferences.restTimer.durationSeconds;
+            timerDuration = preferences.restTimer.durationSeconds;
           }
         }
-        modals.closeScheduledSetModal();
-      } else if (modals.selectedExercise) {
-        await CompletedSetRepo.create(
-          { exerciseId: modals.selectedExercise.id, reps, weight, notes, parameters },
-          displayWorkout?.id
-        );
-        modals.clearSelectedExercise();
-        if (preferences.restTimer.enabled) {
-          shouldShowTimer = true;
-          timerDuration = preferences.restTimer.durationSeconds;
-        }
+      } finally {
+        modals.setIsLogging(false);
+        if (shouldShowTimer) modals.openRestTimer(timerDuration);
       }
-    } finally {
-      modals.setIsLogging(false);
-      if (shouldShowTimer) modals.openRestTimer(timerDuration);
-    }
-  };
+    },
+    [
+      modals,
+      preferences.restTimer,
+      preferences.maxTestRestTimer,
+      exerciseMap,
+      syncItem,
+      displayWorkout,
+      markWorkoutCompleted,
+    ]
+  );
 
   const currentGroup = activeCycle?.groups.find(g => g.id === displayWorkout?.groupId);
 
@@ -504,16 +548,19 @@ export function TodayPage() {
     ? activeCycle?.groups.find(g => g.id === overdueWorkout.groupId)?.name
     : undefined;
 
-  const handleDoOverdueWorkout = () => {
+  const handleDoOverdueWorkout = useCallback(() => {
     // Close modal - the overdue workout will become the next pending workout
     setShowOverdueModal(false);
-  };
+  }, []);
 
-  const handleSkipOverdueWorkout = async (reason?: string) => {
-    if (!overdueWorkout) return;
-    await ScheduledWorkoutRepo.updateSkipReason(overdueWorkout.id, reason);
-    setShowOverdueModal(false);
-  };
+  const handleSkipOverdueWorkout = useCallback(
+    async (reason?: string) => {
+      if (!overdueWorkout) return;
+      await ScheduledWorkoutRepo.updateSkipReason(overdueWorkout.id, reason);
+      setShowOverdueModal(false);
+    },
+    [overdueWorkout]
+  );
 
   // Get group name for next scheduled workout (for rest day card)
   const nextScheduledGroupName = scheduledStatus.nextScheduledWorkout
