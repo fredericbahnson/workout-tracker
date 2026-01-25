@@ -14,14 +14,75 @@ interface TrialBannerProps {
 }
 
 export function TrialBanner({ variant = 'compact', className = '' }: TrialBannerProps) {
-  const { trial, purchase, showPaywall } = useEntitlement();
+  const { trial, purchase, canUseTrialForAdvanced, showPaywall } = useEntitlement();
 
-  // Don't show if user has a purchase
-  if (purchase) {
+  // Don't show if user has advanced purchase (they have full access)
+  if (purchase?.tier === 'advanced') {
     return null;
   }
 
-  // Trial active
+  // Standard purchaser with active trial - show trial days for advanced features
+  if (purchase?.tier === 'standard' && trial.isActive && canUseTrialForAdvanced) {
+    if (variant === 'compact') {
+      return (
+        <button
+          onClick={() => showPaywall('advanced', 'standard_can_use_trial')}
+          className={`
+            flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
+            transition-colors
+            bg-purple-100 text-purple-700 hover:bg-purple-200
+            dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30
+            ${className}
+          `}
+        >
+          <Clock className="w-3 h-3" />
+          <span>
+            {trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} Advanced trial
+          </span>
+        </button>
+      );
+    }
+
+    // Full variant for standard purchasers
+    return (
+      <div
+        className={`
+          rounded-lg p-4
+          bg-purple-50 border border-purple-200
+          dark:bg-purple-900/30 dark:border-purple-600/30
+          ${className}
+        `}
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/30 flex items-center justify-center flex-shrink-0">
+            <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-medium text-purple-800 dark:text-purple-200">
+              Advanced Trial Available
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} left to try Advanced
+              features like Simple and Mixed cycles.
+            </p>
+            <button
+              onClick={() => showPaywall('advanced', 'standard_can_use_trial')}
+              className="mt-3 px-4 py-1.5 bg-purple-500 hover:bg-purple-600 text-white font-medium text-sm rounded-lg transition-colors"
+            >
+              Try Advanced
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't show for standard purchasers with expired trial
+  if (purchase?.tier === 'standard') {
+    return null;
+  }
+
+  // Trial active (no purchase)
   if (trial.isActive) {
     const isEnding = trial.daysRemaining <= 7;
 
