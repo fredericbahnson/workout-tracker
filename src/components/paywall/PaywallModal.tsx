@@ -27,8 +27,12 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
 
   // State for IAP
   const [offerings, setOfferings] = useState<OfferingInfo[] | null>(null);
+  const [upgradeOfferings, setUpgradeOfferings] = useState<OfferingInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if user has standard subscription (eligible for upgrade pricing)
+  const isStandardSubscriber = purchase?.tier === 'standard';
 
   // Check if user has paid for Advanced but is in Standard mode
   // They just need to switch app mode, no purchase needed
@@ -85,13 +89,19 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
         try {
           const result = await iapService.getOfferings();
           setOfferings(result);
+
+          // Load upgrade offerings for standard subscribers
+          if (purchase?.tier === 'standard') {
+            const upgradeResult = await iapService.getUpgradeOfferings();
+            setUpgradeOfferings(upgradeResult);
+          }
         } catch {
           // Offerings failed to load - will show placeholder prices
         }
       };
       loadOfferings();
     }
-  }, [isOpen, isNativePlatform]);
+  }, [isOpen, isNativePlatform, purchase?.tier]);
 
   // Handle purchase
   const handlePurchase = async (packageId: string) => {
@@ -149,6 +159,13 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
       if (pkg) return pkg.priceString;
     }
     return null;
+  };
+
+  // Get upgrade price for standard subscribers
+  const getUpgradePrice = (): string | null => {
+    if (!upgradeOfferings) return null;
+    const pkg = upgradeOfferings.packages.find(p => p.identifier === 'upgrade');
+    return pkg?.priceString || null;
   };
 
   // Handle switching to advanced mode (for users who already purchased)
@@ -321,9 +338,11 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                 <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">Advanced</h3>
                 <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded ml-auto">
-                  {isNativePlatform && getPackagePrice('advanced')
-                    ? getPackagePrice('advanced')
-                    : 'Full Access'}
+                  {isNativePlatform && isStandardSubscriber && getUpgradePrice()
+                    ? getUpgradePrice()
+                    : isNativePlatform && getPackagePrice('advanced')
+                      ? getPackagePrice('advanced')
+                      : 'Full Access'}
                 </span>
               </div>
               <ul className="space-y-2 text-sm mb-4">
@@ -339,16 +358,38 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                 </FeatureItem>
               </ul>
               {isNativePlatform && (
-                <Button
-                  onClick={() => handlePurchase('advanced')}
-                  className="w-full"
-                  variant="primary"
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  {reason === 'standard_only' ? 'Upgrade to Advanced' : 'Purchase Advanced'}{' '}
-                  {getPackagePrice('advanced') ? `(${getPackagePrice('advanced')})` : ''}
-                </Button>
+                <>
+                  {isStandardSubscriber && getUpgradePrice() ? (
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => handlePurchase('upgrade')}
+                        className="w-full"
+                        variant="primary"
+                        disabled={loading}
+                      >
+                        {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                        Upgrade to Advanced ({getUpgradePrice()})
+                      </Button>
+                      <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                        <span className="line-through">{getPackagePrice('advanced')}</span>
+                        {' — '}Save with upgrade pricing!
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => handlePurchase('advanced')}
+                      className="w-full"
+                      variant="primary"
+                      disabled={loading}
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      {reason === 'standard_only'
+                        ? 'Upgrade to Advanced'
+                        : 'Purchase Advanced'}{' '}
+                      {getPackagePrice('advanced') ? `(${getPackagePrice('advanced')})` : ''}
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -389,14 +430,18 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
               </Button>
               {isNativePlatform && (
                 <Button
-                  onClick={() => handlePurchase('advanced')}
+                  onClick={() => handlePurchase(getUpgradePrice() ? 'upgrade' : 'advanced')}
                   className="w-full"
                   variant="secondary"
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                   Upgrade to Advanced{' '}
-                  {getPackagePrice('advanced') ? `(${getPackagePrice('advanced')})` : ''}
+                  {getUpgradePrice()
+                    ? `(${getUpgradePrice()})`
+                    : getPackagePrice('advanced')
+                      ? `(${getPackagePrice('advanced')})`
+                      : ''}
                 </Button>
               )}
             </>

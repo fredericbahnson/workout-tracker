@@ -127,6 +127,30 @@ class IAPService {
   }
 
   /**
+   * Get upgrade offerings for standard subscribers.
+   * Returns the 'upgrade_to_advanced' offering if available.
+   */
+  async getUpgradeOfferings(): Promise<OfferingInfo | null> {
+    if (!this.isAvailable() || !this.purchases) {
+      return null;
+    }
+
+    try {
+      const offerings = await this.purchases.getOfferings();
+
+      // Look for upgrade-specific offering
+      if (offerings.all?.['upgrade_to_advanced']) {
+        return this.mapSingleOffering(offerings.all['upgrade_to_advanced']);
+      }
+
+      return null;
+    } catch (error) {
+      log.error('Failed to get upgrade offerings', { error });
+      return null;
+    }
+  }
+
+  /**
    * Execute a purchase for the given package ID.
    */
   async purchase(packageId: string): Promise<PurchaseInfo | null> {
