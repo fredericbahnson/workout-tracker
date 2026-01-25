@@ -8,7 +8,8 @@ export function AppearanceSection() {
   const { theme, setTheme } = useThemeEffect();
   const { fontSize, setFontSize } = useAppStore();
   const { preferences, setAppMode } = useSyncedPreferences();
-  const { canAccessAdvanced, showPaywall, purchase, trial } = useEntitlement();
+  const { canAccessAdvanced, canUseTrialForAdvanced, showPaywall, purchase, trial } =
+    useEntitlement();
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     // setTheme will trigger the effect in useThemeEffect to apply the theme
@@ -121,8 +122,9 @@ export function AppearanceSection() {
                 if (canAccessAdvanced) {
                   setAppMode('advanced');
                 } else {
-                  const reason =
-                    purchase?.tier === 'standard'
+                  const reason = canUseTrialForAdvanced
+                    ? 'standard_can_use_trial'
+                    : purchase?.tier === 'standard'
                       ? 'standard_only'
                       : trial.hasExpired
                         ? 'trial_expired'

@@ -15,7 +15,8 @@ export function CycleTypeSelector({
   onCancel,
 }: CycleTypeSelectorProps) {
   const { preferences } = useSyncedPreferences();
-  const { canAccessAdvanced, showPaywall, trial, purchase } = useEntitlement();
+  const { canAccessAdvanced, canUseTrialForAdvanced, showPaywall, trial, purchase } =
+    useEntitlement();
 
   // User can access advanced features if:
   // 1. They have an Advanced purchase, OR
@@ -27,9 +28,10 @@ export function CycleTypeSelector({
   // Handler for locked options
   const handleLockedClick = () => {
     if (!canAccessAdvanced) {
-      // User needs to purchase/subscribe
-      const reason =
-        purchase?.tier === 'standard'
+      // User needs to purchase/subscribe or can use their trial
+      const reason = canUseTrialForAdvanced
+        ? 'standard_can_use_trial'
+        : purchase?.tier === 'standard'
           ? 'standard_only'
           : trial.hasExpired
             ? 'trial_expired'
@@ -37,8 +39,9 @@ export function CycleTypeSelector({
       showPaywall('advanced', reason);
     } else {
       // User has access but is in Standard mode - they can switch in Settings
-      // For now, just show the paywall which explains the tiers
-      showPaywall('advanced', 'standard_only');
+      // Check if they can use trial for advanced
+      const reason = canUseTrialForAdvanced ? 'standard_can_use_trial' : 'standard_only';
+      showPaywall('advanced', reason);
     }
   };
 
