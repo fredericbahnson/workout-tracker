@@ -38,6 +38,7 @@ class IAPService {
   private purchases: Purchases | null = null;
   private initialized = false;
   private isNative: boolean;
+  private currentUserId: string | null = null;
 
   constructor() {
     this.isNative = Capacitor.isNativePlatform();
@@ -83,7 +84,7 @@ class IAPService {
 
   /**
    * Get current purchase info from RevenueCat.
-   * Returns null if no active purchase or not available.
+   * Returns null if no active purchase, not available, or purchase belongs to different user.
    */
   async getPurchaseInfo(): Promise<PurchaseInfo | null> {
     if (!this.isAvailable() || !this.purchases) {
@@ -94,10 +95,20 @@ class IAPService {
     try {
       const { customerInfo } = await this.purchases.getCustomerInfo();
       log.debug('Customer info - ID:', customerInfo.originalAppUserId);
+      log.debug('Customer info - Current user ID:', this.currentUserId);
       log.debug(
         'Customer info - Active entitlements:',
         Object.keys(customerInfo.entitlements.active)
       );
+
+      // SECURITY CHECK: Verify the purchase belongs to the current user
+      if (this.currentUserId && customerInfo.originalAppUserId !== this.currentUserId) {
+        log.debug('Purchase info rejected - belongs to different user', {
+          originalOwner: customerInfo.originalAppUserId,
+          currentUser: this.currentUserId,
+        });
+        return null;
+      }
 
       const purchaseInfo = this.mapCustomerInfoToPurchaseInfo(customerInfo);
       log.debug('Mapped purchase info:', purchaseInfo);
@@ -156,6 +167,7 @@ class IAPService {
 
   /**
    * Restore previous purchases.
+   * Only restores purchases that belong to the current logged-in user.
    */
   async restorePurchases(): Promise<PurchaseInfo | null> {
     if (!this.isAvailable() || !this.purchases) {
@@ -167,6 +179,7 @@ class IAPService {
 
       // Log detailed info for debugging
       log.debug('Restore result - Customer ID:', customerInfo.originalAppUserId);
+      log.debug('Restore result - Current user ID:', this.currentUserId);
       log.debug(
         'Restore result - Active entitlements:',
         Object.keys(customerInfo.entitlements.active)
@@ -175,6 +188,18 @@ class IAPService {
         'Restore result - All entitlements:',
         JSON.stringify(customerInfo.entitlements, null, 2)
       );
+
+      // SECURITY CHECK: Verify the purchase belongs to the current user
+      // This prevents purchases from being transferred between app users
+      // who share the same Apple ID (e.g., on a shared device)
+      if (this.currentUserId && customerInfo.originalAppUserId !== this.currentUserId) {
+        log.debug('Restore rejected - purchase belongs to different user', {
+          originalOwner: customerInfo.originalAppUserId,
+          currentUser: this.currentUserId,
+        });
+        // Return null - no valid purchases for this user
+        return null;
+      }
 
       const purchaseInfo = this.mapCustomerInfoToPurchaseInfo(customerInfo);
       log.debug('Mapped purchase info:', purchaseInfo);
@@ -190,6 +215,8 @@ class IAPService {
    * Associate a Supabase user ID with RevenueCat.
    */
   async setUserId(userId: string): Promise<void> {
+    this.currentUserId = userId;
+
     if (!this.isAvailable() || !this.purchases) {
       return;
     }
@@ -207,6 +234,8 @@ class IAPService {
    * Clear user ID on logout.
    */
   async clearUserId(): Promise<void> {
+    this.currentUserId = null;
+
     if (!this.isAvailable() || !this.purchases) {
       return;
     }
