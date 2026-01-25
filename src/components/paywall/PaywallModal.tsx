@@ -315,8 +315,8 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
 
         {/* Error message */}
         {error && (
-          <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-3">
-            <p className="text-sm text-red-200 text-center">{error}</p>
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-600/50 rounded-lg p-3">
+            <p className="text-sm text-red-700 dark:text-red-200 text-center">{error}</p>
           </div>
         )}
 
