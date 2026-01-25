@@ -42,7 +42,7 @@ export const Input = memo(InputComponent);
 
 // Number input that properly handles empty state during editing
 interface NumberInputProps {
-  label?: string;
+  label?: React.ReactNode;
   value: number;
   onChange: (value: number) => void;
   min?: number;
@@ -98,7 +98,7 @@ export const NumberInput = memo(function NumberInput({
     }
   };
 
-  const inputId = label?.toLowerCase().replace(/\s+/g, '-');
+  const inputId = typeof label === 'string' ? label.toLowerCase().replace(/\s+/g, '-') : undefined;
   const inputClassName = `${inputClasses.base} ${inputClasses.disabled} ${className}`;
 
   // If there's no label, render just the input (for inline use)

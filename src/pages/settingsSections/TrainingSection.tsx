@@ -22,13 +22,25 @@ export function TrainingSection() {
 
           <div className="grid grid-cols-2 gap-4">
             <NumberInput
-              label="Default Max (RFEM)"
+              label={
+                <>
+                  Default Max
+                  <br />
+                  (RFEM)
+                </>
+              }
               value={preferences.defaultMaxReps}
               onChange={v => setDefaultMaxReps(v)}
               min={1}
             />
             <NumberInput
-              label="Default Reps (Conditioning)"
+              label={
+                <>
+                  Default Reps
+                  <br />
+                  (Conditioning)
+                </>
+              }
               value={preferences.defaultConditioningReps}
               onChange={v => setDefaultConditioningReps(v)}
               min={1}
