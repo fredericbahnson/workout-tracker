@@ -11,7 +11,14 @@ export function useGatedAction<T extends (...args: unknown[]) => unknown>(
   requiredTier: PurchaseTier,
   lockReason?: LockReason
 ): T {
-  const { canAccessStandard, canAccessAdvanced, showPaywall, trial } = useEntitlement();
+  const {
+    canAccessStandard,
+    canAccessAdvanced,
+    canUseTrialForAdvanced,
+    showPaywall,
+    trial,
+    purchase,
+  } = useEntitlement();
 
   return useCallback(
     ((...args: Parameters<T>) => {
@@ -23,13 +30,36 @@ export function useGatedAction<T extends (...args: unknown[]) => unknown>(
 
       if (!hasAccess) {
         // Determine reason if not provided
-        const reason = lockReason || (trial.hasExpired ? 'trial_expired' : 'not_purchased');
+        let reason: LockReason;
+        if (lockReason) {
+          reason = lockReason;
+        } else if (requiredTier === 'advanced' && canUseTrialForAdvanced) {
+          // Standard purchaser with active trial can use trial for advanced
+          reason = 'standard_can_use_trial';
+        } else if (requiredTier === 'advanced' && purchase?.tier === 'standard') {
+          // Standard purchaser with expired trial
+          reason = 'standard_only';
+        } else if (trial.hasExpired) {
+          reason = 'trial_expired';
+        } else {
+          reason = 'not_purchased';
+        }
         showPaywall(requiredTier, reason);
         return;
       }
 
       return action(...args);
     }) as T,
-    [action, requiredTier, lockReason, canAccessStandard, canAccessAdvanced, showPaywall, trial]
+    [
+      action,
+      requiredTier,
+      lockReason,
+      canAccessStandard,
+      canAccessAdvanced,
+      canUseTrialForAdvanced,
+      showPaywall,
+      trial,
+      purchase,
+    ]
   );
 }
