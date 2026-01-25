@@ -43,7 +43,9 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
     setIsAuthSubmitting(true);
 
     try {
+      log.debug('Auth submit:', { isSignup, email });
       const result = isSignup ? await signUp(email, password) : await signIn(email, password);
+      log.debug('Auth result:', { error: result.error?.message });
 
       if (result.error) {
         // Check if the error is due to unverified email
@@ -52,6 +54,7 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
           errorMessage.includes('email not confirmed') ||
           errorMessage.includes('not confirmed')
         ) {
+          log.debug('Setting mode to verify (unconfirmed email error)');
           setAuthMode('verify');
           setAuthError(null);
         } else {
@@ -60,6 +63,7 @@ export function AccountSection({ setMessage }: SettingsSectionProps) {
       } else {
         if (isSignup) {
           // Switch to verification screen after successful signup
+          log.debug('Signup successful, setting mode to verify');
           setAuthMode('verify');
           setPassword('');
         } else {
