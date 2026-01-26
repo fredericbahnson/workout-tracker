@@ -46,8 +46,8 @@ export function OnboardingSlide({
         ${isVisible ? 'opacity-100' : 'opacity-0'}
       `}
     >
-      {/* Content area - centered vertically */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+      {/* Content area - centered vertically, scrollable for long content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-y-auto min-h-0">
         {/* Icon or Image */}
         {image ? (
           <img
