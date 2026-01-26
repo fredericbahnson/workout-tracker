@@ -299,17 +299,17 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
 
       {/* Swipe demo slides - rendered outside scroll container to fix iOS touch offset */}
       {phase === 'swipe-complete' && (
-        <div className="flex-1" key={phase}>
+        <div className="flex-1 h-full" key={phase}>
           <SwipeCompleteSlide onComplete={handleSwipeCompleteComplete} />
         </div>
       )}
       {phase === 'swipe-skip' && (
-        <div className="flex-1" key={phase}>
+        <div className="flex-1 h-full" key={phase}>
           <SwipeSkipSlide onComplete={handleSwipeSkipComplete} />
         </div>
       )}
       {phase === 'tap-to-edit' && (
-        <div className="flex-1" key={phase}>
+        <div className="flex-1 h-full" key={phase}>
           <TapToEditSlide onComplete={handleTapToEditComplete} />
         </div>
       )}
