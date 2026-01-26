@@ -19,8 +19,6 @@ const SUGGESTIONS: ExerciseSuggestion[] = [
   { name: 'Dips', type: 'push' },
   { name: 'Rows', type: 'pull' },
   { name: 'Lunges', type: 'legs' },
-  { name: 'Pike Push-ups', type: 'push' },
-  { name: 'Plank', type: 'core' },
 ];
 
 interface ExerciseSuggestionChipsProps {
