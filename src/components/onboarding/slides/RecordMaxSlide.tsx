@@ -74,7 +74,11 @@ export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
             `}
           >
             How many <strong className="text-gray-900 dark:text-gray-100">{exerciseName}</strong>{' '}
-            can you do in one set, with good form?
+            can you do in one set,{' '}
+            <span className="font-semibold text-primary-600 dark:text-primary-400">
+              with good form
+            </span>
+            ?
           </p>
 
           {/* Max input */}
@@ -136,7 +140,7 @@ export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
       {/* Actions - fixed at bottom */}
       <div
         className={`
-          px-6 pb-6 pt-4 space-y-3
+          px-6 pb-24 pt-4 space-y-3
           transition-all duration-500 delay-500
           ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
         `}

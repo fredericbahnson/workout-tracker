@@ -74,7 +74,7 @@ export function ValuePropositionSlide({ onNext }: ValuePropositionSlideProps) {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800">
               <Sparkles className="w-4 h-4 text-primary-500" />
               <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-                4-week free trial, then $2.99/month
+                4-week free trial to get started
               </span>
             </div>
           </div>

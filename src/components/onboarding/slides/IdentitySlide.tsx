@@ -16,7 +16,7 @@ export function IdentitySlide({ onNext }: IdentitySlideProps) {
   return (
     <OnboardingSlide
       image="/pwa-192x192.png"
-      headline="Built for Bodyweight Athletes"
+      headline="Built for Athletes"
       variant="default"
       gradient="from-primary-500 to-cyan-500"
       body={

@@ -34,7 +34,9 @@ import {
   IdentitySlide,
   ValuePropositionSlide,
   DayInLifeSlide,
-  SwipeDemoSlide,
+  SwipeCompleteSlide,
+  SwipeSkipSlide,
+  TapToEditSlide,
   FirstExerciseSlide,
   RecordMaxSlide,
   ReadySlide,
@@ -54,14 +56,16 @@ type OnboardingPhase =
   | 'identity'
   | 'value'
   | 'day-in-life'
-  | 'swipe-demo'
+  | 'swipe-complete'
+  | 'swipe-skip'
+  | 'tap-to-edit'
   | 'first-exercise'
   | 'record-max'
   | 'ready'
   | 'rfem-deep-dive';
 
 // Slides in the main flow (excluding RFEM deep dive)
-const MAIN_FLOW_SLIDES = 7;
+const MAIN_FLOW_SLIDES = 9;
 const TOTAL_SLIDES_WITH_RFEM = MAIN_FLOW_SLIDES + RFEM_GUIDE_SLIDES;
 
 // Get slide index for progress indicator
@@ -73,14 +77,18 @@ function getSlideIndex(phase: OnboardingPhase, rfemSlide: number = 0): number {
       return 1;
     case 'day-in-life':
       return 2;
-    case 'swipe-demo':
+    case 'swipe-complete':
       return 3;
-    case 'first-exercise':
+    case 'swipe-skip':
       return 4;
-    case 'record-max':
+    case 'tap-to-edit':
       return 5;
-    case 'ready':
+    case 'first-exercise':
       return 6;
+    case 'record-max':
+      return 7;
+    case 'ready':
+      return 8;
     case 'rfem-deep-dive':
       return MAIN_FLOW_SLIDES + rfemSlide;
     default:
@@ -111,10 +119,18 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   };
 
   const handleDayInLifeComplete = () => {
-    setPhase('swipe-demo');
+    setPhase('swipe-complete');
   };
 
-  const handleSwipeDemoComplete = () => {
+  const handleSwipeCompleteComplete = () => {
+    setPhase('swipe-skip');
+  };
+
+  const handleSwipeSkipComplete = () => {
+    setPhase('tap-to-edit');
+  };
+
+  const handleTapToEditComplete = () => {
     setOnboardingMilestone('swipeDemoPracticed', true);
     setPhase('first-exercise');
   };
@@ -200,11 +216,17 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
       case 'day-in-life':
         setPhase('value');
         break;
-      case 'swipe-demo':
+      case 'swipe-complete':
         setPhase('day-in-life');
         break;
+      case 'swipe-skip':
+        setPhase('swipe-complete');
+        break;
+      case 'tap-to-edit':
+        setPhase('swipe-skip');
+        break;
       case 'first-exercise':
-        setPhase('swipe-demo');
+        setPhase('tap-to-edit');
         break;
       case 'record-max':
         setPhase('first-exercise');
@@ -246,19 +268,22 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
       <OnboardingProgress
         totalSteps={totalSteps}
         currentStep={currentStep}
-        moduleBreaks={[2, 4]} // After Value, after Swipe Demo
+        moduleBreaks={[2, 6]} // After Value, after gesture demos
         onSkip={onSkip}
-        showSkip={phase !== 'swipe-demo'} // Can't skip the swipe demo
+        showSkip={phase !== 'swipe-complete' && phase !== 'swipe-skip' && phase !== 'tap-to-edit'} // Can't skip gesture demos
       />
 
       {/* Back button (when applicable) */}
-      {phase !== 'identity' && phase !== 'swipe-demo' && (
-        <div className="absolute top-6 left-4 z-10">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="p-2">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        </div>
-      )}
+      {phase !== 'identity' &&
+        phase !== 'swipe-complete' &&
+        phase !== 'swipe-skip' &&
+        phase !== 'tap-to-edit' && (
+          <div className="absolute top-6 left-4 z-10">
+            <Button variant="ghost" size="sm" onClick={handleBack} className="p-2">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
 
       {/* Slide content */}
       <div className="flex-1 overflow-y-auto" key={phase}>
@@ -268,7 +293,13 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
 
         {phase === 'day-in-life' && <DayInLifeSlide onNext={handleDayInLifeComplete} />}
 
-        {phase === 'swipe-demo' && <SwipeDemoSlide onComplete={handleSwipeDemoComplete} />}
+        {phase === 'swipe-complete' && (
+          <SwipeCompleteSlide onComplete={handleSwipeCompleteComplete} />
+        )}
+
+        {phase === 'swipe-skip' && <SwipeSkipSlide onComplete={handleSwipeSkipComplete} />}
+
+        {phase === 'tap-to-edit' && <TapToEditSlide onComplete={handleTapToEditComplete} />}
 
         {phase === 'first-exercise' && <FirstExerciseSlide onNext={handleFirstExerciseComplete} />}
 

@@ -7,7 +7,9 @@
 export { IdentitySlide } from './IdentitySlide';
 export { ValuePropositionSlide } from './ValuePropositionSlide';
 export { DayInLifeSlide } from './DayInLifeSlide';
-export { SwipeDemoSlide } from './SwipeDemoSlide';
+export { SwipeCompleteSlide } from './SwipeCompleteSlide';
+export { SwipeSkipSlide } from './SwipeSkipSlide';
+export { TapToEditSlide } from './TapToEditSlide';
 export { FirstExerciseSlide } from './FirstExerciseSlide';
 export { RecordMaxSlide } from './RecordMaxSlide';
 export { ReadySlide } from './ReadySlide';

@@ -1,7 +1,7 @@
 /**
- * SwipeDemoSlide Component
+ * SwipeCompleteSlide Component
  *
- * Interactive slide where user must practice the swipe gesture.
+ * Interactive slide where user practices the swipe-right-to-complete gesture.
  * Uses the SwipeDemo component for the actual interaction.
  */
 
@@ -9,11 +9,11 @@ import { useState, useEffect } from 'react';
 import { Hand } from 'lucide-react';
 import { SwipeDemo } from '../visuals';
 
-interface SwipeDemoSlideProps {
+interface SwipeCompleteSlideProps {
   onComplete: () => void;
 }
 
-export function SwipeDemoSlide({ onComplete }: SwipeDemoSlideProps) {
+export function SwipeCompleteSlide({ onComplete }: SwipeCompleteSlideProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   // Animate in on mount
@@ -34,7 +34,7 @@ export function SwipeDemoSlide({ onComplete }: SwipeDemoSlideProps) {
         {/* Icon */}
         <div
           className={`
-            w-20 h-20 mb-6 rounded-2xl bg-gradient-to-br from-primary-500 to-cyan-500
+            w-20 h-20 mb-6 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500
             flex items-center justify-center shadow-lg
             transition-transform duration-500 delay-100
             ${isVisible ? 'scale-100' : 'scale-90'}
@@ -51,7 +51,7 @@ export function SwipeDemoSlide({ onComplete }: SwipeDemoSlideProps) {
             ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
           `}
         >
-          Try It: Swipe to Complete
+          Swipe Right to Complete
         </h2>
 
         {/* Instructions */}
@@ -73,7 +73,13 @@ export function SwipeDemoSlide({ onComplete }: SwipeDemoSlideProps) {
             ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
           `}
         >
-          <SwipeDemo exercise="Push-ups" targetReps={12} onComplete={onComplete} showHint={true} />
+          <SwipeDemo
+            exercise="Push-ups"
+            targetReps={12}
+            onComplete={onComplete}
+            showHint={true}
+            mode="complete"
+          />
         </div>
 
         {/* Hint text */}

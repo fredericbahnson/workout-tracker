@@ -119,7 +119,8 @@ export function MaxTestingGuide({
                       <span className="font-medium text-gray-900 dark:text-gray-100">Warmups</span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 pl-8">
-                      Progressive sets at 50%, 70%, and 85% of your current max
+                      Warm up each movement before max testing. Ascend can calculate warmup sets for
+                      you once there is at least one max for reference.
                     </p>
                   </div>
 
@@ -152,11 +153,6 @@ export function MaxTestingGuide({
                       Your new PR is saved and future targets are recalculated
                     </p>
                   </div>
-                </div>
-
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-sm text-amber-700 dark:text-amber-300">
-                  <strong>Tip:</strong> Give yourself extra rest before max testing day for the best
-                  results.
                 </div>
               </div>
             }

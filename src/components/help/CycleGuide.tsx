@@ -61,23 +61,46 @@ export function CycleGuide({
 
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
                   <div className="text-center mb-3">
-                    <span className="text-3xl font-bold text-primary-600 dark:text-primary-400">
-                      4
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
-                      weeks typical
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Example Weekly Schedule
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[1, 2, 3, 4].map(week => (
+                  <div className="space-y-1.5">
+                    {[
+                      { day: 'Mon', workout: 'A', isWorkout: true },
+                      { day: 'Tue', workout: null, isWorkout: false },
+                      { day: 'Wed', workout: 'B', isWorkout: true },
+                      { day: 'Thu', workout: null, isWorkout: false },
+                      { day: 'Fri', workout: 'A', isWorkout: true },
+                      { day: 'Sat', workout: 'B', isWorkout: true },
+                      { day: 'Sun', workout: null, isWorkout: false },
+                    ].map(({ day, workout, isWorkout }) => (
                       <div
-                        key={week}
-                        className="text-center p-2 bg-white dark:bg-gray-700 rounded-lg"
+                        key={day}
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                          isWorkout
+                            ? 'bg-primary-100 dark:bg-primary-900/30'
+                            : 'bg-white dark:bg-gray-700'
+                        }`}
                       >
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Week {week}</div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {week === 4 ? 'Deload' : 'Train'}
-                        </div>
+                        <span
+                          className={`text-sm font-medium ${
+                            isWorkout
+                              ? 'text-primary-700 dark:text-primary-300'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          {day}
+                        </span>
+                        <span
+                          className={`text-sm ${
+                            isWorkout
+                              ? 'font-semibold text-primary-600 dark:text-primary-400'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}
+                        >
+                          {isWorkout ? `Workout ${workout}` : 'Recovery'}
+                        </span>
                       </div>
                     ))}
                   </div>
