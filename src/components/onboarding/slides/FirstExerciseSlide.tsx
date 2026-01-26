@@ -55,7 +55,7 @@ export function FirstExerciseSlide({ onNext }: FirstExerciseSlideProps) {
     >
       {/* Content area */}
       <div className="flex-1 overflow-y-auto px-6 py-8">
-        <div className="max-w-sm mx-auto">
+        <div className="max-w-sm mx-auto pb-48">
           {/* Icon */}
           <div
             className={`
