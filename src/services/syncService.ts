@@ -404,9 +404,9 @@ export const SyncService = {
   ) {
     if (!isSupabaseConfigured()) return;
 
-    // If offline, queue for later
+    // If offline, queue for later with userId for cross-logout preservation
     if (!this.isOnline()) {
-      await this.queueOperation(table, 'upsert', item);
+      await this.queueOperation(table, 'upsert', item, userId);
       return;
     }
 
@@ -415,9 +415,9 @@ export const SyncService = {
       await supabase.from(table).upsert(remoteItem, { onConflict: 'id' });
     } catch (error) {
       log.error(error as Error, { operation: 'sync', table });
-      // Queue for retry on network errors
+      // Queue for retry on network errors with userId
       if (this.isNetworkError(error)) {
-        await this.queueOperation(table, 'upsert', item);
+        await this.queueOperation(table, 'upsert', item, userId);
       }
     }
   },
@@ -430,9 +430,9 @@ export const SyncService = {
   ): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
 
-    // If offline, queue for later
+    // If offline, queue for later with userId for cross-logout preservation
     if (!this.isOnline()) {
-      await this.queueOperation(table, 'delete', { id });
+      await this.queueOperation(table, 'delete', { id }, userId);
       return true; // Queued successfully
     }
 
@@ -457,9 +457,9 @@ export const SyncService = {
       return true;
     } catch (error) {
       log.error(error as Error, { operation: 'delete', table, id });
-      // Queue for retry on network errors
+      // Queue for retry on network errors with userId
       if (this.isNetworkError(error)) {
-        await this.queueOperation(table, 'delete', { id });
+        await this.queueOperation(table, 'delete', { id }, userId);
         return true; // Queued for retry
       }
       return false;
@@ -509,6 +509,7 @@ export const SyncService = {
   },
 
   // Queue an operation for later sync
+  // userId is stored to enable cross-logout data preservation
   async queueOperation(
     table:
       | 'exercises'
@@ -518,7 +519,8 @@ export const SyncService = {
       | 'scheduled_workouts'
       | 'user_preferences',
     operation: 'upsert' | 'delete',
-    item: unknown
+    item: unknown,
+    userId?: string
   ) {
     const itemId = (item as { id: string }).id;
 
@@ -531,9 +533,10 @@ export const SyncService = {
         data: item,
         operation,
         createdAt: now(),
+        userId: userId ?? existing.userId, // Preserve userId if not provided
       });
     } else {
-      // Add new queue item
+      // Add new queue item with userId for cross-logout preservation
       await db.syncQueue.add({
         id: generateId(),
         table,
@@ -542,13 +545,17 @@ export const SyncService = {
         data: item,
         createdAt: now(),
         retryCount: 0,
+        userId: userId ?? null,
       });
     }
 
-    log.debug(`Queued ${operation} for ${table}:${itemId}`);
+    log.debug(
+      `Queued ${operation} for ${table}:${itemId}${userId ? ` (user: ${userId.substring(0, 8)}...)` : ''}`
+    );
   },
 
   // Process queued operations (call when back online)
+  // Only processes items belonging to the specified userId
   async processQueue(
     userId: string
   ): Promise<{ processed: number; failed: number; skipped: number }> {
@@ -556,7 +563,12 @@ export const SyncService = {
       return { processed: 0, failed: 0, skipped: 0 };
     }
 
-    const queuedItems = await db.syncQueue.orderBy('createdAt').toArray();
+    const allQueuedItems = await db.syncQueue.orderBy('createdAt').toArray();
+    // Filter to only process items belonging to this user (or items with no userId for backwards compat)
+    const queuedItems = allQueuedItems.filter(
+      item => item.userId === userId || item.userId === null || item.userId === undefined
+    );
+
     let processed = 0;
     let failed = 0;
     let skipped = 0;
@@ -615,6 +627,24 @@ export const SyncService = {
       );
     }
     return { processed, failed, skipped };
+  },
+
+  // Clean up orphaned queue items from other users
+  // Called on login to remove items that can't be synced (belong to a different user)
+  async cleanupOrphanedQueueItems(currentUserId: string): Promise<number> {
+    const allItems = await db.syncQueue.toArray();
+    const orphanedItems = allItems.filter(
+      item => item.userId !== null && item.userId !== undefined && item.userId !== currentUserId
+    );
+
+    if (orphanedItems.length > 0) {
+      log.debug(`Cleaning up ${orphanedItems.length} orphaned queue items from other users`);
+      for (const item of orphanedItems) {
+        await db.syncQueue.delete(item.id);
+      }
+    }
+
+    return orphanedItems.length;
   },
 
   // Get queue count (for UI display)

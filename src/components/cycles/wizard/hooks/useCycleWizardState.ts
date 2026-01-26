@@ -5,7 +5,7 @@
  * Extracts state management from the UI for better separation of concerns.
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ExerciseRepo, CycleRepo, ScheduledWorkoutRepo } from '@/data/repositories';
 import { generateSchedule, validateCycle } from '@/services/scheduler';
@@ -279,6 +279,10 @@ export function useCycleWizardState({
     }
   }, [allCycles, editCycle, currentStep]);
 
+  // Defer groups for validation to prevent focus loss during typing
+  // When user types in group name input, this prevents immediate validation recalculation
+  const deferredGroups = useDeferredValue(groups);
+
   // Validation
   const validation: ValidationResult = useMemo(() => {
     if (!exercises) {
@@ -293,7 +297,7 @@ export function useCycleWizardState({
         numberOfWeeks,
         workoutDaysPerWeek,
         weeklySetGoals,
-        groups,
+        groups: deferredGroups,
         groupRotation,
         rfemRotation,
         conditioningWeeklyRepIncrement,
@@ -309,7 +313,7 @@ export function useCycleWizardState({
     numberOfWeeks,
     workoutDaysPerWeek,
     weeklySetGoals,
-    groups,
+    deferredGroups,
     groupRotation,
     rfemRotation,
     conditioningWeeklyRepIncrement,

@@ -24,6 +24,7 @@ export interface SyncQueueItem {
   createdAt: Date;
   retryCount: number;
   nextRetryAt?: Date; // For exponential backoff
+  userId?: string | null; // Track which user created this item for cross-logout preservation
 }
 
 // Database class
@@ -123,6 +124,31 @@ class AscendDatabase extends Dexie {
             if (workout.updatedAt === undefined) {
               // Use completedAt if available, otherwise current time
               workout.updatedAt = workout.completedAt || new Date();
+            }
+          });
+      });
+
+    // Version 7: Add userId to syncQueue for cross-logout data preservation
+    // Queue items are now tagged with userId so they can survive logout and be processed
+    // when the same user logs back in
+    this.version(7)
+      .stores({
+        exercises: 'id, type, mode, name, createdAt',
+        maxRecords: 'id, exerciseId, recordedAt',
+        completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
+        cycles: 'id, status, startDate',
+        scheduledWorkouts: 'id, cycleId, sequenceNumber, status, scheduledDate',
+        syncQueue: 'id, [table+itemId], createdAt, userId',
+        userPreferences: 'id',
+      })
+      .upgrade(tx => {
+        // Migration: existing queue items get null userId - will be cleaned on next login
+        return tx
+          .table('syncQueue')
+          .toCollection()
+          .modify(item => {
+            if (item.userId === undefined) {
+              item.userId = null;
             }
           });
       });

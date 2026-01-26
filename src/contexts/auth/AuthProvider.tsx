@@ -16,8 +16,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isNewUser, setIsNewUser] = useState(false);
   const isConfigured = isSupabaseConfigured();
 
-  // Helper to clear all local database tables
+  // Helper to clear all local database tables EXCEPT syncQueue
   // CRITICAL: Must include userPreferences to prevent health disclaimer bypass on user switch
+  // NOTE: syncQueue is NOT cleared - it's preserved for cross-logout sync.
+  // Queue items are tagged with userId and cleaned up on next login.
   const clearLocalDatabase = async () => {
     await db.transaction(
       'rw',
@@ -27,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         db.completedSets,
         db.cycles,
         db.scheduledWorkouts,
-        db.syncQueue,
+        // syncQueue intentionally NOT included - preserved for cross-logout sync
         db.userPreferences,
       ],
       async () => {
@@ -36,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await db.completedSets.clear();
         await db.cycles.clear();
         await db.scheduledWorkouts.clear();
-        await db.syncQueue.clear();
+        // syncQueue intentionally NOT cleared - items tagged with userId will sync on re-login
         await db.userPreferences.clear();
       }
     );
@@ -148,17 +150,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: new Error('Supabase not configured') };
     }
 
-    // Clear local database before signing in to prevent data leakage between accounts
-    try {
-      await clearLocalDatabase();
-    } catch (e) {
-      log.error(e as Error);
-    }
-
+    // Authenticate FIRST - don't clear data until auth succeeds
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // Only clear local database AFTER successful authentication
+    // This prevents data loss if the login fails
+    if (!error) {
+      try {
+        await clearLocalDatabase();
+      } catch (e) {
+        log.error(e as Error);
+      }
+    }
 
     return { error: error as Error | null };
   };
