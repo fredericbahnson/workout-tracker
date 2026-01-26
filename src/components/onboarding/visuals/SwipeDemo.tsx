@@ -168,7 +168,10 @@ export function SwipeDemo({
   );
 
   const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX),
+    (e: React.TouchEvent) => {
+      e.preventDefault(); // Prevent parent scroll from stealing the gesture
+      handleDragMove(e.touches[0].clientX);
+    },
     [handleDragMove]
   );
 
