@@ -290,8 +290,13 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
 
       {/* Back button (when applicable) */}
       {phase !== 'identity' && (
-        <div className="absolute top-6 left-4 z-10">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="p-2">
+        <div className="absolute top-6 left-4 z-10 pointer-events-none">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            className="p-2 pointer-events-auto"
+          >
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </div>
