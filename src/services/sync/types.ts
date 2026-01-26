@@ -140,6 +140,8 @@ export interface RemoteScheduledWorkout {
   completed_at: string | null;
   scheduled_date: string | null;
   skip_reason: string | null;
+  is_ad_hoc: boolean | null;
+  custom_name: string | null;
   deleted_at: string | null;
 }
 
@@ -160,6 +162,7 @@ export interface RemoteUserPreferences {
   max_test_rest_timer_enabled: boolean;
   max_test_rest_timer_duration_seconds: number;
   timer_volume: number | null; // null for backwards compatibility
+  last_scheduling_mode: string | null;
   created_at: string;
   updated_at: string;
 }

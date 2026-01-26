@@ -14,6 +14,13 @@ Migrations are numbered sequentially: `NNN_description.sql`
 | 002 | `002_app_mode.sql` | Add app_mode column for standard/advanced feature gating | v2.7.0 |
 | 003 | `003_timer_volume.sql` | Add timer_volume column for audio volume control | v2.13.0 |
 | 004 | `004_delete_user_account.sql` | Add RPC function to delete user account and all data | v2.18.6 |
+| 005 | `005_exercises_table.sql` | Document exercises table schema | v2.22.0 |
+| 006 | `006_max_records_table.sql` | Document max_records table schema | v2.22.0 |
+| 007 | `007_completed_sets_table.sql` | Document completed_sets table schema | v2.22.0 |
+| 008 | `008_cycles_table.sql` | Document cycles table schema | v2.22.0 |
+| 009 | `009_scheduled_workouts_table.sql` | Document scheduled_workouts table schema | v2.22.0 |
+| 010 | `010_scheduled_workouts_adhoc.sql` | Add ad-hoc workout fields | v2.22.0 |
+| 011 | `011_user_preferences_scheduling_mode.sql` | Add last_scheduling_mode preference | v2.22.0 |
 
 ## Running Migrations
 

@@ -134,6 +134,8 @@ export function remoteToLocalScheduledWorkout(remote: RemoteScheduledWorkout): S
     completedAt: toDate(remote.completed_at),
     scheduledDate: toDate(remote.scheduled_date),
     skipReason: remote.skip_reason ?? undefined,
+    isAdHoc: remote.is_ad_hoc ?? undefined,
+    customName: remote.custom_name ?? undefined,
   };
 }
 
@@ -247,6 +249,8 @@ export function localToRemoteScheduledWorkout(local: ScheduledWorkout, userId: s
     completed_at: local.completedAt ? toISOString(local.completedAt) : null,
     scheduled_date: local.scheduledDate ? toISOString(local.scheduledDate) : null,
     skip_reason: local.skipReason || null,
+    is_ad_hoc: local.isAdHoc ?? false,
+    custom_name: local.customName || null,
   };
 }
 
@@ -274,6 +278,7 @@ export function remoteToLocalUserPreferences(remote: RemoteUserPreferences): Use
       durationSeconds: remote.max_test_rest_timer_duration_seconds,
     },
     timerVolume: remote.timer_volume ?? 40, // Default to 40 for existing records
+    lastSchedulingMode: (remote.last_scheduling_mode as SchedulingMode) ?? undefined,
     createdAt: toDateRequired(remote.created_at),
     updatedAt: toDateRequired(remote.updated_at),
   };
@@ -296,6 +301,7 @@ export function localToRemoteUserPreferences(local: UserPreferences, userId: str
     max_test_rest_timer_enabled: local.maxTestRestTimer.enabled,
     max_test_rest_timer_duration_seconds: local.maxTestRestTimer.durationSeconds,
     timer_volume: local.timerVolume,
+    last_scheduling_mode: local.lastSchedulingMode || null,
     created_at: toISOString(local.createdAt),
     updated_at: toISOString(local.updatedAt),
   };
