@@ -17,6 +17,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // Use ref to track syncing state to avoid stale closure in useCallback
   const isSyncingRef = useRef(false);
 
+  // Reset sync state when user changes (login/logout)
+  // This ensures we wait for sync before showing content for new users
+  useEffect(() => {
+    setLastSyncTime(null);
+    setLastError(null);
+  }, [user?.id]);
+
   // Update queue count
   const updateQueueCount = useCallback(async () => {
     const count = await SyncService.getQueueCount();
