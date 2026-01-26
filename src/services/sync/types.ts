@@ -142,6 +142,7 @@ export interface RemoteScheduledWorkout {
   skip_reason: string | null;
   is_ad_hoc: boolean | null;
   custom_name: string | null;
+  updated_at: string;
   deleted_at: string | null;
 }
 

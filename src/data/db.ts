@@ -102,6 +102,30 @@ class AscendDatabase extends Dexie {
             }
           });
       });
+
+    // Version 6: Add updatedAt to scheduledWorkouts for sync conflict resolution
+    this.version(6)
+      .stores({
+        exercises: 'id, type, mode, name, createdAt',
+        maxRecords: 'id, exerciseId, recordedAt',
+        completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
+        cycles: 'id, status, startDate',
+        scheduledWorkouts: 'id, cycleId, sequenceNumber, status, scheduledDate',
+        syncQueue: 'id, [table+itemId], createdAt',
+        userPreferences: 'id',
+      })
+      .upgrade(tx => {
+        // Migration: add updatedAt to existing scheduled workouts
+        return tx
+          .table('scheduledWorkouts')
+          .toCollection()
+          .modify(workout => {
+            if (workout.updatedAt === undefined) {
+              // Use completedAt if available, otherwise current time
+              workout.updatedAt = workout.completedAt || new Date();
+            }
+          });
+      });
   }
 }
 

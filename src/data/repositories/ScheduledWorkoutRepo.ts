@@ -105,15 +105,18 @@ export const ScheduledWorkoutRepo = {
     const scheduledWorkout: ScheduledWorkout = {
       ...workout,
       id: generateId(),
+      updatedAt: now(),
     };
     await db.scheduledWorkouts.add(scheduledWorkout);
     return scheduledWorkout;
   },
 
   async bulkCreate(workouts: Omit<ScheduledWorkout, 'id'>[]): Promise<ScheduledWorkout[]> {
+    const timestamp = now();
     const scheduledWorkouts: ScheduledWorkout[] = workouts.map(w => ({
       ...w,
       id: generateId(),
+      updatedAt: timestamp,
     }));
     await db.scheduledWorkouts.bulkAdd(scheduledWorkouts);
     return scheduledWorkouts;
@@ -125,7 +128,7 @@ export const ScheduledWorkoutRepo = {
   ): Promise<ScheduledWorkout | undefined> {
     const existing = await this.getById(id);
     if (existing) {
-      const updates: Partial<ScheduledWorkout> = { status };
+      const updates: Partial<ScheduledWorkout> = { status, updatedAt: now() };
       if (status === 'completed') {
         updates.completedAt = now();
       }
@@ -139,7 +142,7 @@ export const ScheduledWorkoutRepo = {
   async updateName(id: string, customName: string): Promise<ScheduledWorkout | undefined> {
     const existing = await this.getById(id);
     if (existing) {
-      const updated = { ...existing, customName };
+      const updated = { ...existing, customName, updatedAt: now() };
       await db.scheduledWorkouts.put(updated);
       return updated;
     }

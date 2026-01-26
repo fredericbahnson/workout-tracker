@@ -98,6 +98,8 @@ export interface ScheduledWorkout {
   scheduledDate?: Date;
   /** User-provided reason when skipping an overdue workout */
   skipReason?: string;
+  /** Last modification timestamp for sync conflict resolution */
+  updatedAt?: Date;
 }
 
 /**

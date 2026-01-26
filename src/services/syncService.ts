@@ -247,11 +247,9 @@ export const SyncService = {
           }
         }
 
-        if (
-          !local ||
-          (remote.completed_at &&
-            (!local.completedAt || isAfter(remote.completed_at, local.completedAt)))
-        ) {
+        // Use updatedAt for last-write-wins conflict resolution (like cycles)
+        // If local has no updatedAt, treat remote as newer
+        if (!local || !local.updatedAt || isAfter(remote.updated_at, local.updatedAt)) {
           const converted = remoteToLocalScheduledWorkout(remote);
           await db.scheduledWorkouts.put(converted);
           // Track this workout

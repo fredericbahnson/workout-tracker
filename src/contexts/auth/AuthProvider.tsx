@@ -170,6 +170,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // This must happen BEFORE clearing the database to prevent UI flash
     window.dispatchEvent(new Event('auth-signing-out'));
 
+    // CRITICAL: Process sync queue before clearing data
+    // This ensures all pending changes are synced to cloud
+    if (user && navigator.onLine) {
+      try {
+        const { SyncService } = await import('@/services/syncService');
+        await SyncService.processQueue(user.id);
+      } catch (e) {
+        log.warn('Failed to process sync queue on logout', e as Error);
+        // Continue with logout even if sync fails
+      }
+    }
+
     // Clear local IndexedDB tables before signing out
     try {
       await clearLocalDatabase();

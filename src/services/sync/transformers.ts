@@ -136,6 +136,7 @@ export function remoteToLocalScheduledWorkout(remote: RemoteScheduledWorkout): S
     skipReason: remote.skip_reason ?? undefined,
     isAdHoc: remote.is_ad_hoc ?? undefined,
     customName: remote.custom_name ?? undefined,
+    updatedAt: toDate(remote.updated_at),
   };
 }
 
@@ -251,6 +252,7 @@ export function localToRemoteScheduledWorkout(local: ScheduledWorkout, userId: s
     skip_reason: local.skipReason || null,
     is_ad_hoc: local.isAdHoc ?? false,
     custom_name: local.customName || null,
+    updated_at: local.updatedAt ? toISOString(local.updatedAt) : toISOString(new Date()),
   };
 }
 
