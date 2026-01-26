@@ -134,7 +134,7 @@ export function SwipeDemo({
         setTimeout(() => {
           setShowCelebration(false);
           onComplete();
-        }, 1500);
+        }, 2500);
       }, SWIPE_ANIMATION_DURATION);
     } else {
       // Snap back (wrong direction or insufficient distance)
@@ -158,7 +158,7 @@ export function SwipeDemo({
     setTimeout(() => {
       setShowCelebration(false);
       onComplete();
-    }, 1500);
+    }, 2500);
   }, [onComplete]);
 
   // Touch handlers
@@ -360,7 +360,7 @@ export function SwipeDemo({
               ? 'cursor-pointer hover:border-primary-300'
               : 'cursor-grab active:cursor-grabbing'
           }`}
-          style={{ transform: `translateX(${translateX}px)` }}
+          style={{ transform: `translateX(${translateX}px)`, touchAction: 'none' }}
           onTouchStart={mode !== 'tap' ? handleTouchStart : undefined}
           onTouchMove={mode !== 'tap' ? handleTouchMove : undefined}
           onTouchEnd={mode !== 'tap' ? handleTouchEnd : undefined}

@@ -285,25 +285,17 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         currentStep={currentStep}
         moduleBreaks={[2, 6]} // After Value, after gesture demos
         onSkip={onSkip}
-        showSkip={
-          phase !== 'identity' && // No skip on welcome/identity
-          phase !== 'swipe-complete' &&
-          phase !== 'swipe-skip' &&
-          phase !== 'tap-to-edit'
-        } // Can't skip identity or gesture demos
+        showSkip={phase !== 'identity'} // No skip on welcome/identity
       />
 
       {/* Back button (when applicable) */}
-      {phase !== 'identity' &&
-        phase !== 'swipe-complete' &&
-        phase !== 'swipe-skip' &&
-        phase !== 'tap-to-edit' && (
-          <div className="absolute top-6 left-4 z-10">
-            <Button variant="ghost" size="sm" onClick={handleBack} className="p-2">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </div>
-        )}
+      {phase !== 'identity' && (
+        <div className="absolute top-6 left-4 z-10">
+          <Button variant="ghost" size="sm" onClick={handleBack} className="p-2">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
 
       {/* Slide content */}
       <div className="flex-1 overflow-y-auto" key={phase}>
