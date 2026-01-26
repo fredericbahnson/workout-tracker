@@ -21,6 +21,9 @@ Migrations are numbered sequentially: `NNN_description.sql`
 | 009 | `009_scheduled_workouts_table.sql` | Document scheduled_workouts table schema | v2.22.0 |
 | 010 | `010_scheduled_workouts_adhoc.sql` | Add ad-hoc workout fields | v2.22.0 |
 | 011 | `011_user_preferences_scheduling_mode.sql` | Add last_scheduling_mode preference | v2.22.0 |
+| 012 | `012_health_disclaimer.sql` | Add health disclaimer acknowledgment tracking | v2.24.0 |
+| 013 | `013_scheduled_workouts_updated_at.sql` | Add updated_at for conflict resolution | v2.24.0 |
+| 014 | `014_schema_sync.sql` | Comprehensive schema sync (idempotent) | v2.24.29 |
 
 ## Running Migrations
 
