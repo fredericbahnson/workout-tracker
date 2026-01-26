@@ -81,15 +81,27 @@ function PaywallErrorFallback({ onClose }: { onClose: () => void }) {
 function AppContent() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading, isConfigured, isNewUser, clearNewUserFlag } = useAuth();
-  const { hasCompletedOnboarding, setHasCompletedOnboarding } = useAppStore();
+  const {
+    hasCompletedOnboarding,
+    setHasCompletedOnboarding,
+    hasStartedOnboarding,
+    setHasStartedOnboarding,
+  } = useAppStore();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Trigger onboarding for new users (detected via AuthContext)
   useEffect(() => {
+    // New user signing up for the first time
     if (isNewUser && !hasCompletedOnboarding && user) {
+      setHasStartedOnboarding(true);
+      setShowOnboarding(true);
+      return;
+    }
+    // Resuming incomplete onboarding (app was closed mid-flow)
+    if (hasStartedOnboarding && !hasCompletedOnboarding && user) {
       setShowOnboarding(true);
     }
-  }, [isNewUser, hasCompletedOnboarding, user]);
+  }, [isNewUser, hasCompletedOnboarding, hasStartedOnboarding, user, setHasStartedOnboarding]);
 
   // Handler for when auth gate reports a new user (signup flow)
   const handleAuthComplete = (isNewUserFromGate: boolean) => {
@@ -101,6 +113,7 @@ function AppContent() {
   // Handler for when onboarding is complete
   const handleOnboardingComplete = () => {
     setHasCompletedOnboarding(true);
+    setHasStartedOnboarding(false);
     setShowOnboarding(false);
     clearNewUserFlag();
     navigate('/exercises');
@@ -109,6 +122,7 @@ function AppContent() {
   // Handler for skipping onboarding
   const handleOnboardingSkip = () => {
     setHasCompletedOnboarding(true);
+    setHasStartedOnboarding(false);
     setShowOnboarding(false);
     clearNewUserFlag();
     navigate('/exercises');

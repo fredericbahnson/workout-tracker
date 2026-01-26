@@ -7,12 +7,11 @@
  * - Getting Started
  *   - Quick Start Guide
  *   - Try the Swipe Demo
+ *   - Feature Tour
  * - Training Concepts
  *   - Understanding RFEM
  *   - How Cycles Work
  *   - Max Testing Explained
- * - App Features
- *   - Feature Tour
  * - About
  */
 
@@ -141,6 +140,14 @@ export function HelpSection() {
             description="Practice the core gesture"
             onClick={() => setShowSwipeDemo(true)}
           />
+
+          <HelpItem
+            icon={<Smartphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+            iconBg="bg-blue-100 dark:bg-blue-900/30"
+            title="Feature Tour"
+            description="Explore key features and navigation"
+            onClick={() => setActiveGuide('app-tour')}
+          />
         </CardContent>
       </Card>
 
@@ -173,23 +180,6 @@ export function HelpSection() {
             title="Max Testing Explained"
             description="When and how to test PRs"
             onClick={() => setActiveGuide('max-testing')}
-          />
-        </CardContent>
-      </Card>
-
-      {/* App Features */}
-      <Card>
-        <CardContent className="space-y-1">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-            App Features
-          </h3>
-
-          <HelpItem
-            icon={<Smartphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
-            iconBg="bg-blue-100 dark:bg-blue-900/30"
-            title="Feature Tour"
-            description="Explore key features and navigation"
-            onClick={() => setActiveGuide('app-tour')}
           />
         </CardContent>
       </Card>

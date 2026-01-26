@@ -63,6 +63,8 @@ interface AppState {
   // Onboarding
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
+  hasStartedOnboarding: boolean;
+  setHasStartedOnboarding: (started: boolean) => void;
 
   // Progressive onboarding milestones
   onboardingMilestones: OnboardingMilestones;
@@ -95,6 +97,8 @@ export const useAppStore = create<AppState>()(
       // Onboarding
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: completed => set({ hasCompletedOnboarding: completed }),
+      hasStartedOnboarding: false,
+      setHasStartedOnboarding: started => set({ hasStartedOnboarding: started }),
 
       // Progressive onboarding milestones
       onboardingMilestones: DEFAULT_MILESTONES,
@@ -118,6 +122,7 @@ export const useAppStore = create<AppState>()(
         fontSize: state.fontSize,
         repDisplayMode: state.repDisplayMode,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
+        hasStartedOnboarding: state.hasStartedOnboarding,
         onboardingMilestones: state.onboardingMilestones,
         // Note: sidebarOpen is not persisted
       }),
