@@ -45,27 +45,25 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     [lastSyncTime] // Re-query when sync completes
   );
 
-  // Set loading state based on query result AND sync status
+  // Set loading state based on sync status (not query completion)
   // For authenticated users, wait for initial sync to complete before showing content
   // This prevents the health disclaimer from flashing for returning users
   useEffect(() => {
-    if (dbPreferences !== undefined) {
-      // If user is authenticated and Supabase is configured, wait for sync
-      if (user && isConfigured) {
-        // lastSyncTime is set after sync completes
-        const syncCompleted = lastSyncTime !== null;
-        const isOffline = !navigator.onLine;
-
-        // Allow proceeding if sync completed or if offline (use local data)
-        if (syncCompleted || isOffline) {
-          setIsLoading(false);
-        }
-      } else {
-        // No auth or not configured - use local data immediately
+    if (user && isConfigured) {
+      // For authenticated users, wait for sync to complete
+      const syncCompleted = lastSyncTime !== null;
+      const isOffline = !navigator.onLine;
+      if (syncCompleted || isOffline) {
         setIsLoading(false);
+      } else {
+        // Sync not yet complete - keep loading
+        setIsLoading(true);
       }
+    } else {
+      // No auth or not configured - use local data immediately
+      setIsLoading(false);
     }
-  }, [dbPreferences, lastSyncTime, user, isConfigured]);
+  }, [lastSyncTime, user, isConfigured]);
 
   // Current preferences with fallback to defaults
   const preferences = dbPreferences ?? defaultPrefs;
