@@ -298,7 +298,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
       )}
 
       {/* Slide content */}
-      <div className="flex-1 overflow-y-auto" key={phase}>
+      <div className="flex-1 overflow-y-auto" style={{ touchAction: 'pan-y' }} key={phase}>
         {phase === 'identity' && <IdentitySlide onNext={handleIdentityComplete} />}
 
         {phase === 'value' && <ValuePropositionSlide onNext={handleValueComplete} />}

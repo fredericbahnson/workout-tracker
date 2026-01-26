@@ -168,10 +168,7 @@ export function SwipeDemo({
   );
 
   const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      e.preventDefault(); // Prevent parent scroll from stealing the gesture
-      handleDragMove(e.touches[0].clientX);
-    },
+    (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX),
     [handleDragMove]
   );
 
@@ -363,7 +360,7 @@ export function SwipeDemo({
               ? 'cursor-pointer hover:border-primary-300'
               : 'cursor-grab active:cursor-grabbing'
           }`}
-          style={{ transform: `translateX(${translateX}px)`, touchAction: 'none' }}
+          style={{ transform: `translateX(${translateX}px)` }}
           onTouchStart={mode !== 'tap' ? handleTouchStart : undefined}
           onTouchMove={mode !== 'tap' ? handleTouchMove : undefined}
           onTouchEnd={mode !== 'tap' ? handleTouchEnd : undefined}
