@@ -48,6 +48,12 @@ export const WARMUP = {
    * Intensity factor for max testing warmups (20% of previous max).
    */
   MAX_TEST_INTENSITY: 0.2,
+
+  /**
+   * Percentages of previous max for max testing warmup sets.
+   * Three warmup sets at 20%, 30%, and 40% of previous max.
+   */
+  MAX_TEST_PERCENTAGES: [20, 30, 40] as const,
 } as const;
 
 /**

@@ -671,14 +671,18 @@ export function calculateTargetReps(
       return set.simpleBaseTime;
     }
 
-    // Max testing warmups: use previousMaxReps/Time with fixed 20% intensity
+    // Max testing warmups: use previousMaxReps/Time with stored warmupPercentage
     if (set.previousMaxReps !== undefined || set.previousMaxTime !== undefined) {
+      // Use warmupPercentage if set, fall back to 20% for backward compatibility
+      const intensity =
+        set.warmupPercentage !== undefined ? set.warmupPercentage / 100 : WARMUP.MAX_TEST_INTENSITY;
+
       if (isTimeBased) {
         const prevMax = set.previousMaxTime || maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
-        return Math.max(WARMUP.MIN_TIME_SECONDS, Math.round(prevMax * WARMUP.MAX_TEST_INTENSITY));
+        return Math.max(WARMUP.MIN_TIME_SECONDS, Math.ceil(prevMax * intensity));
       } else {
         const prevMax = set.previousMaxReps || maxRecord?.maxReps || defaultMax;
-        return Math.max(WARMUP.MIN_REPS, Math.round(prevMax * WARMUP.MAX_TEST_INTENSITY));
+        return Math.max(WARMUP.MIN_REPS, Math.ceil(prevMax * intensity));
       }
     }
 

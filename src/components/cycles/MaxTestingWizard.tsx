@@ -15,6 +15,7 @@ import { CycleRepo, ExerciseRepo, MaxRecordRepo, ScheduledWorkoutRepo } from '@/
 import { useSyncItem } from '@/contexts';
 import { generateId } from '@/data/db';
 import { createScopedLogger } from '@/utils/logger';
+import { WARMUP } from '@/constants/training';
 import type {
   Cycle,
   Exercise,
@@ -383,18 +384,21 @@ export function MaxTestingWizard({
           const exerciseInfo = standardExercises.find(e => e.exerciseId === assignment.exerciseId);
           if (!exerciseInfo) continue;
 
-          // Warmup set at 20% of previous max (calculated dynamically)
+          // Create 3 warmup sets at 20%, 30%, and 40% of previous max
           if (exerciseInfo.previousMaxReps) {
-            scheduledSets.push({
-              id: generateId(),
-              exerciseId: assignment.exerciseId,
-              exerciseType: exerciseInfo.exerciseType,
-              isConditioning: false,
-              setNumber: setNumber++,
-              isWarmup: true,
-              isMaxTest: false,
-              previousMaxReps: exerciseInfo.previousMaxReps,
-            });
+            for (const percentage of WARMUP.MAX_TEST_PERCENTAGES) {
+              scheduledSets.push({
+                id: generateId(),
+                exerciseId: assignment.exerciseId,
+                exerciseType: exerciseInfo.exerciseType,
+                isConditioning: false,
+                setNumber: setNumber++,
+                isWarmup: true,
+                isMaxTest: false,
+                previousMaxReps: exerciseInfo.previousMaxReps,
+                warmupPercentage: percentage,
+              });
+            }
           }
 
           // Max test set
@@ -699,8 +703,13 @@ export function MaxTestingWizard({
                     <div key={ex.exerciseId} className="flex items-center justify-between text-sm">
                       <span className="text-gray-700 dark:text-gray-300">{ex.exerciseName}</span>
                       <span className="text-gray-500 dark:text-gray-400">
-                        Warmup: {ex.previousMaxReps ? Math.round(ex.previousMaxReps * 0.2) : '—'} →
-                        Max attempt
+                        Warmup:{' '}
+                        {ex.previousMaxReps
+                          ? WARMUP.MAX_TEST_PERCENTAGES.map(p =>
+                              Math.ceil((ex.previousMaxReps! * p) / 100)
+                            ).join(' → ')
+                          : '—'}{' '}
+                        → Max attempt
                       </span>
                     </div>
                   ))}
