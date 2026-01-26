@@ -6,7 +6,7 @@
  * Replaces the interactive SwipeDemo to avoid iOS WebView touch offset issues.
  */
 
-import { CheckCircle, X, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle, X } from 'lucide-react';
 
 interface StaticSwipeDemoProps {
   mode: 'complete' | 'skip';
@@ -71,29 +71,6 @@ export function StaticSwipeDemo({ mode, exercise, targetReps }: StaticSwipeDemoP
               <span className="text-xl font-bold text-gray-400">1</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Arrow indicator below the card */}
-      <div className="mt-4 flex justify-center">
-        <div
-          className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-            isComplete ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'
-          }`}
-        >
-          {isComplete ? (
-            <>
-              <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                Swipe right
-              </span>
-              <ArrowRight className="w-5 h-5 text-green-600 dark:text-green-400 animate-pulse" />
-            </>
-          ) : (
-            <>
-              <ArrowLeft className="w-5 h-5 text-red-600 dark:text-red-400 animate-pulse" />
-              <span className="text-sm font-medium text-red-700 dark:text-red-300">Swipe left</span>
-            </>
-          )}
         </div>
       </div>
     </div>
