@@ -24,6 +24,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     setLastError(null);
   }, [user?.id]);
 
+  // Reset sync state immediately when sign-out starts
+  // This prevents health disclaimer flash during logout
+  useEffect(() => {
+    const handleSigningOut = () => {
+      setLastSyncTime(null);
+      setLastError(null);
+    };
+
+    window.addEventListener('auth-signing-out', handleSigningOut);
+    return () => window.removeEventListener('auth-signing-out', handleSigningOut);
+  }, []);
+
   // Update queue count
   const updateQueueCount = useCallback(async () => {
     const count = await SyncService.getQueueCount();

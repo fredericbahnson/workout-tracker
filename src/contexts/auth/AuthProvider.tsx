@@ -166,6 +166,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     if (!isConfigured) return;
 
+    // Signal that sign-out is starting so other contexts can reset state
+    // This must happen BEFORE clearing the database to prevent UI flash
+    window.dispatchEvent(new Event('auth-signing-out'));
+
     // Clear local IndexedDB tables before signing out
     try {
       await clearLocalDatabase();
