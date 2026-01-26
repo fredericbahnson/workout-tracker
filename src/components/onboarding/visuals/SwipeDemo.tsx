@@ -53,7 +53,9 @@ export function SwipeDemo({
   const [isCompleted, setIsCompleted] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showEditView, setShowEditView] = useState(false);
+  const [editedReps, setEditedReps] = useState(targetReps);
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
   const startTimeRef = useRef(0);
   const hasDraggedRef = useRef(false);
 
@@ -67,15 +69,25 @@ export function SwipeDemo({
     }
   }, [isDragging, showEditView, hintVisible]);
 
+  // Sync editedReps when targetReps prop changes
+  useEffect(() => {
+    setEditedReps(targetReps);
+  }, [targetReps]);
+
   const handleDragStart = useCallback(
-    (clientX: number) => {
+    (clientX: number, clientY: number) => {
+      // Dismiss hint immediately on any touch
+      if (hintVisible) {
+        setHintVisible(false);
+      }
       if (isCompleted || mode === 'tap') return;
       startXRef.current = clientX;
+      startYRef.current = clientY;
       startTimeRef.current = Date.now();
       hasDraggedRef.current = false;
       setIsDragging(true);
     },
-    [isCompleted, mode]
+    [isCompleted, mode, hintVisible]
   );
 
   const handleDragMove = useCallback(
@@ -88,15 +100,11 @@ export function SwipeDemo({
         hasDraggedRef.current = true;
       }
 
-      // For 'complete' mode, only allow right swipe
-      // For 'skip' mode, only allow left swipe
-      if (mode === 'complete' && diff > 0) {
-        setTranslateX(calculateSwipeTranslation(diff));
-      } else if (mode === 'skip' && diff < 0) {
-        setTranslateX(calculateSwipeTranslation(diff));
-      }
+      // Allow translation in both directions during drag
+      // Direction will be validated at drag end
+      setTranslateX(calculateSwipeTranslation(diff));
     },
-    [isDragging, isCompleted, mode]
+    [isDragging, isCompleted]
   );
 
   const handleDragEnd = useCallback(() => {
@@ -109,7 +117,11 @@ export function SwipeDemo({
 
     const meetsThreshold = absTranslate >= SWIPE_THRESHOLD || velocity >= VELOCITY_THRESHOLD;
 
-    if (meetsThreshold) {
+    // Validate direction before completing
+    const isCorrectDirection =
+      (mode === 'complete' && translateX > 0) || (mode === 'skip' && translateX < 0);
+
+    if (meetsThreshold && isCorrectDirection) {
       // Complete animation
       const direction = mode === 'skip' ? -1 : 1;
       setTranslateX(direction * window.innerWidth);
@@ -125,7 +137,7 @@ export function SwipeDemo({
         }, 1500);
       }, SWIPE_ANIMATION_DURATION);
     } else {
-      // Snap back
+      // Snap back (wrong direction or insufficient distance)
       setTranslateX(0);
     }
 
@@ -150,27 +162,57 @@ export function SwipeDemo({
   }, [onComplete]);
 
   // Touch handlers
-  const handleTouchStart = (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX);
-  const handleTouchMove = (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX);
-  const handleTouchEnd = () => handleDragEnd();
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY),
+    [handleDragStart]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX),
+    [handleDragMove]
+  );
+
+  const handleTouchEnd = useCallback(() => handleDragEnd(), [handleDragEnd]);
 
   // Mouse handlers
-  const handleMouseDown = (e: React.MouseEvent) => handleDragStart(e.clientX);
-  const handleMouseMove = (e: React.MouseEvent) => handleDragMove(e.clientX);
-  const handleMouseUp = () => handleDragEnd();
-  const handleMouseLeave = () => {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => handleDragStart(e.clientX, e.clientY),
+    [handleDragStart]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => handleDragMove(e.clientX),
+    [handleDragMove]
+  );
+
+  const handleMouseUp = useCallback(() => handleDragEnd(), [handleDragEnd]);
+
+  const handleMouseLeave = useCallback(() => {
     if (isDragging) {
       setTranslateX(0);
       setIsDragging(false);
     }
-  };
+  }, [isDragging]);
 
   // Click handler for tap mode
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
+    // Dismiss hint on any click
+    if (hintVisible) {
+      setHintVisible(false);
+    }
     if (mode === 'tap' && !hasDraggedRef.current) {
       handleTap();
     }
-  };
+  }, [mode, handleTap, hintVisible]);
+
+  // Increment/decrement handlers for edit view
+  const handleDecrement = useCallback(() => {
+    setEditedReps(prev => Math.max(1, prev - 1));
+  }, []);
+
+  const handleIncrement = useCallback(() => {
+    setEditedReps(prev => prev + 1);
+  }, []);
 
   // Progress calculation for visual feedback
   const progress = Math.min(Math.abs(translateX) / SWIPE_THRESHOLD, 1);
@@ -234,13 +276,19 @@ export function SwipeDemo({
           </div>
 
           <div className="flex items-center justify-center gap-4 mb-4 py-2">
-            <button className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 text-xl font-bold">
+            <button
+              onClick={handleDecrement}
+              className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 text-xl font-bold"
+            >
               −
             </button>
             <span className="text-3xl font-bold text-primary-600 dark:text-primary-400 w-16 text-center">
-              {targetReps}
+              {editedReps}
             </span>
-            <button className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 text-xl font-bold">
+            <button
+              onClick={handleIncrement}
+              className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 text-xl font-bold"
+            >
               +
             </button>
           </div>
@@ -283,81 +331,103 @@ export function SwipeDemo({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
-      {/* Background action indicator */}
-      {mode !== 'tap' && (
-        <div
-          className={`absolute inset-0 flex items-center transition-all duration-150 rounded-xl ${
-            mode === 'skip' ? 'justify-end pr-4' : 'justify-start pl-4'
-          } ${progress > 0 ? (progress >= 1 ? config.bgActive : config.bgPartial) : config.bgIdle}`}
-        >
+    <div className="flex flex-col">
+      <div className="relative overflow-hidden rounded-xl">
+        {/* Background action indicator */}
+        {mode !== 'tap' && (
           <div
-            className={`flex items-center gap-2 text-white transition-all duration-150 ${
-              progress > 0.2 ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
-            }`}
+            className={`absolute inset-0 flex items-center transition-all duration-150 rounded-xl ${
+              mode === 'skip' ? 'justify-end pr-4' : 'justify-start pl-4'
+            } ${progress > 0 ? (progress >= 1 ? config.bgActive : config.bgPartial) : config.bgIdle}`}
           >
-            {config.icon}
-            <span className="font-semibold">{config.label}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Swipeable/Tappable card */}
-      <div
-        className={`relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border-2 ${
-          progress >= 1 ? config.borderActive : 'border-gray-200 dark:border-gray-700'
-        } ${isDragging ? '' : 'transition-transform duration-200'} ${
-          mode === 'tap'
-            ? 'cursor-pointer hover:border-primary-300'
-            : 'cursor-grab active:cursor-grabbing'
-        }`}
-        style={{ transform: `translateX(${translateX}px)` }}
-        onTouchStart={mode !== 'tap' ? handleTouchStart : undefined}
-        onTouchMove={mode !== 'tap' ? handleTouchMove : undefined}
-        onTouchEnd={mode !== 'tap' ? handleTouchEnd : undefined}
-        onMouseDown={mode !== 'tap' ? handleMouseDown : undefined}
-        onMouseMove={mode !== 'tap' ? handleMouseMove : undefined}
-        onMouseUp={mode !== 'tap' ? handleMouseUp : undefined}
-        onMouseLeave={mode !== 'tap' ? handleMouseLeave : undefined}
-        onClick={handleClick}
-      >
-        {/* Set card content */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{exercise}</div>
-            <div className="text-gray-500 dark:text-gray-400">
-              Target:{' '}
-              <span className="font-medium text-primary-600 dark:text-primary-400">
-                {targetReps} reps
-              </span>
+            <div
+              className={`flex items-center gap-2 text-white transition-all duration-150 ${
+                progress > 0.2 ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+              }`}
+            >
+              {config.icon}
+              <span className="font-semibold">{config.label}</span>
             </div>
           </div>
-          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <span className="text-xl font-bold text-gray-400">1</span>
+        )}
+
+        {/* Swipeable/Tappable card */}
+        <div
+          className={`relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border-2 ${
+            progress >= 1 ? config.borderActive : 'border-gray-200 dark:border-gray-700'
+          } ${isDragging ? '' : 'transition-transform duration-200'} ${
+            mode === 'tap'
+              ? 'cursor-pointer hover:border-primary-300'
+              : 'cursor-grab active:cursor-grabbing'
+          }`}
+          style={{ transform: `translateX(${translateX}px)` }}
+          onTouchStart={mode !== 'tap' ? handleTouchStart : undefined}
+          onTouchMove={mode !== 'tap' ? handleTouchMove : undefined}
+          onTouchEnd={mode !== 'tap' ? handleTouchEnd : undefined}
+          onMouseDown={mode !== 'tap' ? handleMouseDown : undefined}
+          onMouseMove={mode !== 'tap' ? handleMouseMove : undefined}
+          onMouseUp={mode !== 'tap' ? handleMouseUp : undefined}
+          onMouseLeave={mode !== 'tap' ? handleMouseLeave : undefined}
+          onClick={handleClick}
+        >
+          {/* Set card content */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
+                {exercise}
+              </div>
+              <div className="text-gray-500 dark:text-gray-400">
+                Target:{' '}
+                <span className="font-medium text-primary-600 dark:text-primary-400">
+                  {targetReps} reps
+                </span>
+              </div>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <span className="text-xl font-bold text-gray-400">1</span>
+            </div>
           </div>
         </div>
 
-        {/* Animated hint overlay */}
-        {hintVisible && !isCompleted && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/10 dark:bg-black/30 rounded-xl pointer-events-none">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-lg animate-bounce-x">
-              <Hand className="w-5 h-5 text-primary-500" />
-              {config.hintIcon}
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {config.hintText}
-              </span>
-            </div>
+        {/* Progress indicator */}
+        {Math.abs(translateX) > 0 && mode !== 'tap' && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 rounded-b-xl overflow-hidden">
+            <div
+              className={`h-full ${config.progressColor} transition-all duration-75`}
+              style={{ width: `${progress * 100}%` }}
+            />
           </div>
         )}
       </div>
 
-      {/* Progress indicator */}
-      {Math.abs(translateX) > 0 && mode !== 'tap' && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 rounded-b-xl overflow-hidden">
-          <div
-            className={`h-full ${config.progressColor} transition-all duration-75`}
-            style={{ width: `${progress * 100}%` }}
-          />
+      {/* Animated hint - shown below card, not overlaying it */}
+      {hintVisible && !isCompleted && mode !== 'tap' && (
+        <div className="mt-4 flex justify-center animate-pulse">
+          <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+            {mode === 'complete' ? (
+              <>
+                <Hand className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">Swipe</span>
+                <ArrowRight className="w-5 h-5 text-green-500" />
+              </>
+            ) : (
+              <>
+                <ArrowLeft className="w-5 h-5 text-red-500" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">Swipe</span>
+                <Hand className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tap hint for tap mode */}
+      {hintVisible && !isCompleted && mode === 'tap' && (
+        <div className="mt-4 flex justify-center animate-pulse">
+          <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+            <MousePointer className="w-4 h-4 text-primary-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Tap the card</span>
+          </div>
         </div>
       )}
     </div>
