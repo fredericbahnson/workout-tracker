@@ -161,38 +161,37 @@ export function SwipeDemo({
     }, 2500);
   }, [onComplete]);
 
-  // Touch handlers - use raw clientX/clientY like SwipeableSetCard
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY),
-    [handleDragStart]
+  // Pointer handlers - unified API that may bypass iOS WebView touch coordinate issues
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (isCompleted || mode === 'tap') return;
+      // Capture pointer to ensure all events go to this element
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      handleDragStart(e.clientX, e.clientY);
+    },
+    [handleDragStart, isCompleted, mode]
   );
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX),
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      handleDragMove(e.clientX);
+    },
     [handleDragMove]
   );
 
-  const handleTouchEnd = useCallback(() => handleDragEnd(), [handleDragEnd]);
-
-  // Mouse handlers
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => handleDragStart(e.clientX, e.clientY),
-    [handleDragStart]
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      handleDragEnd();
+    },
+    [handleDragEnd]
   );
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => handleDragMove(e.clientX),
-    [handleDragMove]
-  );
-
-  const handleMouseUp = useCallback(() => handleDragEnd(), [handleDragEnd]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (isDragging) {
-      setTranslateX(0);
-      setIsDragging(false);
-    }
-  }, [isDragging]);
+  const handlePointerCancel = useCallback((e: React.PointerEvent) => {
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    setTranslateX(0);
+    setIsDragging(false);
+  }, []);
 
   // Click handler for tap mode
   const handleClick = useCallback(() => {
@@ -360,14 +359,14 @@ export function SwipeDemo({
               ? 'cursor-pointer hover:border-primary-300'
               : 'cursor-grab active:cursor-grabbing'
           }`}
-          style={{ transform: `translateX(${translateX}px)` }}
-          onTouchStart={mode !== 'tap' ? handleTouchStart : undefined}
-          onTouchMove={mode !== 'tap' ? handleTouchMove : undefined}
-          onTouchEnd={mode !== 'tap' ? handleTouchEnd : undefined}
-          onMouseDown={mode !== 'tap' ? handleMouseDown : undefined}
-          onMouseMove={mode !== 'tap' ? handleMouseMove : undefined}
-          onMouseUp={mode !== 'tap' ? handleMouseUp : undefined}
-          onMouseLeave={mode !== 'tap' ? handleMouseLeave : undefined}
+          style={{
+            transform: `translateX(${translateX}px)`,
+            touchAction: mode !== 'tap' ? 'none' : 'auto',
+          }}
+          onPointerDown={mode !== 'tap' ? handlePointerDown : undefined}
+          onPointerMove={mode !== 'tap' ? handlePointerMove : undefined}
+          onPointerUp={mode !== 'tap' ? handlePointerUp : undefined}
+          onPointerCancel={mode !== 'tap' ? handlePointerCancel : undefined}
           onClick={handleClick}
         >
           {/* Set card content */}
