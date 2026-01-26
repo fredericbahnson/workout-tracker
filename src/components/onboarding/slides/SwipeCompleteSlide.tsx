@@ -1,13 +1,14 @@
 /**
  * SwipeCompleteSlide Component
  *
- * Interactive slide where user practices the swipe-right-to-complete gesture.
- * Uses the SwipeDemo component for the actual interaction.
+ * Static slide demonstrating the swipe-right-to-complete gesture.
+ * Shows a partially swiped card visual with instructional text.
  */
 
 import { useState, useEffect } from 'react';
 import { Hand } from 'lucide-react';
-import { SwipeDemo } from '../visuals';
+import { StaticSwipeDemo } from '../visuals';
+import { Button } from '@/components/ui/Button';
 
 interface SwipeCompleteSlideProps {
   onComplete: () => void;
@@ -29,7 +30,7 @@ export function SwipeCompleteSlide({ onComplete }: SwipeCompleteSlideProps) {
         ${isVisible ? 'opacity-100' : 'opacity-0'}
       `}
     >
-      {/* Content area - use explicit padding instead of justify-center to fix iOS touch target offset */}
+      {/* Content area */}
       <div className="flex-1 flex flex-col items-center px-6 pt-12">
         {/* Icon */}
         <div
@@ -62,10 +63,10 @@ export function SwipeCompleteSlide({ onComplete }: SwipeCompleteSlideProps) {
             ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
           `}
         >
-          Drag the card to the right to complete the set
+          Swipe the set card to the right to mark it complete
         </p>
 
-        {/* Swipe Demo */}
+        {/* Static Swipe Demo */}
         <div
           className={`
             w-full max-w-sm
@@ -73,13 +74,7 @@ export function SwipeCompleteSlide({ onComplete }: SwipeCompleteSlideProps) {
             ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
           `}
         >
-          <SwipeDemo
-            exercise="Push-ups"
-            targetReps={12}
-            onComplete={onComplete}
-            showHint={true}
-            mode="complete"
-          />
+          <StaticSwipeDemo mode="complete" exercise="Push-ups" targetReps={12} />
         </div>
 
         {/* Hint text */}
@@ -90,8 +85,15 @@ export function SwipeCompleteSlide({ onComplete }: SwipeCompleteSlideProps) {
             ${isVisible ? 'opacity-100' : 'opacity-0'}
           `}
         >
-          This is exactly how you'll log sets during workouts
+          Changed your mind? Tap "Undo" to redo or edit the set
         </p>
+      </div>
+
+      {/* Button at bottom */}
+      <div className="px-6 pb-8 flex justify-center">
+        <Button variant="primary" onClick={onComplete} className="w-full max-w-xs">
+          Got it
+        </Button>
       </div>
     </div>
   );

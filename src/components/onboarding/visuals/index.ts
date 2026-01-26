@@ -7,5 +7,6 @@
 export { RFEMCalculator } from './RFEMCalculator';
 export { ProgressComparisonChart } from './ProgressComparisonChart';
 export { SwipeDemo } from './SwipeDemo';
+export { StaticSwipeDemo } from './StaticSwipeDemo';
 export { ExerciseSuggestionChips, EXERCISE_SUGGESTIONS } from './ExerciseSuggestionChips';
 export type { ExerciseSuggestion } from './ExerciseSuggestionChips';

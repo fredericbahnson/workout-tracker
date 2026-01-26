@@ -1,13 +1,14 @@
 /**
  * SwipeSkipSlide Component
  *
- * Interactive slide where user practices the swipe-left-to-skip gesture.
- * Uses the SwipeDemo component for the actual interaction.
+ * Static slide demonstrating the swipe-left-to-skip gesture.
+ * Shows a partially swiped card visual with instructional text.
  */
 
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { SwipeDemo } from '../visuals';
+import { StaticSwipeDemo } from '../visuals';
+import { Button } from '@/components/ui/Button';
 
 interface SwipeSkipSlideProps {
   onComplete: () => void;
@@ -29,7 +30,7 @@ export function SwipeSkipSlide({ onComplete }: SwipeSkipSlideProps) {
         ${isVisible ? 'opacity-100' : 'opacity-0'}
       `}
     >
-      {/* Content area - use explicit padding instead of justify-center to fix iOS touch target offset */}
+      {/* Content area */}
       <div className="flex-1 flex flex-col items-center px-6 pt-12">
         {/* Icon */}
         <div
@@ -62,10 +63,10 @@ export function SwipeSkipSlide({ onComplete }: SwipeSkipSlideProps) {
             ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
           `}
         >
-          Need to skip a set? Swipe left.
+          Swipe left to skip a set you can't complete
         </p>
 
-        {/* Swipe Demo */}
+        {/* Static Swipe Demo */}
         <div
           className={`
             w-full max-w-sm
@@ -73,13 +74,7 @@ export function SwipeSkipSlide({ onComplete }: SwipeSkipSlideProps) {
             ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
           `}
         >
-          <SwipeDemo
-            exercise="Pull-ups"
-            targetReps={8}
-            onComplete={onComplete}
-            showHint={true}
-            mode="skip"
-          />
+          <StaticSwipeDemo mode="skip" exercise="Pull-ups" targetReps={8} />
         </div>
 
         {/* Hint text */}
@@ -92,6 +87,13 @@ export function SwipeSkipSlide({ onComplete }: SwipeSkipSlideProps) {
         >
           Skipped sets can always be revisited later
         </p>
+      </div>
+
+      {/* Button at bottom */}
+      <div className="px-6 pb-8 flex justify-center">
+        <Button variant="primary" onClick={onComplete} className="w-full max-w-xs">
+          Got it
+        </Button>
       </div>
     </div>
   );
