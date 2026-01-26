@@ -1,34 +1,46 @@
 /**
  * OnboardingFlow Component
  *
- * Orchestrates the complete onboarding experience:
- * 1. Welcome slide
- * 2. RFEM Guide module (5 slides)
- * 3. App Tour module (4 slides)
- * 4. Exercise creation step
+ * Orchestrates the complete onboarding experience with the new flow:
  *
- * Total: 11 slides including welcome and exercise creation
+ * Phase 1: Identity & Value (2 slides)
+ *   - IdentitySlide: Calisthenics identity hook
+ *   - ValuePropositionSlide: Key differentiators, trial mention
+ *
+ * Phase 2: Experience Preview (2 slides)
+ *   - DayInLifeSlide: What a typical day looks like
+ *   - SwipeDemoSlide: Interactive swipe practice (must complete)
+ *
+ * Phase 3: Quick Start (3 slides)
+ *   - FirstExerciseSlide: Create first exercise with suggestion chips
+ *   - RecordMaxSlide: Establish baseline (optional)
+ *   - ReadySlide: Success with next-step options
+ *
+ * Phase 4: RFEM Deep Dive (optional, accessible from Ready slide or Settings)
+ *   - Condensed RFEMGuide (3 slides)
+ *
+ * Total: 7 required slides + 3 optional RFEM slides
  */
 
 import { useState } from 'react';
-import {
-  ArrowRight,
-  ArrowLeft,
-  CheckCircle,
-  Plus,
-  Home,
-  AlertCircle,
-  Dumbbell,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { ExerciseForm } from '@/components/exercises';
 import { ExerciseRepo, MaxRecordRepo } from '@/data/repositories';
 import { createScopedLogger } from '@/utils/logger';
-import type { ExerciseFormData } from '@/types';
-import { OnboardingSlide } from './OnboardingSlide';
+import { useAppStore } from '@/stores/appStore';
 import { OnboardingProgress } from './OnboardingProgress';
 import { RFEMGuide, RFEM_GUIDE_SLIDES } from './RFEMGuide';
-import { AppTour, APP_TOUR_SLIDES } from './AppTour';
+import {
+  IdentitySlide,
+  ValuePropositionSlide,
+  DayInLifeSlide,
+  SwipeDemoSlide,
+  FirstExerciseSlide,
+  RecordMaxSlide,
+  ReadySlide,
+  type FirstExerciseData,
+  type NextAction,
+} from './slides';
 
 const log = createScopedLogger('Onboarding');
 
@@ -37,322 +49,251 @@ interface OnboardingFlowProps {
   onSkip: () => void;
 }
 
-// Module definitions for progress tracking
-const MODULES = {
-  WELCOME: 1,
-  RFEM: RFEM_GUIDE_SLIDES,
-  TOUR: APP_TOUR_SLIDES,
-  EXERCISE: 1,
-};
+// Phase definitions
+type OnboardingPhase =
+  | 'identity'
+  | 'value'
+  | 'day-in-life'
+  | 'swipe-demo'
+  | 'first-exercise'
+  | 'record-max'
+  | 'ready'
+  | 'rfem-deep-dive';
 
-const TOTAL_STEPS = MODULES.WELCOME + MODULES.RFEM + MODULES.TOUR + MODULES.EXERCISE;
+// Slides in the main flow (excluding RFEM deep dive)
+const MAIN_FLOW_SLIDES = 7;
+const TOTAL_SLIDES_WITH_RFEM = MAIN_FLOW_SLIDES + RFEM_GUIDE_SLIDES;
 
-// Module break points (indices where new modules start)
-const MODULE_BREAKS = [
-  MODULES.WELCOME, // After welcome
-  MODULES.WELCOME + MODULES.RFEM, // After RFEM
-  MODULES.WELCOME + MODULES.RFEM + MODULES.TOUR, // After Tour
-];
-
-type OnboardingPhase = 'welcome' | 'rfem' | 'tour' | 'exercise' | 'success';
+// Get slide index for progress indicator
+function getSlideIndex(phase: OnboardingPhase, rfemSlide: number = 0): number {
+  switch (phase) {
+    case 'identity':
+      return 0;
+    case 'value':
+      return 1;
+    case 'day-in-life':
+      return 2;
+    case 'swipe-demo':
+      return 3;
+    case 'first-exercise':
+      return 4;
+    case 'record-max':
+      return 5;
+    case 'ready':
+      return 6;
+    case 'rfem-deep-dive':
+      return MAIN_FLOW_SLIDES + rfemSlide;
+    default:
+      return 0;
+  }
+}
 
 export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
-  const [phase, setPhase] = useState<OnboardingPhase>('welcome');
-  const [currentStep, setCurrentStep] = useState(0);
+  const [phase, setPhase] = useState<OnboardingPhase>('identity');
+  const [showRFEM, setShowRFEM] = useState(false);
 
   // Exercise creation state
+  const [exerciseData, setExerciseData] = useState<FirstExerciseData | null>(null);
+  const [maxReps, setMaxReps] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [createdExerciseName, setCreatedExerciseName] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
-  // Calculate overall progress step
-  const getOverallStep = () => {
-    switch (phase) {
-      case 'welcome':
-        return 0;
-      case 'rfem':
-        return MODULES.WELCOME + currentStep;
-      case 'tour':
-        return MODULES.WELCOME + MODULES.RFEM + currentStep;
-      case 'exercise':
-      case 'success':
-        return MODULES.WELCOME + MODULES.RFEM + MODULES.TOUR;
-      default:
-        return 0;
+  // Milestone tracking
+  const setOnboardingMilestone = useAppStore(state => state.setOnboardingMilestone);
+
+  // Phase navigation
+  const handleIdentityComplete = () => {
+    setOnboardingMilestone('identityShown', true);
+    setPhase('value');
+  };
+
+  const handleValueComplete = () => {
+    setPhase('day-in-life');
+  };
+
+  const handleDayInLifeComplete = () => {
+    setPhase('swipe-demo');
+  };
+
+  const handleSwipeDemoComplete = () => {
+    setOnboardingMilestone('swipeDemoPracticed', true);
+    setPhase('first-exercise');
+  };
+
+  const handleFirstExerciseComplete = (data: FirstExerciseData) => {
+    setExerciseData(data);
+    setPhase('record-max');
+  };
+
+  const handleRecordMaxComplete = async (reps: number | null) => {
+    setMaxReps(reps);
+    setIsCreating(true);
+
+    try {
+      if (!exerciseData) {
+        throw new Error('Exercise data not found');
+      }
+
+      log.debug('Creating exercise:', exerciseData.name);
+
+      // Create the exercise
+      const exercise = await ExerciseRepo.create({
+        name: exerciseData.name,
+        type: exerciseData.type as 'push' | 'pull' | 'legs' | 'core' | 'other',
+        mode: 'standard',
+        measurementType: 'reps',
+        notes: '',
+        customParameters: [],
+      });
+
+      log.debug('Exercise created:', exercise.id);
+      setOnboardingMilestone('firstExerciseCreated', true);
+
+      // Create initial max record if provided
+      if (reps && reps > 0) {
+        await MaxRecordRepo.create(exercise.id, reps, undefined, 'Initial max during onboarding');
+        log.debug('Initial max recorded:', reps);
+        setOnboardingMilestone('firstMaxRecorded', true);
+      }
+
+      setPhase('ready');
+    } catch (err) {
+      log.error(err as Error);
+      // Still proceed to ready screen even on error
+      setPhase('ready');
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  // Phase navigation
-  const handleWelcomeComplete = () => {
-    setPhase('rfem');
-    setCurrentStep(0);
+  const handleReadyAction = (action: NextAction) => {
+    switch (action) {
+      case 'learn-rfem':
+        setShowRFEM(true);
+        setPhase('rfem-deep-dive');
+        break;
+      case 'add-more':
+        // Navigate to exercises page
+        onComplete();
+        break;
+      case 'create-cycle':
+        // Navigate to cycle creation
+        onComplete();
+        break;
+      case 'start-training':
+      default:
+        // Navigate to Today page
+        onComplete();
+        break;
+    }
   };
 
   const handleRFEMComplete = () => {
-    setPhase('tour');
-    setCurrentStep(0);
+    setOnboardingMilestone('rfemDeepDiveSeen', true);
+    onComplete();
   };
 
-  const handleTourComplete = () => {
-    setPhase('exercise');
-    setCurrentStep(0);
-  };
-
-  const handleBackFromRFEM = () => {
-    setPhase('welcome');
-    setCurrentStep(0);
-  };
-
-  const handleBackFromTour = () => {
-    setPhase('rfem');
-    setCurrentStep(RFEM_GUIDE_SLIDES - 1);
-  };
-
-  // Exercise creation handlers
-  const handleCreateExercise = async (data: ExerciseFormData) => {
-    setIsCreating(true);
-    setError(null);
-
-    try {
-      log.debug('Creating exercise:', data.name);
-
-      const { initialMax, initialMaxTime, startingReps, startingTime, ...exerciseData } = data;
-
-      // Add default conditioning values based on measurement type
-      const exerciseToCreate = {
-        ...exerciseData,
-        defaultConditioningReps:
-          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps'
-            ? startingReps
-            : undefined,
-        defaultConditioningTime:
-          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time'
-            ? startingTime
-            : undefined,
-      };
-
-      const exercise = await ExerciseRepo.create(exerciseToCreate);
-      log.debug('Exercise created:', exercise.id);
-
-      // Create initial max record if provided (standard exercises)
-      if (exerciseData.measurementType === 'reps' && initialMax && initialMax > 0) {
-        await MaxRecordRepo.create(
-          exercise.id,
-          initialMax,
-          undefined,
-          'Initial max during onboarding'
-        );
-        log.debug('Initial max reps recorded:', initialMax);
-      } else if (exerciseData.measurementType === 'time' && initialMaxTime && initialMaxTime > 0) {
-        await MaxRecordRepo.create(
-          exercise.id,
-          undefined,
-          initialMaxTime,
-          'Initial max during onboarding'
-        );
-        log.debug('Initial max time recorded:', initialMaxTime);
-      }
-
-      setCreatedExerciseName(data.name);
-      setPhase('success');
-      setIsCreating(false);
-    } catch (err) {
-      log.error(err as Error);
-      setError(err instanceof Error ? err.message : 'Failed to create exercise. Please try again.');
-      setIsCreating(false);
+  const handleBack = () => {
+    switch (phase) {
+      case 'value':
+        setPhase('identity');
+        break;
+      case 'day-in-life':
+        setPhase('value');
+        break;
+      case 'swipe-demo':
+        setPhase('day-in-life');
+        break;
+      case 'first-exercise':
+        setPhase('swipe-demo');
+        break;
+      case 'record-max':
+        setPhase('first-exercise');
+        break;
+      case 'ready':
+        setPhase('record-max');
+        break;
+      case 'rfem-deep-dive':
+        setShowRFEM(false);
+        setPhase('ready');
+        break;
+      default:
+        break;
     }
   };
 
-  const handleAddAnother = () => {
-    setError(null);
-    setPhase('exercise');
-  };
+  // Calculate progress
+  const totalSteps = showRFEM ? TOTAL_SLIDES_WITH_RFEM : MAIN_FLOW_SLIDES;
+  const currentStep = getSlideIndex(phase);
 
-  const handleBackFromExercise = () => {
-    setPhase('tour');
-    setCurrentStep(APP_TOUR_SLIDES - 1);
-  };
-
-  // Render based on current phase
-  switch (phase) {
-    case 'welcome':
-      return (
-        <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col z-50 safe-area-top safe-area-bottom">
-          <OnboardingProgress
-            totalSteps={TOTAL_STEPS}
-            currentStep={getOverallStep()}
-            moduleBreaks={MODULE_BREAKS}
-            onSkip={onSkip}
-            showSkip={true}
-          />
-          <OnboardingSlide
-            image="/pwa-192x192.png"
-            headline="Welcome to Ascend"
-            body={
-              <div className="space-y-4">
-                <p className="text-lg">Smart strength training that adapts to you.</p>
-                <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                  <p>In the next 2 minutes, you'll learn:</p>
-                  <ul className="text-left space-y-1 mt-2">
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary-500 mt-0.5">•</span>
-                      <span>A training approach used by elite athletes</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary-500 mt-0.5">•</span>
-                      <span>How Ascend automates your programming</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary-500 mt-0.5">•</span>
-                      <span>Everything you need to start training</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            }
-            primaryAction={{
-              label: "Let's Go",
-              onClick: handleWelcomeComplete,
-              icon: <ArrowRight className="w-5 h-5" />,
-            }}
-          />
-        </div>
-      );
-
-    case 'rfem':
-      return (
-        <RFEMGuide
-          onComplete={handleRFEMComplete}
-          onBack={handleBackFromRFEM}
-          showProgress={true}
-          showSkip={true}
-          onSkip={onSkip}
-          standalone={false}
-        />
-      );
-
-    case 'tour':
-      return (
-        <AppTour
-          onComplete={handleTourComplete}
-          onBack={handleBackFromTour}
-          showProgress={true}
-          showSkip={true}
-          onSkip={onSkip}
-          standalone={false}
-        />
-      );
-
-    case 'exercise':
-      return (
-        <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col z-50 safe-area-top safe-area-bottom">
-          {/* Header */}
-          <div className="px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-dark-border">
-            <button
-              onClick={handleBackFromExercise}
-              className="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-              Create Your First Exercise
-            </h2>
-            <button
-              onClick={onSkip}
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            >
-              Skip
-            </button>
-          </div>
-
-          {/* Form content */}
-          <div className="flex-1 overflow-y-auto px-4 py-6">
-            <div className="max-w-sm mx-auto space-y-6">
-              {/* Error message */}
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-                </div>
-              )}
-
-              {/* Encouragement */}
-              <div className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
-                <Dumbbell className="w-6 h-6 text-primary-600 dark:text-primary-400 flex-shrink-0" />
-                <p className="text-sm text-primary-700 dark:text-primary-300">
-                  Start with your favorite exercise—the one you're most excited to track.
-                </p>
-              </div>
-
-              {/* Use the full ExerciseForm component */}
-              <ExerciseForm
-                onSubmit={handleCreateExercise}
-                onCancel={onSkip}
-                isLoading={isCreating}
-              />
-            </div>
-          </div>
-        </div>
-      );
-
-    case 'success':
-      return (
-        <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col items-center justify-center p-6 z-50 safe-area-top safe-area-bottom">
-          <div className="text-center max-w-sm">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {createdExerciseName} Added!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-8">
-              Your first exercise is ready. You can:
-            </p>
-
-            <div className="space-y-2 text-left mb-8">
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-primary-500 font-bold">•</span>
-                <span>
-                  <strong className="text-gray-900 dark:text-gray-100">Add more exercises</strong>{' '}
-                  to build your library
-                </span>
-              </div>
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-primary-500 font-bold">•</span>
-                <span>
-                  <strong className="text-gray-900 dark:text-gray-100">
-                    Create a training cycle
-                  </strong>{' '}
-                  to start scheduled workouts
-                </span>
-              </div>
-              <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-                <span className="text-primary-500 font-bold">•</span>
-                <span>
-                  <strong className="text-gray-900 dark:text-gray-100">
-                    Log an ad-hoc workout now
-                  </strong>{' '}
-                  on the Today page
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Button onClick={handleAddAnother} variant="secondary" className="w-full py-3">
-                <Plus className="w-5 h-5 mr-2" />
-                Add Another Exercise
-              </Button>
-
-              <Button onClick={onComplete} className="w-full py-3">
-                <Home className="w-5 h-5 mr-2" />
-                Start Using Ascend
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-
-    default:
-      return null;
+  // Render RFEM deep dive
+  if (phase === 'rfem-deep-dive') {
+    return (
+      <RFEMGuide
+        onComplete={handleRFEMComplete}
+        onBack={handleBack}
+        showProgress={true}
+        showSkip={true}
+        onSkip={onComplete}
+        standalone={false}
+      />
+    );
   }
+
+  // Main onboarding phases
+  return (
+    <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg flex flex-col z-50 safe-area-top safe-area-bottom">
+      {/* Progress indicator */}
+      <OnboardingProgress
+        totalSteps={totalSteps}
+        currentStep={currentStep}
+        moduleBreaks={[2, 4]} // After Value, after Swipe Demo
+        onSkip={onSkip}
+        showSkip={phase !== 'swipe-demo'} // Can't skip the swipe demo
+      />
+
+      {/* Back button (when applicable) */}
+      {phase !== 'identity' && phase !== 'swipe-demo' && (
+        <div className="absolute top-6 left-4 z-10">
+          <Button variant="ghost" size="sm" onClick={handleBack} className="p-2">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Slide content */}
+      <div className="flex-1 overflow-y-auto" key={phase}>
+        {phase === 'identity' && <IdentitySlide onNext={handleIdentityComplete} />}
+
+        {phase === 'value' && <ValuePropositionSlide onNext={handleValueComplete} />}
+
+        {phase === 'day-in-life' && <DayInLifeSlide onNext={handleDayInLifeComplete} />}
+
+        {phase === 'swipe-demo' && <SwipeDemoSlide onComplete={handleSwipeDemoComplete} />}
+
+        {phase === 'first-exercise' && <FirstExerciseSlide onNext={handleFirstExerciseComplete} />}
+
+        {phase === 'record-max' && exerciseData && (
+          <RecordMaxSlide exerciseName={exerciseData.name} onNext={handleRecordMaxComplete} />
+        )}
+
+        {phase === 'ready' && exerciseData && (
+          <ReadySlide
+            exerciseName={exerciseData.name}
+            maxReps={maxReps}
+            onSelectAction={handleReadyAction}
+          />
+        )}
+      </div>
+
+      {/* Loading overlay */}
+      {isCreating && (
+        <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 flex items-center justify-center z-20">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-600 dark:text-gray-400">Creating exercise...</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

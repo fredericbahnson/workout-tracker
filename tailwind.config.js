@@ -41,7 +41,16 @@ export default {
         'gym-xl': ['1.5rem', { lineHeight: '2rem', fontWeight: '600' }],      // 24px
         'gym-2xl': ['1.75rem', { lineHeight: '2.25rem', fontWeight: '700' }], // 28px
         'gym-3xl': ['2rem', { lineHeight: '2.5rem', fontWeight: '700' }],     // 32px
-      }
+      },
+      animation: {
+        'bounce-x': 'bounce-x 1.5s ease-in-out infinite',
+      },
+      keyframes: {
+        'bounce-x': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '50%': { transform: 'translateX(8px)' },
+        },
+      },
     },
   },
   plugins: [],

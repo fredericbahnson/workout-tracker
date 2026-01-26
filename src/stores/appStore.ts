@@ -16,6 +16,37 @@ export type Theme = 'light' | 'dark' | 'system';
 export type RepDisplayMode = 'week' | 'cycle' | 'allTime';
 export type FontSize = 'small' | 'default' | 'large' | 'xl';
 
+/**
+ * Progressive onboarding milestones for contextual education.
+ * Tracks which key actions the user has completed to enable
+ * contextual hints, nudges, and deferred education content.
+ */
+export interface OnboardingMilestones {
+  identityShown: boolean;
+  swipeDemoPracticed: boolean;
+  firstExerciseCreated: boolean;
+  firstMaxRecorded: boolean;
+  firstSetLogged: boolean;
+  firstCycleCreated: boolean;
+  rfemDeepDiveSeen: boolean;
+  cycleIntroSeen: boolean;
+  maxTestingIntroSeen: boolean;
+  adHocSessionCount: number;
+}
+
+const DEFAULT_MILESTONES: OnboardingMilestones = {
+  identityShown: false,
+  swipeDemoPracticed: false,
+  firstExerciseCreated: false,
+  firstMaxRecorded: false,
+  firstSetLogged: false,
+  firstCycleCreated: false,
+  rfemDeepDiveSeen: false,
+  cycleIntroSeen: false,
+  maxTestingIntroSeen: false,
+  adHocSessionCount: 0,
+};
+
 interface AppState {
   // Theme
   theme: Theme;
@@ -32,6 +63,14 @@ interface AppState {
   // Onboarding
   hasCompletedOnboarding: boolean;
   setHasCompletedOnboarding: (completed: boolean) => void;
+
+  // Progressive onboarding milestones
+  onboardingMilestones: OnboardingMilestones;
+  setOnboardingMilestone: <K extends keyof OnboardingMilestones>(
+    key: K,
+    value: OnboardingMilestones[K]
+  ) => void;
+  resetOnboardingMilestones: () => void;
 
   // UI state (not persisted)
   sidebarOpen: boolean;
@@ -57,6 +96,17 @@ export const useAppStore = create<AppState>()(
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: completed => set({ hasCompletedOnboarding: completed }),
 
+      // Progressive onboarding milestones
+      onboardingMilestones: DEFAULT_MILESTONES,
+      setOnboardingMilestone: (key, value) =>
+        set(state => ({
+          onboardingMilestones: {
+            ...state.onboardingMilestones,
+            [key]: value,
+          },
+        })),
+      resetOnboardingMilestones: () => set({ onboardingMilestones: DEFAULT_MILESTONES }),
+
       // UI state
       sidebarOpen: false,
       setSidebarOpen: open => set({ sidebarOpen: open }),
@@ -68,8 +118,33 @@ export const useAppStore = create<AppState>()(
         fontSize: state.fontSize,
         repDisplayMode: state.repDisplayMode,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
+        onboardingMilestones: state.onboardingMilestones,
         // Note: sidebarOpen is not persisted
       }),
+      // Migration for existing users: if hasCompletedOnboarding is true but no milestones,
+      // initialize all milestones as true (they've already been through onboarding)
+      migrate: (persistedState: unknown, _version: number) => {
+        const state = persistedState as Partial<AppState>;
+        if (state.hasCompletedOnboarding && !state.onboardingMilestones) {
+          return {
+            ...state,
+            onboardingMilestones: {
+              identityShown: true,
+              swipeDemoPracticed: true,
+              firstExerciseCreated: true,
+              firstMaxRecorded: true,
+              firstSetLogged: true,
+              firstCycleCreated: true,
+              rfemDeepDiveSeen: true,
+              cycleIntroSeen: true,
+              maxTestingIntroSeen: true,
+              adHocSessionCount: 0,
+            },
+          };
+        }
+        return state;
+      },
+      version: 1,
     }
   )
 );

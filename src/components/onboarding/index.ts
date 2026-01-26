@@ -9,12 +9,18 @@ export { AuthGate } from './AuthGate';
 export { OnboardingFlow } from './OnboardingFlow';
 
 // Standalone modules (can be accessed from Settings)
-export { RFEMGuide } from './RFEMGuide';
-export { AppTour } from './AppTour';
+export { RFEMGuide, RFEM_GUIDE_SLIDES } from './RFEMGuide';
+export { AppTour, APP_TOUR_SLIDES } from './AppTour';
 
 // Shared components
 export { OnboardingSlide } from './OnboardingSlide';
 export { OnboardingProgress } from './OnboardingProgress';
+
+// Individual slides
+export * from './slides';
+
+// Visual components
+export * from './visuals';
 
 // Types
 export type { OnboardingChapter, SlideVariant } from './types';

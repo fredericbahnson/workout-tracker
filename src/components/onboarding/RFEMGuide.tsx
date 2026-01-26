@@ -1,16 +1,21 @@
 /**
  * RFEMGuide Component
  *
- * Comprehensive explanation of RFEM training methodology.
+ * Condensed explanation of RFEM training methodology (3 slides).
  * Can be used standalone (from Settings) or as part of onboarding flow.
+ *
+ * Slides:
+ * 1. RFEMExplainedSlide - What RFEM is with interactive calculator
+ * 2. WavePatternSlide - Intensity rotation visualization (3→4→5→4)
+ * 3. BeyondRFEMSlide - Alternative modes (Simple, Mixed, Conditioning)
  */
 
 import { useState } from 'react';
-import { ArrowRight, ArrowLeft, Target, TrendingUp, Repeat, Layers } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Target, Repeat, Layers } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { OnboardingSlide } from './OnboardingSlide';
 import { OnboardingProgress } from './OnboardingProgress';
-import { RFEMCalculator, ProgressComparisonChart } from './visuals';
+import { RFEMCalculator } from './visuals';
 
 interface RFEMGuideProps {
   onComplete: () => void;
@@ -24,7 +29,7 @@ interface RFEMGuideProps {
   standalone?: boolean;
 }
 
-const TOTAL_SLIDES = 5;
+const TOTAL_SLIDES = 3;
 
 export function RFEMGuide({
   onComplete,
@@ -58,47 +63,8 @@ export function RFEMGuide({
   // Slide content
   const renderSlideContent = () => {
     switch (currentSlide) {
+      // Slide 1: RFEM Explained
       case 0:
-        return (
-          <OnboardingSlide
-            image="/app-icon-80.png"
-            headline="What If You Could Get Stronger... Without Burning Out?"
-            variant="rfem"
-            gradient="from-emerald-500 to-teal-500"
-            body={
-              <div className="space-y-3">
-                <p>Most people train to failure every set. It feels productive, but it actually:</p>
-                <ul className="text-left space-y-1.5 text-sm">
-                  <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">•</span>
-                    <span>Creates excessive fatigue that hurts next session</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">•</span>
-                    <span>Increases injury risk as form breaks down</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">•</span>
-                    <span>Makes progress unpredictable</span>
-                  </li>
-                </ul>
-                <p className="text-emerald-600 dark:text-emerald-400 font-medium pt-2">
-                  Elite athletes discovered something better.
-                </p>
-              </div>
-            }
-            primaryAction={{
-              label: 'See the Solution',
-              onClick: handleNext,
-              icon: <ArrowRight className="w-5 h-5" />,
-            }}
-            secondaryAction={
-              onBack && isFirstSlide ? { label: 'Back', onClick: handlePrev } : undefined
-            }
-          />
-        );
-
-      case 1:
         return (
           <OnboardingSlide
             icon={<Target className="w-10 h-10" />}
@@ -111,69 +77,41 @@ export function RFEMGuide({
                   <strong>below</strong> your max.
                 </p>
                 <RFEMCalculator initialMax={15} interactive={true} />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  You're always working hard, but never destroying yourself.
-                </p>
-              </div>
-            }
-            primaryAction={{
-              label: 'Why This Works',
-              onClick: handleNext,
-              icon: <ArrowRight className="w-5 h-5" />,
-            }}
-          />
-        );
-
-      case 2:
-        return (
-          <OnboardingSlide
-            icon={<TrendingUp className="w-10 h-10" />}
-            headline="More Volume, Better Recovery, Faster Progress"
-            variant="rfem"
-            body={
-              <div className="space-y-4">
-                <p>When you don't go to failure:</p>
-                <ul className="text-left space-y-1.5 text-sm">
-                  <li className="flex items-start gap-2">
+                <div className="space-y-2 text-sm text-left">
+                  <div className="flex items-start gap-2">
                     <span className="text-emerald-500 mt-0.5">✓</span>
                     <span>
                       <strong>Recover faster</strong> — ready to train again sooner
                     </span>
-                  </li>
-                  <li className="flex items-start gap-2">
+                  </div>
+                  <div className="flex items-start gap-2">
                     <span className="text-emerald-500 mt-0.5">✓</span>
                     <span>
                       <strong>Accumulate more volume</strong> — more total reps over time
                     </span>
-                  </li>
-                  <li className="flex items-start gap-2">
+                  </div>
+                  <div className="flex items-start gap-2">
                     <span className="text-emerald-500 mt-0.5">✓</span>
                     <span>
-                      <strong>Better technique</strong> — form stays clean when not exhausted
+                      <strong>Better technique</strong> — form stays clean
                     </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-500 mt-0.5">✓</span>
-                    <span>
-                      <strong>Sustainable progress</strong> — no burnout cycles
-                    </span>
-                  </li>
-                </ul>
-                <ProgressComparisonChart animate={true} />
-                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                  Train more frequently and consistently — the real key to long-term gains.
-                </p>
+                  </div>
+                </div>
               </div>
             }
             primaryAction={{
-              label: 'How Ascend Uses RFEM',
+              label: 'See the Wave Pattern',
               onClick: handleNext,
               icon: <ArrowRight className="w-5 h-5" />,
             }}
+            secondaryAction={
+              onBack && isFirstSlide ? { label: 'Back', onClick: handlePrev } : undefined
+            }
           />
         );
 
-      case 3:
+      // Slide 2: Wave Pattern
+      case 1:
         return (
           <OnboardingSlide
             icon={<Repeat className="w-10 h-10" />}
@@ -182,7 +120,7 @@ export function RFEMGuide({
             body={
               <div className="space-y-4">
                 <p>Ascend rotates your RFEM values from workout to workout:</p>
-                {/* Static RFEM wave chart */}
+                {/* RFEM wave chart */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
                   <svg
                     viewBox="0 0 300 100"
@@ -226,8 +164,7 @@ export function RFEMGuide({
                     >
                       RFEM
                     </text>
-                    {/* Wave line - smooth curve through all data points */}
-                    {/* Points: (25,70) (62,42.5) (99,15) (136,42.5) (173,70) (211,42.5) (248,15) (285,42.5) */}
+                    {/* Wave line */}
                     <path
                       d="M 25 70
                          C 25 70, 44 70, 62 42.5
@@ -243,7 +180,7 @@ export function RFEMGuide({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    {/* Data points - dots at all workouts, larger at peaks/nadirs */}
+                    {/* Data points */}
                     {[
                       { x: 25, y: 70, rfem: 3 },
                       { x: 62, y: 42.5, rfem: 4 },
@@ -293,21 +230,18 @@ export function RFEMGuide({
                   </strong>{' '}
                   without you having to think about it.
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  You can use the app's built-in defaults, or customize the RFEM rotation values
-                  yourself when creating a cycle.
-                </p>
               </div>
             }
             primaryAction={{
-              label: 'Other Training Styles',
+              label: 'Other Training Modes',
               onClick: handleNext,
               icon: <ArrowRight className="w-5 h-5" />,
             }}
           />
         );
 
-      case 4:
+      // Slide 3: Beyond RFEM
+      case 2:
         return (
           <OnboardingSlide
             icon={<Layers className="w-10 h-10" />}
@@ -354,7 +288,7 @@ export function RFEMGuide({
               </div>
             }
             primaryAction={{
-              label: standalone ? 'Done' : 'Explore the App',
+              label: standalone ? 'Done' : 'Get Started',
               onClick: handleNext,
               icon: <ArrowRight className="w-5 h-5" />,
             }}
