@@ -79,6 +79,29 @@ class AscendDatabase extends Dexie {
       syncQueue: 'id, [table+itemId], createdAt',
       userPreferences: 'id',
     });
+
+    // Version 5: Add healthDisclaimerAcknowledgedAt to user preferences
+    this.version(5)
+      .stores({
+        exercises: 'id, type, mode, name, createdAt',
+        maxRecords: 'id, exerciseId, recordedAt',
+        completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt',
+        cycles: 'id, status, startDate',
+        scheduledWorkouts: 'id, cycleId, sequenceNumber, status, scheduledDate',
+        syncQueue: 'id, [table+itemId], createdAt',
+        userPreferences: 'id',
+      })
+      .upgrade(tx => {
+        // Migration: add healthDisclaimerAcknowledgedAt to existing preferences
+        return tx
+          .table('userPreferences')
+          .toCollection()
+          .modify(prefs => {
+            if (prefs.healthDisclaimerAcknowledgedAt === undefined) {
+              prefs.healthDisclaimerAcknowledgedAt = null;
+            }
+          });
+      });
   }
 }
 

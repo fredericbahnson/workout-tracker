@@ -12,7 +12,8 @@ import {
   EntitlementProvider,
   useEntitlement,
 } from './contexts';
-import { AuthGate, OnboardingFlow } from './components/onboarding';
+import { AuthGate, OnboardingFlow, HealthDisclaimer } from './components/onboarding';
+import { useSyncedPreferences } from './contexts';
 import { PaywallModal } from './components/paywall';
 
 // Lazy-loaded page components
@@ -87,7 +88,13 @@ function AppContent() {
     hasStartedOnboarding,
     setHasStartedOnboarding,
   } = useAppStore();
+  const {
+    hasAcknowledgedHealthDisclaimer,
+    acknowledgeHealthDisclaimer,
+    isLoading: preferencesLoading,
+  } = useSyncedPreferences();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isAcknowledgingHealth, setIsAcknowledgingHealth] = useState(false);
 
   // Trigger onboarding for new users (detected via AuthContext)
   useEffect(() => {
@@ -128,8 +135,21 @@ function AppContent() {
     navigate('/exercises');
   };
 
-  // Show loading state while checking auth
-  if (authLoading) {
+  // Handler for standalone health disclaimer (existing users)
+  const handleStandaloneHealthAcknowledge = async () => {
+    setIsAcknowledgingHealth(true);
+    try {
+      await acknowledgeHealthDisclaimer();
+    } catch (error) {
+      console.error('Failed to save health acknowledgment:', error);
+      // Still allow progress - the acknowledgment will be retried on next sync
+    } finally {
+      setIsAcknowledgingHealth(false);
+    }
+  };
+
+  // Show loading state while checking auth AND preferences
+  if (authLoading || preferencesLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex items-center justify-center">
         <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -146,7 +166,23 @@ function AppContent() {
     );
   }
 
-  // If new user needs onboarding
+  // CRITICAL: Health disclaimer gate for ALL users
+  // This catches:
+  // - Existing users who haven't seen the disclaimer
+  // - Users who somehow skipped it
+  // - Users on older app versions updating
+  if (!hasAcknowledgedHealthDisclaimer) {
+    return (
+      <ErrorBoundary level="page">
+        <HealthDisclaimer
+          onAcknowledge={handleStandaloneHealthAcknowledge}
+          isLoading={isAcknowledgingHealth}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  // If new user needs onboarding (health already acknowledged above)
   if (showOnboarding) {
     return (
       <ErrorBoundary level="page">

@@ -163,6 +163,7 @@ export interface RemoteUserPreferences {
   max_test_rest_timer_duration_seconds: number;
   timer_volume: number | null; // null for backwards compatibility
   last_scheduling_mode: string | null;
+  health_disclaimer_acknowledged_at: string | null; // null means not acknowledged
   created_at: string;
   updated_at: string;
 }

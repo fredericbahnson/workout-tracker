@@ -30,6 +30,7 @@ import { createScopedLogger } from '@/utils/logger';
 import { useAppStore } from '@/stores/appStore';
 import { OnboardingProgress } from './OnboardingProgress';
 import { RFEMGuide, RFEM_GUIDE_SLIDES } from './RFEMGuide';
+import { AppTour, APP_TOUR_SLIDES } from './AppTour';
 import {
   IdentitySlide,
   ValuePropositionSlide,
@@ -39,9 +40,8 @@ import {
   TapToEditSlide,
   FirstExerciseSlide,
   RecordMaxSlide,
-  ReadySlide,
+  ExerciseSuccessSlide,
   type FirstExerciseData,
-  type NextAction,
 } from './slides';
 
 const log = createScopedLogger('Onboarding');
@@ -62,14 +62,20 @@ type OnboardingPhase =
   | 'first-exercise'
   | 'record-max'
   | 'ready'
+  | 'app-tour'
   | 'rfem-deep-dive';
 
 // Slides in the main flow (excluding RFEM deep dive)
-const MAIN_FLOW_SLIDES = 9;
+// 9 initial slides + 4 app tour slides = 13
+const MAIN_FLOW_SLIDES = 9 + APP_TOUR_SLIDES;
 const TOTAL_SLIDES_WITH_RFEM = MAIN_FLOW_SLIDES + RFEM_GUIDE_SLIDES;
 
 // Get slide index for progress indicator
-function getSlideIndex(phase: OnboardingPhase, rfemSlide: number = 0): number {
+function getSlideIndex(
+  phase: OnboardingPhase,
+  appTourSlide: number = 0,
+  rfemSlide: number = 0
+): number {
   switch (phase) {
     case 'identity':
       return 0;
@@ -89,6 +95,8 @@ function getSlideIndex(phase: OnboardingPhase, rfemSlide: number = 0): number {
       return 7;
     case 'ready':
       return 8;
+    case 'app-tour':
+      return 9 + appTourSlide;
     case 'rfem-deep-dive':
       return MAIN_FLOW_SLIDES + rfemSlide;
     default:
@@ -181,26 +189,12 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
     }
   };
 
-  const handleReadyAction = (action: NextAction) => {
-    switch (action) {
-      case 'learn-rfem':
-        setShowRFEM(true);
-        setPhase('rfem-deep-dive');
-        break;
-      case 'add-more':
-        // Navigate to exercises page
-        onComplete();
-        break;
-      case 'create-cycle':
-        // Navigate to cycle creation
-        onComplete();
-        break;
-      case 'start-training':
-      default:
-        // Navigate to Today page
-        onComplete();
-        break;
-    }
+  const handleExerciseSuccessContinue = () => {
+    setPhase('app-tour');
+  };
+
+  const handleAppTourComplete = () => {
+    onComplete();
   };
 
   const handleRFEMComplete = () => {
@@ -234,9 +228,12 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
       case 'ready':
         setPhase('record-max');
         break;
+      case 'app-tour':
+        setPhase('ready');
+        break;
       case 'rfem-deep-dive':
         setShowRFEM(false);
-        setPhase('ready');
+        setPhase('app-tour');
         break;
       default:
         break;
@@ -246,6 +243,24 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
   // Calculate progress
   const totalSteps = showRFEM ? TOTAL_SLIDES_WITH_RFEM : MAIN_FLOW_SLIDES;
   const currentStep = getSlideIndex(phase);
+
+  // Render App Tour
+  if (phase === 'app-tour') {
+    return (
+      <AppTour
+        onComplete={handleAppTourComplete}
+        onBack={() => setPhase('ready')}
+        onLearnRFEM={() => {
+          setShowRFEM(true);
+          setPhase('rfem-deep-dive');
+        }}
+        showProgress={true}
+        showSkip={true}
+        onSkip={onComplete}
+        standalone={false}
+      />
+    );
+  }
 
   // Render RFEM deep dive
   if (phase === 'rfem-deep-dive') {
@@ -270,7 +285,12 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         currentStep={currentStep}
         moduleBreaks={[2, 6]} // After Value, after gesture demos
         onSkip={onSkip}
-        showSkip={phase !== 'swipe-complete' && phase !== 'swipe-skip' && phase !== 'tap-to-edit'} // Can't skip gesture demos
+        showSkip={
+          phase !== 'identity' && // No skip on welcome/identity
+          phase !== 'swipe-complete' &&
+          phase !== 'swipe-skip' &&
+          phase !== 'tap-to-edit'
+        } // Can't skip identity or gesture demos
       />
 
       {/* Back button (when applicable) */}
@@ -308,10 +328,10 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         )}
 
         {phase === 'ready' && exerciseData && (
-          <ReadySlide
+          <ExerciseSuccessSlide
             exerciseName={exerciseData.name}
             maxReps={maxReps}
-            onSelectAction={handleReadyAction}
+            onContinue={handleExerciseSuccessContinue}
           />
         )}
       </div>

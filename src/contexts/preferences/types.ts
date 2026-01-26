@@ -14,6 +14,12 @@ export interface SyncedPreferencesContextType {
   /** Whether preferences are currently loading */
   isLoading: boolean;
 
+  /** Whether user has acknowledged health disclaimer */
+  hasAcknowledgedHealthDisclaimer: boolean;
+
+  /** Record health disclaimer acknowledgment */
+  acknowledgeHealthDisclaimer: () => Promise<void>;
+
   /** Update app mode (standard or advanced) */
   setAppMode: (mode: AppMode) => Promise<void>;
 
@@ -48,4 +54,5 @@ export const defaultPrefs: UserPreferences = {
   ...DEFAULT_USER_PREFERENCES,
   createdAt: new Date(),
   updatedAt: new Date(),
+  healthDisclaimerAcknowledgedAt: null,
 };

@@ -279,6 +279,7 @@ export function remoteToLocalUserPreferences(remote: RemoteUserPreferences): Use
     },
     timerVolume: remote.timer_volume ?? 40, // Default to 40 for existing records
     lastSchedulingMode: (remote.last_scheduling_mode as SchedulingMode) ?? undefined,
+    healthDisclaimerAcknowledgedAt: remote.health_disclaimer_acknowledged_at ?? null,
     createdAt: toDateRequired(remote.created_at),
     updatedAt: toDateRequired(remote.updated_at),
   };
@@ -302,6 +303,7 @@ export function localToRemoteUserPreferences(local: UserPreferences, userId: str
     max_test_rest_timer_duration_seconds: local.maxTestRestTimer.durationSeconds,
     timer_volume: local.timerVolume,
     last_scheduling_mode: local.lastSchedulingMode || null,
+    health_disclaimer_acknowledged_at: local.healthDisclaimerAcknowledgedAt || null,
     created_at: toISOString(local.createdAt),
     updated_at: toISOString(local.updatedAt),
   };

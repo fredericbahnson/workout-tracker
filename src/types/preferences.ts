@@ -71,6 +71,13 @@ export interface UserPreferences {
 
   /** When preferences were last updated */
   updatedAt: Date;
+
+  /**
+   * Timestamp when user acknowledged health and safety disclaimer.
+   * Required to use the app. Null means not yet acknowledged.
+   * Stored as ISO string for serialization compatibility.
+   */
+  healthDisclaimerAcknowledgedAt: string | null;
 }
 
 /**
@@ -100,4 +107,5 @@ export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'createdAt' 
     durationSeconds: TIMER.DEFAULT_MAX_TEST_REST_SECONDS,
   },
   timerVolume: 100, // 0-100 scale, percentage of system volume (100 = full system volume)
+  healthDisclaimerAcknowledgedAt: null,
 };

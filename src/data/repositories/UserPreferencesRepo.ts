@@ -175,6 +175,24 @@ export const UserPreferencesRepo = {
   },
 
   /**
+   * Record that the user has acknowledged the health disclaimer.
+   * Sets the timestamp to the current time.
+   * This is a one-way operation during normal use (only cleared on account deletion).
+   */
+  async acknowledgeHealthDisclaimer(): Promise<UserPreferences> {
+    const timestamp = new Date().toISOString();
+    return this.save({ healthDisclaimerAcknowledgedAt: timestamp });
+  },
+
+  /**
+   * Check if user has acknowledged the health disclaimer.
+   */
+  async hasAcknowledgedHealthDisclaimer(): Promise<boolean> {
+    const prefs = await this.get();
+    return prefs.healthDisclaimerAcknowledgedAt !== null;
+  },
+
+  /**
    * Reset preferences to defaults.
    */
   async reset(): Promise<UserPreferences> {

@@ -14,7 +14,7 @@ export type OnboardingChapter = 'rfem_guide' | 'app_tour';
 /**
  * Visual variant for slides.
  */
-export type SlideVariant = 'default' | 'rfem' | 'tour' | 'exercise';
+export type SlideVariant = 'default' | 'rfem' | 'tour' | 'exercise' | 'health';
 
 /**
  * Props for the shared OnboardingSlide component.

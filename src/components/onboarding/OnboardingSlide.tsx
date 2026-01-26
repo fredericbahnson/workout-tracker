@@ -34,6 +34,7 @@ export function OnboardingSlide({
     rfem: 'from-emerald-500 to-cyan-500',
     tour: 'from-purple-500 to-pink-500',
     exercise: 'from-orange-500 to-amber-500',
+    health: 'from-rose-500 to-amber-500',
   };
 
   const accentGradient = gradient || variantColors[variant];

@@ -7,6 +7,7 @@
 // Main components
 export { AuthGate } from './AuthGate';
 export { OnboardingFlow } from './OnboardingFlow';
+export { HealthDisclaimer } from './HealthDisclaimer';
 
 // Standalone modules (can be accessed from Settings)
 export { RFEMGuide, RFEM_GUIDE_SLIDES } from './RFEMGuide';

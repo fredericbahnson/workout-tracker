@@ -8,7 +8,7 @@
  * UI preferences (theme, font size, etc.) remain in the local appStore.
  */
 
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { UserPreferencesRepo } from '@/data/repositories';
 import { useSyncItem, useSync } from '../sync';
@@ -52,6 +52,12 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
 
   // Current preferences with fallback to defaults
   const preferences = dbPreferences ?? defaultPrefs;
+
+  // Computed: whether user has acknowledged health disclaimer
+  const hasAcknowledgedHealthDisclaimer = useMemo(
+    () => preferences.healthDisclaimerAcknowledgedAt !== null,
+    [preferences.healthDisclaimerAcknowledgedAt]
+  );
 
   // Helper to save and sync
   const saveAndSync = useCallback(
@@ -138,11 +144,18 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     [saveAndSync]
   );
 
+  const acknowledgeHealthDisclaimer = useCallback(async () => {
+    const updated = await UserPreferencesRepo.acknowledgeHealthDisclaimer();
+    await saveAndSync(updated);
+  }, [saveAndSync]);
+
   return (
     <SyncedPreferencesContext.Provider
       value={{
         preferences,
         isLoading,
+        hasAcknowledgedHealthDisclaimer,
+        acknowledgeHealthDisclaimer,
         setAppMode,
         setDefaultMaxReps,
         setDefaultConditioningReps,
