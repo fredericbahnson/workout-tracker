@@ -5,12 +5,69 @@
  * In mixed mode, also handles per-exercise progression configuration.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { Button, Input, NumberInput, Card, Badge, Modal } from '@/components/ui';
 import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
 import { MixedExerciseConfig } from '../components/MixedExerciseConfig';
 import type { GroupsStepProps } from '../types';
+
+/**
+ * GroupNameInput - Locally controlled input that debounces updates to parent.
+ *
+ * This prevents the parent component from re-rendering on every keystroke,
+ * which was causing focus loss on physical iOS devices. The input maintains
+ * its own local state and only updates the parent after a debounce delay
+ * or on blur.
+ */
+const GroupNameInput = memo(function GroupNameInput({
+  groupId,
+  initialValue,
+  onUpdate,
+}: {
+  groupId: string;
+  initialValue: string;
+  onUpdate: (groupId: string, value: string) => void;
+}) {
+  const [localValue, setLocalValue] = useState(initialValue);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Sync local value when initial value changes externally (e.g., from clone)
+  useEffect(() => {
+    setLocalValue(initialValue);
+  }, [initialValue]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+
+    // Debounce updates to parent to avoid re-renders during typing
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      onUpdate(groupId, newValue);
+    }, 300);
+  };
+
+  const handleBlur = () => {
+    // Immediately sync on blur to ensure latest value is saved
+    clearTimeout(timeoutRef.current);
+    onUpdate(groupId, localValue);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => clearTimeout(timeoutRef.current);
+  }, []);
+
+  return (
+    <Input
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className="flex-1 font-medium"
+    />
+  );
+});
 
 export function GroupsStep({
   groups,
@@ -51,10 +108,10 @@ export function GroupsStep({
         {groups.map(group => (
           <Card key={group.id} className="p-2">
             <div className="flex items-center gap-2 mb-2">
-              <Input
-                value={group.name}
-                onChange={e => onUpdateGroupName(group.id, e.target.value)}
-                className="flex-1 font-medium"
+              <GroupNameInput
+                groupId={group.id}
+                initialValue={group.name}
+                onUpdate={onUpdateGroupName}
               />
               <Button
                 variant="ghost"

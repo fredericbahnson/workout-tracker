@@ -133,12 +133,12 @@ export const SyncService = {
   async pullFromCloud(userId: string) {
     // Fetch all user data from Supabase
     const [
-      { data: exercises },
-      { data: maxRecords },
-      { data: completedSets },
-      { data: cycles },
-      { data: scheduledWorkouts },
-      { data: userPreferences },
+      exercisesResult,
+      maxRecordsResult,
+      completedSetsResult,
+      cyclesResult,
+      scheduledWorkoutsResult,
+      userPreferencesResult,
     ] = await Promise.all([
       supabase.from('exercises').select('*').eq('user_id', userId).is('deleted_at', null),
       supabase.from('max_records').select('*').eq('user_id', userId).is('deleted_at', null),
@@ -147,6 +147,42 @@ export const SyncService = {
       supabase.from('scheduled_workouts').select('*').eq('user_id', userId).is('deleted_at', null),
       supabase.from('user_preferences').select('*').eq('user_id', userId),
     ]);
+
+    // Log errors so we can debug if pull fails
+    if (exercisesResult.error)
+      log.error(new Error(exercisesResult.error.message), {
+        table: 'exercises',
+        operation: 'pull',
+      });
+    if (maxRecordsResult.error)
+      log.error(new Error(maxRecordsResult.error.message), {
+        table: 'max_records',
+        operation: 'pull',
+      });
+    if (completedSetsResult.error)
+      log.error(new Error(completedSetsResult.error.message), {
+        table: 'completed_sets',
+        operation: 'pull',
+      });
+    if (cyclesResult.error)
+      log.error(new Error(cyclesResult.error.message), { table: 'cycles', operation: 'pull' });
+    if (scheduledWorkoutsResult.error)
+      log.error(new Error(scheduledWorkoutsResult.error.message), {
+        table: 'scheduled_workouts',
+        operation: 'pull',
+      });
+    if (userPreferencesResult.error)
+      log.error(new Error(userPreferencesResult.error.message), {
+        table: 'user_preferences',
+        operation: 'pull',
+      });
+
+    const exercises = exercisesResult.data;
+    const maxRecords = maxRecordsResult.data;
+    const completedSets = completedSetsResult.data;
+    const cycles = cyclesResult.data;
+    const scheduledWorkouts = scheduledWorkoutsResult.data;
+    const userPreferences = userPreferencesResult.data;
 
     // Merge exercises
     if (exercises) {
@@ -341,7 +377,12 @@ export const SyncService = {
         exercises.map(e => localToRemoteExercise(e, userId)),
         { onConflict: 'id' }
       );
-      if (error) log.error(error as Error);
+      if (error)
+        log.error(new Error(error.message), {
+          table: 'exercises',
+          operation: 'push',
+          code: error.code,
+        });
     }
 
     // Upsert max records
@@ -350,7 +391,12 @@ export const SyncService = {
         maxRecords.map(m => localToRemoteMaxRecord(m, userId)),
         { onConflict: 'id' }
       );
-      if (error) log.error(error as Error);
+      if (error)
+        log.error(new Error(error.message), {
+          table: 'max_records',
+          operation: 'push',
+          code: error.code,
+        });
     }
 
     // Upsert completed sets
@@ -359,7 +405,12 @@ export const SyncService = {
         completedSets.map(c => localToRemoteCompletedSet(c, userId)),
         { onConflict: 'id' }
       );
-      if (error) log.error(error as Error);
+      if (error)
+        log.error(new Error(error.message), {
+          table: 'completed_sets',
+          operation: 'push',
+          code: error.code,
+        });
     }
 
     // Upsert cycles
@@ -368,7 +419,12 @@ export const SyncService = {
         cycles.map(c => localToRemoteCycle(c, userId)),
         { onConflict: 'id' }
       );
-      if (error) log.error(error as Error);
+      if (error)
+        log.error(new Error(error.message), {
+          table: 'cycles',
+          operation: 'push',
+          code: error.code,
+        });
     }
 
     // Upsert scheduled workouts
@@ -377,7 +433,12 @@ export const SyncService = {
         scheduledWorkouts.map(w => localToRemoteScheduledWorkout(w, userId)),
         { onConflict: 'id' }
       );
-      if (error) log.error(error as Error);
+      if (error)
+        log.error(new Error(error.message), {
+          table: 'scheduled_workouts',
+          operation: 'push',
+          code: error.code,
+        });
     }
 
     // Upsert user preferences (singleton record)
@@ -385,7 +446,12 @@ export const SyncService = {
       const { error } = await supabase
         .from('user_preferences')
         .upsert(localToRemoteUserPreferences(userPreferences[0], userId), { onConflict: 'id' });
-      if (error) log.error(error as Error);
+      if (error)
+        log.error(new Error(error.message), {
+          table: 'user_preferences',
+          operation: 'push',
+          code: error.code,
+        });
     }
   },
 
@@ -412,7 +478,14 @@ export const SyncService = {
 
     try {
       const remoteItem = transformLocalToRemote(table, item, userId);
-      await supabase.from(table).upsert(remoteItem, { onConflict: 'id' });
+      const { error } = await supabase.from(table).upsert(remoteItem, { onConflict: 'id' });
+
+      // CRITICAL: Supabase doesn't throw on DB errors - check response!
+      // If there's an error, queue for retry so data isn't lost
+      if (error) {
+        log.error(new Error(error.message), { operation: 'sync', table, code: error.code });
+        await this.queueOperation(table, 'upsert', item, userId);
+      }
     } catch (error) {
       log.error(error as Error, { operation: 'sync', table });
       // Queue for retry on network errors with userId
@@ -584,13 +657,22 @@ export const SyncService = {
       try {
         if (queueItem.operation === 'upsert' && queueItem.data) {
           const remoteItem = transformLocalToRemote(queueItem.table, queueItem.data, userId);
-          await supabase.from(queueItem.table).upsert(remoteItem, { onConflict: 'id' });
+          const { error } = await supabase
+            .from(queueItem.table)
+            .upsert(remoteItem, { onConflict: 'id' });
+          // Check for Supabase errors - they don't throw!
+          if (error) {
+            throw new Error(error.message);
+          }
         } else if (queueItem.operation === 'delete') {
-          await supabase
+          const { error } = await supabase
             .from(queueItem.table)
             .update({ deleted_at: toISOString(now()) })
             .eq('id', queueItem.itemId)
             .eq('user_id', userId);
+          if (error) {
+            throw new Error(error.message);
+          }
         }
 
         // Successfully processed - remove from queue
