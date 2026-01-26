@@ -19,6 +19,7 @@ export function OnboardingSlide({
   primaryAction,
   secondaryAction,
   isLoading = false,
+  scrollable = false,
 }: OnboardingSlideProps) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -46,8 +47,10 @@ export function OnboardingSlide({
         ${isVisible ? 'opacity-100' : 'opacity-0'}
       `}
     >
-      {/* Content area - centered vertically, scrollable for long content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-y-auto min-h-0">
+      {/* Content area */}
+      <div
+        className={`flex-1 flex flex-col items-center px-6 py-8 ${scrollable ? 'justify-start overflow-y-auto min-h-0' : 'justify-center'}`}
+      >
         {/* Icon or Image */}
         {image ? (
           <img

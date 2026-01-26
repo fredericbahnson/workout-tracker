@@ -12,8 +12,7 @@ export { SwipeSkipSlide } from './SwipeSkipSlide';
 export { TapToEditSlide } from './TapToEditSlide';
 export { FirstExerciseSlide } from './FirstExerciseSlide';
 export { RecordMaxSlide } from './RecordMaxSlide';
-export { ReadySlide } from './ReadySlide';
+export { ReadySlide, ExerciseSuccessSlide } from './ReadySlide';
 
 // Types
 export type { FirstExerciseData } from './FirstExerciseSlide';
-export type { NextAction } from './ReadySlide';

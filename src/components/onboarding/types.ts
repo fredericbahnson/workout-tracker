@@ -43,6 +43,9 @@ export interface OnboardingSlideProps {
 
   // State
   isLoading?: boolean;
+
+  // Layout
+  scrollable?: boolean; // Enable scrolling for long content
 }
 
 /**

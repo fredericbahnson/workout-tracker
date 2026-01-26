@@ -27,6 +27,7 @@ export function HealthDisclaimer({ onAcknowledge, isLoading = false }: HealthDis
         headline="Your Health Comes First"
         variant="health"
         isLoading={isLoading}
+        scrollable={true}
         body={
           <div className="space-y-4 text-left">
             <p className="text-gray-700 dark:text-gray-300">
