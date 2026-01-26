@@ -6,7 +6,7 @@
  */
 
 import { useEntitlement, useSyncedPreferences } from '@/contexts';
-import { Clock, Zap, AlertTriangle } from 'lucide-react';
+import { Clock, Zap, AlertTriangle, ChevronRight } from 'lucide-react';
 
 interface TrialBannerProps {
   variant?: 'compact' | 'full';
@@ -45,13 +45,16 @@ export function TrialBanner({ variant = 'compact', className = '' }: TrialBanner
         );
       }
 
-      // Full variant - show trial is active
+      // Full variant - show trial is active with upgrade option
       return (
-        <div
+        <button
+          onClick={() => showPaywall('advanced', 'standard_only')}
           className={`
-            rounded-lg p-4
+            w-full text-left rounded-lg p-4
             bg-purple-50 border border-purple-200
             dark:bg-purple-900/30 dark:border-purple-600/30
+            hover:bg-purple-100 dark:hover:bg-purple-900/50
+            transition-colors cursor-pointer
             ${className}
           `}
         >
@@ -67,9 +70,13 @@ export function TrialBanner({ variant = 'compact', className = '' }: TrialBanner
                 {trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} remaining. All
                 Advanced features are unlocked.
               </p>
+              <span className="inline-flex items-center mt-2 text-sm text-purple-600 dark:text-purple-400 font-medium">
+                Upgrade to keep access
+                <ChevronRight className="w-4 h-4 ml-0.5" />
+              </span>
             </div>
           </div>
-        </div>
+        </button>
       );
     }
 

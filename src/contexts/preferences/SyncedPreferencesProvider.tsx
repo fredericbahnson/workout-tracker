@@ -13,7 +13,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { UserPreferencesRepo } from '@/data/repositories';
 import { useSyncItem, useSync } from '../sync';
 import { createScopedLogger } from '@/utils/logger';
-import type { UserPreferences, TimerSettings, ExerciseType, AppMode } from '@/types';
+import type {
+  UserPreferences,
+  TimerSettings,
+  ExerciseType,
+  AppMode,
+  SchedulingMode,
+} from '@/types';
 import { SyncedPreferencesContext } from './SyncedPreferencesContext';
 import { defaultPrefs } from './types';
 
@@ -124,6 +130,14 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     [saveAndSync]
   );
 
+  const setLastSchedulingMode = useCallback(
+    async (mode: SchedulingMode) => {
+      const updated = await UserPreferencesRepo.setLastSchedulingMode(mode);
+      await saveAndSync(updated);
+    },
+    [saveAndSync]
+  );
+
   return (
     <SyncedPreferencesContext.Provider
       value={{
@@ -137,6 +151,7 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
         setRestTimer,
         setMaxTestRestTimer,
         setTimerVolume,
+        setLastSchedulingMode,
       }}
     >
       {children}

@@ -640,6 +640,25 @@ export function TodayPage() {
               }
             />
 
+            {/* Scheduled date for date-based cycles */}
+            {activeCycle?.schedulingMode === 'date' &&
+              displayWorkout.scheduledDate &&
+              !isShowingCompletedWorkout && (
+                <div className="mx-4 mb-3">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
+                    <Calendar className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      Scheduled for{' '}
+                      {new Date(displayWorkout.scheduledDate).toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </div>
+              )}
+
             {/* Max testing warmup reminder */}
             {activeCycle?.cycleType === 'max_testing' &&
               !isShowingAdHocWorkout &&

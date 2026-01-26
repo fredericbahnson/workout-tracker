@@ -149,7 +149,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 pb-24">
       <Input
         label="Exercise Name"
         value={name}

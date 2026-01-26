@@ -39,7 +39,7 @@ export function useCycleWizardState({
   initialProgressionMode,
   onComplete,
 }: UseCycleWizardStateProps) {
-  const { preferences } = useSyncedPreferences();
+  const { preferences, setLastSchedulingMode } = useSyncedPreferences();
   const { syncItem, deleteItem } = useSyncItem();
 
   // Create defaults object from preferences for backward compatibility with child components
@@ -101,10 +101,10 @@ export function useCycleWizardState({
     return false;
   });
 
-  // Scheduling settings
+  // Scheduling settings - default to last used mode, or 'date' (Fixed Days) if no prior
   const [schedulingMode, setSchedulingMode] = useState<SchedulingMode>(() => {
     if (editCycle) return editCycle.schedulingMode ?? 'sequence';
-    return 'sequence';
+    return preferences.lastSchedulingMode ?? 'date';
   });
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(() => {
     if (editCycle?.selectedDays) return editCycle.selectedDays;
@@ -650,6 +650,12 @@ export function useCycleWizardState({
       }
 
       await saveLastCycleSettings(groups, progressionMode, exerciseMap);
+
+      // Save the scheduling mode preference for next cycle creation (only for new cycles)
+      if (!editCycle && schedulingMode !== preferences.lastSchedulingMode) {
+        await setLastSchedulingMode(schedulingMode);
+      }
+
       onComplete();
     } catch (err) {
       log.error(err as Error);
@@ -681,6 +687,8 @@ export function useCycleWizardState({
     onComplete,
     syncItem,
     deleteItem,
+    setLastSchedulingMode,
+    preferences.lastSchedulingMode,
   ]);
 
   // Get cycles available for cloning

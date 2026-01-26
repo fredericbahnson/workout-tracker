@@ -416,26 +416,17 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
               Enable Advanced Mode
             </Button>
           ) : canResumeTrialForAdvanced ? (
-            // Standard purchaser with active trial - offer to resume trial for advanced
+            // Standard purchaser with active trial - offer to upgrade (emphasized) or resume trial
             <>
-              <Button
-                onClick={handleResumeTrial}
-                className="w-full"
-                variant="primary"
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                <Clock className="w-4 h-4 mr-2" />
-                Resume Trial ({trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} left)
-              </Button>
               {isNativePlatform && (
                 <Button
                   onClick={() => handlePurchase(getUpgradePrice() ? 'upgrade' : 'advanced')}
                   className="w-full"
-                  variant="secondary"
+                  variant="primary"
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  <Zap className="w-4 h-4 mr-2" />
                   Upgrade to Advanced{' '}
                   {getUpgradePrice()
                     ? `(${getUpgradePrice()})`
@@ -444,6 +435,16 @@ export function PaywallModal({ isOpen, onClose, requiredTier, reason }: PaywallM
                       : ''}
                 </Button>
               )}
+              <Button
+                onClick={handleResumeTrial}
+                className="w-full"
+                variant="secondary"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                <Clock className="w-4 h-4 mr-2" />
+                Resume Trial ({trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} left)
+              </Button>
             </>
           ) : canEnableAdvancedForFree ? (
             // User is in trial with standard mode - offer to enable advanced for free

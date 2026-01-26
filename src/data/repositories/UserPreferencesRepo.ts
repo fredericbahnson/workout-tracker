@@ -12,6 +12,7 @@ import type {
   TimerSettings,
   ExerciseType,
   AppMode,
+  SchedulingMode,
 } from '@/types';
 import { DEFAULT_USER_PREFERENCES } from '@/types';
 import { now, normalizeDates } from '@/utils/dateUtils';
@@ -164,6 +165,13 @@ export const UserPreferencesRepo = {
     // Clamp to valid range
     const clampedVolume = Math.min(100, Math.max(0, Math.round(volume)));
     return this.save({ timerVolume: clampedVolume });
+  },
+
+  /**
+   * Update last scheduling mode (for cycle creation defaults).
+   */
+  async setLastSchedulingMode(mode: SchedulingMode): Promise<UserPreferences> {
+    return this.save({ lastSchedulingMode: mode });
   },
 
   /**

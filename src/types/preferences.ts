@@ -6,6 +6,7 @@
  */
 
 import type { ExerciseType } from './exercise';
+import type { SchedulingMode } from './cycle';
 import { TIMER } from '@/constants/training';
 
 /**
@@ -61,6 +62,9 @@ export interface UserPreferences {
 
   /** Timer beep volume (0-100, 0 = muted) */
   timerVolume: number;
+
+  /** Last used scheduling mode for cycle creation */
+  lastSchedulingMode?: SchedulingMode;
 
   /** When preferences were created */
   createdAt: Date;

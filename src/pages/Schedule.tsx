@@ -317,12 +317,10 @@ export function SchedulePage() {
         </div>
 
         {/* View Toggle */}
-        {(allCompletedWorkouts?.length || 0) > 0 && (
-          <ViewToggle showCalendarView={showCalendarView} onToggle={setShowCalendarView} />
-        )}
+        <ViewToggle showCalendarView={showCalendarView} onToggle={setShowCalendarView} />
 
         {/* Calendar View */}
-        {showCalendarView && (allCompletedWorkouts?.length || 0) > 0 && (
+        {showCalendarView && (
           <WorkoutCalendar
             workouts={allCompletedWorkouts || []}
             scheduledWorkouts={activeCycle?.schedulingMode === 'date' ? pendingWorkouts : undefined}

@@ -1,4 +1,10 @@
-import type { UserPreferences, TimerSettings, ExerciseType, AppMode } from '@/types';
+import type {
+  UserPreferences,
+  TimerSettings,
+  ExerciseType,
+  AppMode,
+  SchedulingMode,
+} from '@/types';
 import { DEFAULT_USER_PREFERENCES } from '@/types';
 
 export interface SyncedPreferencesContextType {
@@ -31,6 +37,9 @@ export interface SyncedPreferencesContextType {
 
   /** Update timer volume (0-100) */
   setTimerVolume: (volume: number) => Promise<void>;
+
+  /** Update last scheduling mode for cycle creation */
+  setLastSchedulingMode: (mode: SchedulingMode) => Promise<void>;
 }
 
 // Default preferences object for initial state
