@@ -29,8 +29,8 @@ export function SwipeCompleteSlide({ onComplete }: SwipeCompleteSlideProps) {
         ${isVisible ? 'opacity-100' : 'opacity-0'}
       `}
     >
-      {/* Content area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+      {/* Content area - use explicit padding instead of justify-center to fix iOS touch target offset */}
+      <div className="flex-1 flex flex-col items-center px-6 pt-12">
         {/* Icon */}
         <div
           className={`
