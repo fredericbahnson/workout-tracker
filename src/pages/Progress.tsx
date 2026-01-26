@@ -189,6 +189,69 @@ export function ProgressPage() {
       />
 
       <div className="px-4 py-4 pb-20 space-y-4">
+        {/* Sets by Day (always last 30 days) */}
+        <Card>
+          <CardContent>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Sets by Day (Last 30 Days)
+            </h3>
+            <div className="flex justify-between items-end gap-1 h-20">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => {
+                const count = setsByDayOfWeek[day] || 0;
+                const maxCount = Math.max(...Object.values(setsByDayOfWeek), 1);
+                const heightPercent = (count / maxCount) * 100;
+
+                return (
+                  <div key={day} className="flex-1 flex flex-col items-center">
+                    <div className="w-full flex items-end h-16">
+                      <div
+                        className={`w-full rounded-t-md transition-all ${
+                          count === 0 ? 'bg-gray-100 dark:bg-gray-800' : ''
+                        }`}
+                        style={{
+                          height:
+                            count > 0 ? `${Math.min(Math.max(heightPercent, 8), 85)}%` : '4px',
+                          backgroundColor:
+                            count > 0
+                              ? `rgba(14, 165, 233, ${0.3 + (count / maxCount) * 0.7})`
+                              : undefined,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{day}</p>
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{count}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Progress Totals Timeframe */}
+        <Card>
+          <CardContent>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+              Progress Totals Timeframe
+            </h3>
+            <div className="flex gap-2">
+              {(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setRepDisplayMode(mode)}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    repDisplayMode === mode
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {TIME_PERIOD_LABELS[mode]}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Overview Stats */}
         <Card>
           <CardContent>
@@ -273,69 +336,6 @@ export function ProgressPage() {
                   </div>
                 );
               })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sets by Day (always last 30 days) */}
-        <Card>
-          <CardContent>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Sets by Day (Last 30 Days)
-            </h3>
-            <div className="flex justify-between items-end gap-1 h-20">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => {
-                const count = setsByDayOfWeek[day] || 0;
-                const maxCount = Math.max(...Object.values(setsByDayOfWeek), 1);
-                const heightPercent = (count / maxCount) * 100;
-
-                return (
-                  <div key={day} className="flex-1 flex flex-col items-center">
-                    <div className="w-full flex items-end h-16">
-                      <div
-                        className={`w-full rounded-t-md transition-all ${
-                          count === 0 ? 'bg-gray-100 dark:bg-gray-800' : ''
-                        }`}
-                        style={{
-                          height:
-                            count > 0 ? `${Math.min(Math.max(heightPercent, 8), 85)}%` : '4px',
-                          backgroundColor:
-                            count > 0
-                              ? `rgba(14, 165, 233, ${0.3 + (count / maxCount) * 0.7})`
-                              : undefined,
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{day}</p>
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{count}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Progress Totals Timeframe */}
-        <Card>
-          <CardContent>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-              Progress Totals Timeframe
-            </h3>
-            <div className="flex gap-2">
-              {(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setRepDisplayMode(mode)}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                    repDisplayMode === mode
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {TIME_PERIOD_LABELS[mode]}
-                </button>
-              ))}
             </div>
           </CardContent>
         </Card>
