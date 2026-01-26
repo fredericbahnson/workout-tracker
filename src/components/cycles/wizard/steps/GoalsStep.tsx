@@ -87,17 +87,28 @@ export function GoalsStep({
 
         <div className="flex flex-wrap gap-2">
           {groupRotation.map((groupId, index) => (
-            <Select
-              key={index}
-              value={groupId}
-              onChange={e => {
-                const newRotation = [...groupRotation];
-                newRotation[index] = e.target.value;
-                setGroupRotation(newRotation);
-              }}
-              options={groups.map(g => ({ value: g.id, label: g.name }))}
-              className="w-28"
-            />
+            <div key={index} className="flex items-center gap-1">
+              <Select
+                value={groupId}
+                onChange={e => {
+                  const newRotation = [...groupRotation];
+                  newRotation[index] = e.target.value;
+                  setGroupRotation(newRotation);
+                }}
+                options={groups.map(g => ({ value: g.id, label: g.name }))}
+                className="w-28"
+              />
+              {groupRotation.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setGroupRotation(groupRotation.filter((_, i) => i !== index))}
+                  className="p-1 text-gray-400"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
           ))}
           <Button
             variant="ghost"

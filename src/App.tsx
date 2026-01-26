@@ -114,6 +114,9 @@ function AppContent() {
   const handleAuthComplete = (isNewUserFromGate: boolean) => {
     if (isNewUserFromGate && !hasCompletedOnboarding) {
       setShowOnboarding(true);
+    } else {
+      // Established user - navigate to Today view
+      navigate('/');
     }
   };
 
