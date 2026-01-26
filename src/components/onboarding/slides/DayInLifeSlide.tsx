@@ -90,7 +90,7 @@ export function DayInLifeSlide({ onNext }: DayInLifeSlideProps) {
             <div className="flex items-start gap-2">
               <span className="text-primary-500 font-bold mt-0.5">3</span>
               <span className="text-gray-700 dark:text-gray-300">
-                <strong>Rest timer</strong> starts automatically
+                <strong>Enable rest timers</strong> to have them start automatically
               </span>
             </div>
           </div>

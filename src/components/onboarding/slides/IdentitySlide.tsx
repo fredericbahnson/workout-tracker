@@ -16,14 +16,14 @@ export function IdentitySlide({ onNext }: IdentitySlideProps) {
   return (
     <OnboardingSlide
       image="/pwa-192x192.png"
-      headline="Built for Athletes"
+      headline="Built for Everyone"
       variant="default"
       gradient="from-primary-500 to-cyan-500"
       body={
         <div className="space-y-4">
           <p className="text-lg">
-            Whether you're mastering your first pull-up or chasing muscle-ups, Ascend adapts to your
-            journey.
+            Whether you're working on your first push-up or chasing muscle-ups, Ascend adapts to
+            your journey.
           </p>
 
           {/* Progression examples */}
