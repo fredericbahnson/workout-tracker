@@ -298,7 +298,8 @@ export function ProgressPage() {
                           count === 0 ? 'bg-gray-100 dark:bg-gray-800' : ''
                         }`}
                         style={{
-                          height: count > 0 ? `${Math.max(heightPercent, 8)}%` : '4px',
+                          height:
+                            count > 0 ? `${Math.min(Math.max(heightPercent, 8), 85)}%` : '4px',
                           backgroundColor:
                             count > 0
                               ? `rgba(14, 165, 233, ${0.3 + (count / maxCount) * 0.7})`
