@@ -28,6 +28,7 @@ export function HealthDisclaimer({ onAcknowledge, isLoading = false }: HealthDis
         variant="health"
         isLoading={isLoading}
         scrollable={true}
+        inlineActions={true}
         body={
           <div className="space-y-4 text-left">
             <p className="text-gray-700 dark:text-gray-300">

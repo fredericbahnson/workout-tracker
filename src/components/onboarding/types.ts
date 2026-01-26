@@ -46,6 +46,7 @@ export interface OnboardingSlideProps {
 
   // Layout
   scrollable?: boolean; // Enable scrolling for long content
+  inlineActions?: boolean; // Place actions inside scrollable content (requires scroll to see button)
 }
 
 /**

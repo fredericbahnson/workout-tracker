@@ -20,6 +20,7 @@ export function OnboardingSlide({
   secondaryAction,
   isLoading = false,
   scrollable = false,
+  inlineActions = false,
 }: OnboardingSlideProps) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -39,6 +40,46 @@ export function OnboardingSlide({
   };
 
   const accentGradient = gradient || variantColors[variant];
+
+  // Action buttons - rendered inline or fixed based on inlineActions prop
+  const actionButtons = (
+    <div
+      className={`
+        ${inlineActions ? 'w-full max-w-sm mt-6' : 'px-6 pb-6 pt-4'} space-y-3
+        transition-all duration-500 delay-300
+        ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
+      `}
+    >
+      <Button
+        onClick={primaryAction.onClick}
+        disabled={isLoading}
+        className="w-full py-3 text-base font-medium"
+      >
+        {isLoading ? (
+          <span className="flex items-center justify-center">
+            <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+            Loading...
+          </span>
+        ) : (
+          <>
+            {primaryAction.label}
+            {primaryAction.icon && <span className="ml-2">{primaryAction.icon}</span>}
+          </>
+        )}
+      </Button>
+
+      {secondaryAction && (
+        <Button
+          variant="ghost"
+          onClick={secondaryAction.onClick}
+          disabled={isLoading}
+          className="w-full py-2 text-sm"
+        >
+          {secondaryAction.label}
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div
@@ -96,45 +137,13 @@ export function OnboardingSlide({
         >
           {body}
         </div>
+
+        {/* Inline actions - inside scrollable content */}
+        {inlineActions && actionButtons}
       </div>
 
-      {/* Actions - fixed at bottom */}
-      <div
-        className={`
-          px-6 pb-6 pt-4 space-y-3
-          transition-all duration-500 delay-300
-          ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
-        `}
-      >
-        <Button
-          onClick={primaryAction.onClick}
-          disabled={isLoading}
-          className="w-full py-3 text-base font-medium"
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center">
-              <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              Loading...
-            </span>
-          ) : (
-            <>
-              {primaryAction.label}
-              {primaryAction.icon && <span className="ml-2">{primaryAction.icon}</span>}
-            </>
-          )}
-        </Button>
-
-        {secondaryAction && (
-          <Button
-            variant="ghost"
-            onClick={secondaryAction.onClick}
-            disabled={isLoading}
-            className="w-full py-2 text-sm"
-          >
-            {secondaryAction.label}
-          </Button>
-        )}
-      </div>
+      {/* Fixed actions - at bottom of screen */}
+      {!inlineActions && actionButtons}
     </div>
   );
 }
