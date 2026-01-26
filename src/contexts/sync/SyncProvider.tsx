@@ -106,6 +106,41 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('online', handleOnline);
   }, [user, isConfigured, updateQueueCount]);
 
+  // Sync when app goes to background or closes
+  // This ensures data is saved before the user leaves the app
+  useEffect(() => {
+    if (!user || !isConfigured) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && navigator.onLine) {
+        log.debug('App going to background - processing sync queue...');
+        SyncService.processQueue(user.id).catch(err => {
+          log.error(err as Error, { context: 'visibilitychange sync' });
+        });
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (navigator.onLine) {
+        log.debug('Page unloading - processing sync queue...');
+        // Use synchronous approach for beforeunload
+        // Note: This may not complete if the page closes too quickly,
+        // but it gives the best chance of syncing
+        SyncService.processQueue(user.id).catch(err => {
+          log.error(err as Error, { context: 'beforeunload sync' });
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [user, isConfigured]);
+
   // Periodic sync every 5 minutes when online
   useEffect(() => {
     if (!user || !isConfigured) return;

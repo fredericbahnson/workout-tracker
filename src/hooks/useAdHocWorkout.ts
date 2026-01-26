@@ -110,20 +110,22 @@ export function useAdHocWorkout({
   const handleCompleteAdHocWorkout = useCallback(async () => {
     if (!displayWorkout?.isAdHoc) return;
 
-    await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+    const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+    if (updated) await syncItem('scheduled_workouts', updated);
 
     // Show completion celebration
     markWorkoutCompleted(displayWorkout.id);
-  }, [displayWorkout, markWorkoutCompleted]);
+  }, [displayWorkout, markWorkoutCompleted, syncItem]);
 
   // Rename the current ad-hoc workout
   const handleRenameAdHocWorkout = useCallback(
     async (name: string) => {
       if (!displayWorkout?.isAdHoc || !name.trim()) return;
 
-      await ScheduledWorkoutRepo.updateName(displayWorkout.id, name.trim());
+      const updated = await ScheduledWorkoutRepo.updateName(displayWorkout.id, name.trim());
+      if (updated) await syncItem('scheduled_workouts', updated);
     },
-    [displayWorkout]
+    [displayWorkout, syncItem]
   );
 
   // Cancel/delete the current ad-hoc workout

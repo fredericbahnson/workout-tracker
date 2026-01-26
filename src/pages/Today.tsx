@@ -300,17 +300,19 @@ export function TodayPage() {
   // Event handlers - memoized to prevent unnecessary re-renders of child components
   const handleSkipWorkout = useCallback(async () => {
     if (!nextPendingWorkout) return;
-    await ScheduledWorkoutRepo.updateStatus(nextPendingWorkout.id, 'skipped');
+    const updated = await ScheduledWorkoutRepo.updateStatus(nextPendingWorkout.id, 'skipped');
+    if (updated) await syncItem('scheduled_workouts', updated);
     modals.closeSkipWorkoutConfirm();
-  }, [nextPendingWorkout, modals]);
+  }, [nextPendingWorkout, modals, syncItem]);
 
   const handleEndWorkout = useCallback(async () => {
     if (!displayWorkout || isShowingCompletedWorkout) return;
     const status = scheduledSetsCompleted.length > 0 ? 'partial' : 'skipped';
-    await ScheduledWorkoutRepo.updateStatus(
+    const updated = await ScheduledWorkoutRepo.updateStatus(
       displayWorkout.id,
       status === 'partial' ? 'completed' : 'skipped'
     );
+    if (updated) await syncItem('scheduled_workouts', updated);
     if (status === 'partial') markWorkoutCompleted(displayWorkout.id);
     modals.closeEndWorkoutConfirm();
   }, [
@@ -319,6 +321,7 @@ export function TodayPage() {
     scheduledSetsCompleted.length,
     markWorkoutCompleted,
     modals,
+    syncItem,
   ]);
 
   const handleSelectScheduledSet = useCallback(
@@ -345,7 +348,7 @@ export function TodayPage() {
       }
 
       const targetReps = getTargetReps(set, displayWorkout);
-      await CompletedSetRepo.createFromScheduled(
+      const completedSet = await CompletedSetRepo.createFromScheduled(
         set.id,
         displayWorkout.id,
         set.exerciseId,
@@ -354,16 +357,19 @@ export function TodayPage() {
         '',
         {}
       );
+      await syncItem('completed_sets', completedSet);
 
       // Query actual count from DB to avoid race conditions with React state
       const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
         displayWorkout.id
       );
       if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
-        await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+        if (updated) await syncItem('scheduled_workouts', updated);
         markWorkoutCompleted(displayWorkout.id);
       } else {
-        await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+        if (updated) await syncItem('scheduled_workouts', updated);
         if (preferences.restTimer.enabled) {
           const duration = set.isWarmup
             ? Math.round(preferences.restTimer.durationSeconds * 0.5)
@@ -380,6 +386,7 @@ export function TodayPage() {
       markWorkoutCompleted,
       preferences.restTimer,
       modals,
+      syncItem,
     ]
   );
 
@@ -395,7 +402,7 @@ export function TodayPage() {
   const handleConfirmSkipSet = useCallback(async () => {
     if (!modals.setToSkip || !displayWorkout) return;
 
-    await CompletedSetRepo.createFromScheduled(
+    const completedSet = await CompletedSetRepo.createFromScheduled(
       modals.setToSkip.set.id,
       displayWorkout.id,
       modals.setToSkip.set.exerciseId,
@@ -404,19 +411,22 @@ export function TodayPage() {
       'Skipped',
       {}
     );
+    await syncItem('completed_sets', completedSet);
 
     // Query actual count from DB to avoid race conditions with React state
     const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
       displayWorkout.id
     );
     if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
-      await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+      const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+      if (updated) await syncItem('scheduled_workouts', updated);
       markWorkoutCompleted(displayWorkout.id);
     } else if (actualCompletedCount > 0) {
-      await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+      const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+      if (updated) await syncItem('scheduled_workouts', updated);
     }
     modals.closeSkipSetConfirm();
-  }, [modals, displayWorkout, markWorkoutCompleted]);
+  }, [modals, displayWorkout, markWorkoutCompleted, syncItem]);
 
   const handleEditCompletedSet = useCallback(
     (completedSet: NonNullable<typeof workoutCompletedSets>[number]) => {
@@ -429,28 +439,38 @@ export function TodayPage() {
   const handleSaveEditedSet = useCallback(
     async (reps: number, weight: number | undefined, notes: string) => {
       if (!modals.editingCompletedSet) return;
-      await CompletedSetRepo.update(modals.editingCompletedSet.completedSet.id, {
+      const updated = await CompletedSetRepo.update(modals.editingCompletedSet.completedSet.id, {
         actualReps: reps,
         weight,
         notes,
       });
+      if (updated) await syncItem('completed_sets', updated);
     },
-    [modals.editingCompletedSet]
+    [modals.editingCompletedSet, syncItem]
   );
 
   const handleDeleteCompletedSet = useCallback(async () => {
     if (!modals.editingCompletedSet) return;
     await CompletedSetRepo.delete(modals.editingCompletedSet.completedSet.id);
+    await deleteItem('completed_sets', modals.editingCompletedSet.completedSet.id);
 
     if (displayWorkout) {
       const remainingCompleted = (workoutCompletedSets?.length || 1) - 1;
       if (remainingCompleted === 0) {
-        await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'pending');
+        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'pending');
+        if (updated) await syncItem('scheduled_workouts', updated);
       } else if (displayWorkout.status === 'completed') {
-        await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+        if (updated) await syncItem('scheduled_workouts', updated);
       }
     }
-  }, [modals.editingCompletedSet, displayWorkout, workoutCompletedSets?.length]);
+  }, [
+    modals.editingCompletedSet,
+    displayWorkout,
+    workoutCompletedSets?.length,
+    deleteItem,
+    syncItem,
+  ]);
 
   const handleLogSet = useCallback(
     async (
@@ -467,7 +487,7 @@ export function TodayPage() {
         if (modals.selectedScheduledSet) {
           const { set, workout, targetReps } = modals.selectedScheduledSet;
 
-          await CompletedSetRepo.createFromScheduled(
+          const completedSet = await CompletedSetRepo.createFromScheduled(
             set.id,
             workout.id,
             set.exerciseId,
@@ -477,6 +497,7 @@ export function TodayPage() {
             parameters,
             weight
           );
+          await syncItem('completed_sets', completedSet);
 
           if (set.isMaxTest && reps > 0) {
             const exercise = exerciseMap.get(set.exerciseId);
@@ -498,10 +519,12 @@ export function TodayPage() {
             : 0;
 
           if (actualCompletedCount >= totalSets && displayWorkout) {
-            await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+            const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
+            if (updated) await syncItem('scheduled_workouts', updated);
             markWorkoutCompleted(displayWorkout.id);
           } else if (actualCompletedCount > 0 && displayWorkout) {
-            await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+            const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
+            if (updated) await syncItem('scheduled_workouts', updated);
             if (set.isMaxTest && preferences.maxTestRestTimer.enabled) {
               shouldShowTimer = true;
               timerDuration = preferences.maxTestRestTimer.durationSeconds;
@@ -514,10 +537,11 @@ export function TodayPage() {
           }
           modals.closeScheduledSetModal();
         } else if (modals.selectedExercise) {
-          await CompletedSetRepo.create(
+          const completedSet = await CompletedSetRepo.create(
             { exerciseId: modals.selectedExercise.id, reps, weight, notes, parameters },
             displayWorkout?.id
           );
+          await syncItem('completed_sets', completedSet);
           modals.clearSelectedExercise();
           if (preferences.restTimer.enabled) {
             shouldShowTimer = true;

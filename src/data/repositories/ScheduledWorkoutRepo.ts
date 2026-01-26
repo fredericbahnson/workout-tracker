@@ -119,22 +119,31 @@ export const ScheduledWorkoutRepo = {
     return scheduledWorkouts;
   },
 
-  async updateStatus(id: string, status: ScheduledWorkout['status']): Promise<void> {
+  async updateStatus(
+    id: string,
+    status: ScheduledWorkout['status']
+  ): Promise<ScheduledWorkout | undefined> {
     const existing = await this.getById(id);
     if (existing) {
       const updates: Partial<ScheduledWorkout> = { status };
       if (status === 'completed') {
         updates.completedAt = now();
       }
-      await db.scheduledWorkouts.put({ ...existing, ...updates });
+      const updated = { ...existing, ...updates };
+      await db.scheduledWorkouts.put(updated);
+      return updated;
     }
+    return undefined;
   },
 
-  async updateName(id: string, customName: string): Promise<void> {
+  async updateName(id: string, customName: string): Promise<ScheduledWorkout | undefined> {
     const existing = await this.getById(id);
     if (existing) {
-      await db.scheduledWorkouts.put({ ...existing, customName });
+      const updated = { ...existing, customName };
+      await db.scheduledWorkouts.put(updated);
+      return updated;
     }
+    return undefined;
   },
 
   async delete(id: string): Promise<boolean> {
