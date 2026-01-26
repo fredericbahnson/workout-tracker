@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react
 import { useLiveQuery } from 'dexie-react-hooks';
 import { UserPreferencesRepo } from '@/data/repositories';
 import { useSyncItem, useSync } from '../sync';
+import { useAuth } from '../auth';
 import { createScopedLogger } from '@/utils/logger';
 import type {
   UserPreferences,
@@ -28,6 +29,7 @@ const log = createScopedLogger('SyncedPrefs');
 export function SyncedPreferencesProvider({ children }: { children: ReactNode }) {
   const { syncItem } = useSyncItem();
   const { lastSyncTime } = useSync();
+  const { user, isConfigured } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
 
   // Use live query to reactively get preferences from IndexedDB
@@ -43,12 +45,27 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     [lastSyncTime] // Re-query when sync completes
   );
 
-  // Set loading state based on query result
+  // Set loading state based on query result AND sync status
+  // For authenticated users, wait for initial sync to complete before showing content
+  // This prevents the health disclaimer from flashing for returning users
   useEffect(() => {
     if (dbPreferences !== undefined) {
-      setIsLoading(false);
+      // If user is authenticated and Supabase is configured, wait for sync
+      if (user && isConfigured) {
+        // lastSyncTime is set after sync completes
+        const syncCompleted = lastSyncTime !== null;
+        const isOffline = !navigator.onLine;
+
+        // Allow proceeding if sync completed or if offline (use local data)
+        if (syncCompleted || isOffline) {
+          setIsLoading(false);
+        }
+      } else {
+        // No auth or not configured - use local data immediately
+        setIsLoading(false);
+      }
     }
-  }, [dbPreferences]);
+  }, [dbPreferences, lastSyncTime, user, isConfigured]);
 
   // Current preferences with fallback to defaults
   const preferences = dbPreferences ?? defaultPrefs;
