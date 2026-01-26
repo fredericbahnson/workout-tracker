@@ -17,6 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isConfigured = isSupabaseConfigured();
 
   // Helper to clear all local database tables
+  // CRITICAL: Must include userPreferences to prevent health disclaimer bypass on user switch
   const clearLocalDatabase = async () => {
     await db.transaction(
       'rw',
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         db.cycles,
         db.scheduledWorkouts,
         db.syncQueue,
+        db.userPreferences,
       ],
       async () => {
         await db.exercises.clear();
@@ -35,8 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await db.cycles.clear();
         await db.scheduledWorkouts.clear();
         await db.syncQueue.clear();
+        await db.userPreferences.clear();
       }
     );
+    // Clear the localStorage preferences ID to ensure new user gets fresh defaults
+    localStorage.removeItem('ascend-preferences-id');
   };
 
   useEffect(() => {
