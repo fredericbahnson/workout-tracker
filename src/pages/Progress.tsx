@@ -188,7 +188,7 @@ export function ProgressPage() {
         }
       />
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 pb-20 space-y-4">
         {/* Overview Stats */}
         <Card>
           <CardContent>
@@ -228,49 +228,6 @@ export function ProgressPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Totals by Exercise */}
-        {exerciseStatsByType.length > 0 && (
-          <Card>
-            <CardContent>
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
-                <Dumbbell className="w-4 h-4" />
-                Totals by Exercise
-              </h3>
-              <div className="space-y-4">
-                {exerciseStatsByType.map(({ type, exercises }) => (
-                  <div key={type}>
-                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                      {EXERCISE_TYPE_LABELS[type]}
-                    </h4>
-                    <div className="space-y-2">
-                      {exercises.map(({ exercise, sets, reps }) => (
-                        <div
-                          key={exercise.id}
-                          className="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {exercise.name}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                              {exercise.measurementType === 'time'
-                                ? formatDuration(reps)
-                                : `${reps.toLocaleString()} reps`}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{sets} sets</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Sets by Type */}
         <Card>
@@ -320,29 +277,36 @@ export function ProgressPage() {
           </CardContent>
         </Card>
 
-        {/* Activity by Day (always last 30 days) */}
+        {/* Sets by Day (always last 30 days) */}
         <Card>
           <CardContent>
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              Activity by Day (Last 30 Days)
+              Sets by Day (Last 30 Days)
             </h3>
-            <div className="flex justify-between gap-1">
+            <div className="flex justify-between items-end gap-1 h-20">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => {
                 const count = setsByDayOfWeek[day] || 0;
                 const maxCount = Math.max(...Object.values(setsByDayOfWeek), 1);
-                const intensity = count / maxCount;
+                const heightPercent = (count / maxCount) * 100;
 
                 return (
-                  <div key={day} className="flex-1 text-center">
-                    <div
-                      className="h-16 rounded-lg mb-1 transition-colors"
-                      style={{
-                        backgroundColor:
-                          count > 0 ? `rgba(14, 165, 233, ${0.2 + intensity * 0.8})` : undefined,
-                      }}
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{day}</p>
+                  <div key={day} className="flex-1 flex flex-col items-center">
+                    <div className="w-full flex items-end h-16">
+                      <div
+                        className={`w-full rounded-t-md transition-all ${
+                          count === 0 ? 'bg-gray-100 dark:bg-gray-800' : ''
+                        }`}
+                        style={{
+                          height: count > 0 ? `${Math.max(heightPercent, 8)}%` : '4px',
+                          backgroundColor:
+                            count > 0
+                              ? `rgba(14, 165, 233, ${0.3 + (count / maxCount) * 0.7})`
+                              : undefined,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{day}</p>
                     <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{count}</p>
                   </div>
                 );
@@ -374,6 +338,49 @@ export function ProgressPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Totals by Exercise */}
+        {exerciseStatsByType.length > 0 && (
+          <Card>
+            <CardContent>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                <Dumbbell className="w-4 h-4" />
+                Totals by Exercise
+              </h3>
+              <div className="space-y-4">
+                {exerciseStatsByType.map(({ type, exercises }) => (
+                  <div key={type}>
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      {EXERCISE_TYPE_LABELS[type]}
+                    </h4>
+                    <div className="space-y-2">
+                      {exercises.map(({ exercise, sets, reps }) => (
+                        <div
+                          key={exercise.id}
+                          className="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {exercise.name}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              {exercise.measurementType === 'time'
+                                ? formatDuration(reps)
+                                : `${reps.toLocaleString()} reps`}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{sets} sets</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </>
   );
