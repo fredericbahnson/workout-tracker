@@ -6,7 +6,6 @@
  * Structure:
  * - Getting Started
  *   - Quick Start Guide
- *   - Try the Swipe Demo
  *   - Feature Tour
  * - Training Concepts
  *   - Understanding RFEM
@@ -16,30 +15,13 @@
  */
 
 import { useState } from 'react';
-import {
-  Rocket,
-  Hand,
-  BookOpen,
-  Calendar,
-  Trophy,
-  Smartphone,
-  ChevronRight,
-  Info,
-} from 'lucide-react';
+import { Rocket, BookOpen, Calendar, Trophy, Smartphone, ChevronRight, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui';
 import { RFEMGuide, AppTour } from '@/components/onboarding';
-import { SwipeDemo } from '@/components/onboarding/visuals';
 import { CycleGuide, MaxTestingGuide, QuickStartGuide } from '@/components/help';
 import { APP_VERSION } from '@/constants';
 
-type GuideType =
-  | 'quick-start'
-  | 'swipe-demo'
-  | 'rfem'
-  | 'cycles'
-  | 'max-testing'
-  | 'app-tour'
-  | null;
+type GuideType = 'quick-start' | 'rfem' | 'cycles' | 'max-testing' | 'app-tour' | null;
 
 interface HelpItemProps {
   icon: React.ReactNode;
@@ -71,50 +53,8 @@ function HelpItem({ icon, iconBg, title, description, onClick }: HelpItemProps) 
 
 export function HelpSection() {
   const [activeGuide, setActiveGuide] = useState<GuideType>(null);
-  const [showSwipeDemo, setShowSwipeDemo] = useState(false);
 
   const closeGuide = () => setActiveGuide(null);
-
-  // Swipe Demo Modal
-  if (showSwipeDemo) {
-    return (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-dark-bg z-50 safe-area-top safe-area-bottom">
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-dark-border">
-            <h2 className="font-semibold text-gray-900 dark:text-gray-100">Try the Swipe Demo</h2>
-            <button
-              onClick={() => setShowSwipeDemo(false)}
-              className="text-sm text-primary-600 dark:text-primary-400 font-medium"
-            >
-              Done
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 flex flex-col items-center justify-center p-6">
-            <div className="w-20 h-20 mb-6 rounded-2xl bg-gradient-to-br from-primary-500 to-cyan-500 flex items-center justify-center shadow-lg">
-              <Hand className="w-10 h-10 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Swipe to Complete
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-center mb-8 max-w-xs">
-              Practice the swipe gesture you'll use during workouts
-            </p>
-            <div className="w-full max-w-sm">
-              <SwipeDemo
-                exercise="Push-ups"
-                targetReps={12}
-                onComplete={() => setShowSwipeDemo(false)}
-                showHint={true}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -131,14 +71,6 @@ export function HelpSection() {
             title="Quick Start Guide"
             description="Get up and running in minutes"
             onClick={() => setActiveGuide('quick-start')}
-          />
-
-          <HelpItem
-            icon={<Hand className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />}
-            iconBg="bg-cyan-100 dark:bg-cyan-900/30"
-            title="Try the Swipe Demo"
-            description="Practice the core gesture"
-            onClick={() => setShowSwipeDemo(true)}
           />
 
           <HelpItem

@@ -18,6 +18,8 @@ import {
   Timer,
   BarChart3,
   Target,
+  X,
+  Edit3,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { OnboardingSlide } from './OnboardingSlide';
@@ -33,6 +35,8 @@ interface AppTourProps {
   initialSlide?: number;
   /** Whether this is standalone mode (from Settings) */
   standalone?: boolean;
+  /** Callback for RFEM learning option on final slide */
+  onLearnRFEM?: () => void;
 }
 
 const TOTAL_SLIDES = 4;
@@ -45,6 +49,7 @@ export function AppTour({
   onSkip,
   initialSlide = 0,
   standalone = false,
+  onLearnRFEM,
 }: AppTourProps) {
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
 
@@ -161,6 +166,14 @@ export function AppTour({
                   <div className="flex items-center gap-2">
                     <Dumbbell className="w-4 h-4 text-primary-500" />
                     <span>Log ad-hoc sets anytime</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <X className="w-4 h-4 text-primary-500" />
+                    <span>Swipe left to skip a set</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Edit3 className="w-4 h-4 text-primary-500" />
+                    <span>Tap to edit details of the set</span>
                   </div>
                 </div>
               </div>
@@ -374,6 +387,14 @@ export function AppTour({
               onClick: handleNext,
               icon: <ArrowRight className="w-5 h-5" />,
             }}
+            secondaryAction={
+              onLearnRFEM
+                ? {
+                    label: 'Learn About RFEM First',
+                    onClick: onLearnRFEM,
+                  }
+                : undefined
+            }
           />
         );
 
