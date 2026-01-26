@@ -161,27 +161,45 @@ export function SwipeDemo({
     }, 2500);
   }, [onComplete]);
 
-  // Touch handlers
+  // Touch handlers - use element-relative coordinates to fix iOS WebView offset bug
   const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY),
+    (e: React.TouchEvent) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeX = e.touches[0].clientX - rect.left;
+      const relativeY = e.touches[0].clientY - rect.top;
+      handleDragStart(relativeX, relativeY);
+    },
     [handleDragStart]
   );
 
   const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX),
+    (e: React.TouchEvent) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeX = e.touches[0].clientX - rect.left;
+      handleDragMove(relativeX);
+    },
     [handleDragMove]
   );
 
   const handleTouchEnd = useCallback(() => handleDragEnd(), [handleDragEnd]);
 
-  // Mouse handlers
+  // Mouse handlers - also use element-relative coordinates for consistency
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => handleDragStart(e.clientX, e.clientY),
+    (e: React.MouseEvent) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      const relativeY = e.clientY - rect.top;
+      handleDragStart(relativeX, relativeY);
+    },
     [handleDragStart]
   );
 
   const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => handleDragMove(e.clientX),
+    (e: React.MouseEvent) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      handleDragMove(relativeX);
+    },
     [handleDragMove]
   );
 
