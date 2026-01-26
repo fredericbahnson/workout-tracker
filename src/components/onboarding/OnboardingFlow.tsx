@@ -297,49 +297,36 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         </div>
       )}
 
-      {/* Swipe demo slides - rendered outside scroll container to fix iOS touch offset */}
-      {phase === 'swipe-complete' && (
-        <div className="flex-1 h-full" key={phase}>
+      {/* All slides in scroll container - matches SwipeableSetCard's working environment */}
+      <div className="flex-1 overflow-y-auto" key={phase}>
+        {phase === 'identity' && <IdentitySlide onNext={handleIdentityComplete} />}
+
+        {phase === 'value' && <ValuePropositionSlide onNext={handleValueComplete} />}
+
+        {phase === 'day-in-life' && <DayInLifeSlide onNext={handleDayInLifeComplete} />}
+
+        {phase === 'swipe-complete' && (
           <SwipeCompleteSlide onComplete={handleSwipeCompleteComplete} />
-        </div>
-      )}
-      {phase === 'swipe-skip' && (
-        <div className="flex-1 h-full" key={phase}>
-          <SwipeSkipSlide onComplete={handleSwipeSkipComplete} />
-        </div>
-      )}
-      {phase === 'tap-to-edit' && (
-        <div className="flex-1 h-full" key={phase}>
-          <TapToEditSlide onComplete={handleTapToEditComplete} />
-        </div>
-      )}
+        )}
 
-      {/* Other slides - in scroll container */}
-      {phase !== 'swipe-complete' && phase !== 'swipe-skip' && phase !== 'tap-to-edit' && (
-        <div className="flex-1 overflow-y-auto" key={phase}>
-          {phase === 'identity' && <IdentitySlide onNext={handleIdentityComplete} />}
+        {phase === 'swipe-skip' && <SwipeSkipSlide onComplete={handleSwipeSkipComplete} />}
 
-          {phase === 'value' && <ValuePropositionSlide onNext={handleValueComplete} />}
+        {phase === 'tap-to-edit' && <TapToEditSlide onComplete={handleTapToEditComplete} />}
 
-          {phase === 'day-in-life' && <DayInLifeSlide onNext={handleDayInLifeComplete} />}
+        {phase === 'first-exercise' && <FirstExerciseSlide onNext={handleFirstExerciseComplete} />}
 
-          {phase === 'first-exercise' && (
-            <FirstExerciseSlide onNext={handleFirstExerciseComplete} />
-          )}
+        {phase === 'record-max' && exerciseData && (
+          <RecordMaxSlide exerciseName={exerciseData.name} onNext={handleRecordMaxComplete} />
+        )}
 
-          {phase === 'record-max' && exerciseData && (
-            <RecordMaxSlide exerciseName={exerciseData.name} onNext={handleRecordMaxComplete} />
-          )}
-
-          {phase === 'ready' && exerciseData && (
-            <ExerciseSuccessSlide
-              exerciseName={exerciseData.name}
-              maxReps={maxReps}
-              onContinue={handleExerciseSuccessContinue}
-            />
-          )}
-        </div>
-      )}
+        {phase === 'ready' && exerciseData && (
+          <ExerciseSuccessSlide
+            exerciseName={exerciseData.name}
+            maxReps={maxReps}
+            onContinue={handleExerciseSuccessContinue}
+          />
+        )}
+      </div>
 
       {/* Loading overlay */}
       {isCreating && (
