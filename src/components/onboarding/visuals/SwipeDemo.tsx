@@ -339,7 +339,7 @@ export function SwipeDemo({
         {/* Background action indicator */}
         {mode !== 'tap' && (
           <div
-            className={`absolute inset-0 flex items-center transition-all duration-150 rounded-xl ${
+            className={`absolute inset-0 flex items-center transition-all duration-150 rounded-xl pointer-events-none ${
               mode === 'skip' ? 'justify-end pr-4' : 'justify-start pl-4'
             } ${progress > 0 ? (progress >= 1 ? config.bgActive : config.bgPartial) : config.bgIdle}`}
           >

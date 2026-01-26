@@ -1,7 +1,7 @@
 {
   "name": "ascend",
   "private": true,
-  "version": "2.24.4",
+  "version": "2.24.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
