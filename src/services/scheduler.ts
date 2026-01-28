@@ -682,7 +682,7 @@ export function calculateTargetReps(
         return Math.max(WARMUP.MIN_TIME_SECONDS, Math.ceil(prevMax * intensity));
       } else {
         const prevMax = set.previousMaxReps || maxRecord?.maxReps || defaultMax;
-        return Math.max(WARMUP.MIN_REPS, Math.ceil(prevMax * intensity));
+        return Math.max(WARMUP.MIN_REPS, Math.round(prevMax * intensity));
       }
     }
 
