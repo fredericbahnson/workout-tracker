@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Button, Input } from '@/components/ui';
 import { formatWeightLabel, getWeightUnitLabel } from '@/constants';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 interface MaxRecordFormProps {
   currentMax?: number;
@@ -26,6 +27,7 @@ export function MaxRecordForm({
   const [weight, setWeight] = useState(
     currentMaxWeight?.toString() || defaultWeight?.toString() || ''
   );
+  const { keyboardHeight } = useKeyboardHeight();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -36,7 +38,7 @@ export function MaxRecordForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" style={{ paddingBottom: keyboardHeight }}>
       <Input
         label="Maximum Reps"
         type="number"
