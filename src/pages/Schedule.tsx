@@ -292,18 +292,20 @@ export function SchedulePage() {
               <Plus className="w-4 h-4 mr-1" />
               Create New Cycle
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-              onClick={() => {
-                setIsEditingCycle(true);
-                setShowCycleWizard(true);
-              }}
-            >
-              <Edit2 className="w-4 h-4 mr-1" />
-              Edit Cycle
-            </Button>
+            {activeCycle?.cycleType !== 'max_testing' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  setIsEditingCycle(true);
+                  setShowCycleWizard(true);
+                }}
+              >
+                <Edit2 className="w-4 h-4 mr-1" />
+                Edit Cycle
+              </Button>
+            )}
           </div>
           <Button
             variant="secondary"
