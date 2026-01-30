@@ -1,5 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSkeleton } from './components/ui/Skeleton';
@@ -150,6 +151,13 @@ function AppContent() {
       setIsAcknowledgingHealth(false);
     }
   };
+
+  // Hide the native splash screen once loading is complete
+  useEffect(() => {
+    if (!authLoading && !preferencesLoading) {
+      SplashScreen.hide();
+    }
+  }, [authLoading, preferencesLoading]);
 
   // Show loading state while checking auth AND preferences
   if (authLoading || preferencesLoading) {
