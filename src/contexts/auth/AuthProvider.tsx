@@ -6,6 +6,7 @@ import { db } from '@/data/db';
 import { useAppStore } from '@/stores/appStore';
 import { AuthContext } from './AuthContext';
 import { iapService } from '@/services/iapService';
+import { entitlementCache } from '@/services/entitlementCache';
 
 const log = createScopedLogger('Auth');
 
@@ -164,6 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         log.error(e as Error);
       }
+      // Clear entitlement cache for clean slate with new user
+      entitlementCache.clear();
     }
 
     return { error: error as Error | null };
@@ -195,6 +198,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       log.error(e as Error);
     }
 
+    // Clear entitlement cache to prevent stale data for next user
+    entitlementCache.clear();
+
     // Reset onboarding flag so next user sees onboarding
     useAppStore.getState().setHasCompletedOnboarding(false);
 
@@ -220,6 +226,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Clear local IndexedDB tables
       await clearLocalDatabase();
+
+      // Clear entitlement cache explicitly before full localStorage clear
+      entitlementCache.clear();
 
       // Clear localStorage
       localStorage.clear();

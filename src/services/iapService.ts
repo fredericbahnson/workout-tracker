@@ -8,6 +8,7 @@
 import { Capacitor } from '@capacitor/core';
 import type { PurchaseInfo, PurchaseTier } from '@/types/entitlement';
 import { createScopedLogger } from '@/utils/logger';
+import { entitlementSync } from './entitlementSync';
 
 const log = createScopedLogger('IAP');
 
@@ -38,6 +39,7 @@ class IAPService {
   private purchases: Purchases | null = null;
   private initialized = false;
   private isNative: boolean;
+  private currentUserId: string | null = null;
 
   constructor() {
     this.isNative = Capacitor.isNativePlatform();
@@ -83,11 +85,17 @@ class IAPService {
 
   /**
    * Get current purchase info from RevenueCat.
+   * On native: tries RevenueCat, syncs to Supabase on success, falls back to cache on failure.
+   * On web/non-native with userId: delegates to entitlementSync.
    * Returns null if no active purchase or not available.
    */
   async getPurchaseInfo(): Promise<PurchaseInfo | null> {
     if (!this.isAvailable() || !this.purchases) {
       log.debug('getPurchaseInfo: IAP not available');
+      // On web or when not initialized, fall back to sync service if we have a user
+      if (this.currentUserId) {
+        return entitlementSync.getEntitlement(this.currentUserId);
+      }
       return null;
     }
 
@@ -102,9 +110,20 @@ class IAPService {
       const purchaseInfo = this.mapCustomerInfoToPurchaseInfo(customerInfo);
       log.debug('Mapped purchase info:', purchaseInfo);
 
+      // Sync to Supabase on success (fire-and-forget)
+      if (purchaseInfo && this.currentUserId) {
+        entitlementSync.syncToSupabase(this.currentUserId, purchaseInfo).catch(e => {
+          log.error('Background sync failed', { error: e });
+        });
+      }
+
       return purchaseInfo;
     } catch (error) {
       log.error('Failed to get purchase info', { error });
+      // Fall back to sync service on RevenueCat failure
+      if (this.currentUserId) {
+        return entitlementSync.getEntitlement(this.currentUserId);
+      }
       return null;
     }
   }
@@ -171,7 +190,16 @@ class IAPService {
         aPackage: pkg,
       });
 
-      return this.mapCustomerInfoToPurchaseInfo(customerInfo);
+      const purchaseInfo = this.mapCustomerInfoToPurchaseInfo(customerInfo);
+
+      // Sync to Supabase after successful purchase (fire-and-forget)
+      if (purchaseInfo && this.currentUserId) {
+        entitlementSync.syncToSupabase(this.currentUserId, purchaseInfo).catch(e => {
+          log.error('Background sync after purchase failed', { error: e });
+        });
+      }
+
+      return purchaseInfo;
     } catch (error) {
       log.error('Purchase failed', { error });
       throw error;
@@ -199,6 +227,13 @@ class IAPService {
       const purchaseInfo = this.mapCustomerInfoToPurchaseInfo(customerInfo);
       log.debug('Mapped purchase info:', purchaseInfo);
 
+      // Sync to Supabase after successful restore (fire-and-forget)
+      if (purchaseInfo && this.currentUserId) {
+        entitlementSync.syncToSupabase(this.currentUserId, purchaseInfo).catch(e => {
+          log.error('Background sync after restore failed', { error: e });
+        });
+      }
+
       return purchaseInfo;
     } catch (error) {
       log.error('Restore purchases failed', { error });
@@ -208,8 +243,11 @@ class IAPService {
 
   /**
    * Associate a Supabase user ID with RevenueCat.
+   * Always stores the userId locally (even on web) for entitlement sync.
    */
   async setUserId(userId: string): Promise<void> {
+    this.currentUserId = userId;
+
     if (!this.isAvailable() || !this.purchases) {
       return;
     }
@@ -225,8 +263,11 @@ class IAPService {
 
   /**
    * Clear user ID on logout.
+   * Always clears the local userId (even on web).
    */
   async clearUserId(): Promise<void> {
+    this.currentUserId = null;
+
     if (!this.isAvailable() || !this.purchases) {
       return;
     }

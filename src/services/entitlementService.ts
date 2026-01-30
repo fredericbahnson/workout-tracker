@@ -28,6 +28,7 @@ import type {
 import type { AppMode } from '@/types/preferences';
 import { trialService } from './trialService';
 import { iapService } from './iapService';
+import { entitlementSync } from './entitlementSync';
 
 /**
  * Check if running on a native platform (iOS/Android via Capacitor).
@@ -37,12 +38,21 @@ function isNativePlatform(): boolean {
 }
 
 /**
- * Get purchase info from IAP service.
- * Returns null on web platform.
+ * Get purchase info from IAP service or entitlement sync.
+ * - Native: delegates to iapService (which handles sync/fallback internally)
+ * - Web with userId: reads from Supabase/cache via entitlementSync
+ * - Web without userId: returns null
  */
-async function getPurchaseInfo(): Promise<PurchaseInfo | null> {
-  if (!isNativePlatform()) return null;
-  return iapService.getPurchaseInfo();
+async function getPurchaseInfo(userId?: string): Promise<PurchaseInfo | null> {
+  if (isNativePlatform()) {
+    // iapService now handles Supabase sync and offline fallback
+    return iapService.getPurchaseInfo();
+  }
+  // Web platform: use entitlement sync if we have a user
+  if (userId) {
+    return entitlementSync.getEntitlement(userId);
+  }
+  return null;
 }
 
 import { createScopedLogger } from '@/utils/logger';
@@ -56,8 +66,9 @@ export const entitlementService = {
   /**
    * Initialize entitlement tracking.
    * Call once at app startup.
+   * @param userId - Optional user ID for web platform entitlement lookup
    */
-  async initialize(): Promise<EntitlementStatus> {
+  async initialize(userId?: string): Promise<EntitlementStatus> {
     // ALWAYS start trial first - this must happen regardless of IAP status
     trialService.startTrialIfNeeded();
 
@@ -72,16 +83,17 @@ export const entitlementService = {
     }
 
     // Get current status
-    return this.getEntitlementStatus();
+    return this.getEntitlementStatus(undefined, userId);
   },
 
   /**
    * Get complete entitlement status.
    * @param appMode - Optional current app mode to determine access for standard purchasers with active trial
+   * @param userId - Optional user ID for web platform entitlement lookup
    */
-  async getEntitlementStatus(appMode?: AppMode): Promise<EntitlementStatus> {
+  async getEntitlementStatus(appMode?: AppMode, userId?: string): Promise<EntitlementStatus> {
     const trial = trialService.getTrialStatus();
-    const purchase = await getPurchaseInfo();
+    const purchase = await getPurchaseInfo(userId);
     const native = isNativePlatform();
 
     // Determine effective access level
@@ -139,9 +151,14 @@ export const entitlementService = {
    * Check if a specific feature tier is accessible.
    * @param requiredTier - The tier required for the feature
    * @param appMode - Optional current app mode for mode-aware access checking
+   * @param userId - Optional user ID for web platform entitlement lookup
    */
-  async checkAccess(requiredTier: PurchaseTier, appMode?: AppMode): Promise<LockedFeatureInfo> {
-    const status = await this.getEntitlementStatus(appMode);
+  async checkAccess(
+    requiredTier: PurchaseTier,
+    appMode?: AppMode,
+    userId?: string
+  ): Promise<LockedFeatureInfo> {
+    const status = await this.getEntitlementStatus(appMode, userId);
 
     // 'none' tier is always accessible (shouldn't really be used)
     if (requiredTier === 'none') {
@@ -183,9 +200,10 @@ export const entitlementService = {
   /**
    * Check if Advanced features are locked.
    * Convenience method for the common case.
+   * @param userId - Optional user ID for web platform entitlement lookup
    */
-  async isAdvancedLocked(): Promise<boolean> {
-    const status = await this.getEntitlementStatus();
+  async isAdvancedLocked(userId?: string): Promise<boolean> {
+    const status = await this.getEntitlementStatus(undefined, userId);
     return !status.canAccessAdvanced;
   },
 

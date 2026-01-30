@@ -190,3 +190,22 @@ export type RemoteRecord =
   | RemoteCycle
   | RemoteScheduledWorkout
   | RemoteUserPreferences;
+
+/**
+ * Remote user entitlement record from Supabase.
+ * Corresponds to the `user_entitlements` table.
+ *
+ * NOTE: This table uses a separate sync path (entitlementSync.ts),
+ * not the Dexie queue-based SyncService. It is intentionally excluded
+ * from SyncTableName and RemoteRecord unions.
+ */
+export interface RemoteUserEntitlement {
+  user_id: string;
+  tier: 'standard' | 'advanced';
+  purchase_type: 'lifetime' | 'subscription';
+  purchased_at: string;
+  expires_at: string | null;
+  will_renew: boolean;
+  product_id: string | null;
+  updated_at: string;
+}

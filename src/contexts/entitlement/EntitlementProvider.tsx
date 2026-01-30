@@ -33,7 +33,7 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
   useEffect(() => {
     const init = async () => {
       try {
-        const status = await entitlementService.initialize();
+        const status = await entitlementService.initialize(user?.id);
         setEntitlement(status);
       } catch (error) {
         console.error('[Entitlement] Failed to initialize:', error);
@@ -59,7 +59,7 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
       try {
         // Small delay to allow RevenueCat to sync with new user ID
         await new Promise(resolve => setTimeout(resolve, 500));
-        const status = await entitlementService.getEntitlementStatus(preferences.appMode);
+        const status = await entitlementService.getEntitlementStatus(preferences.appMode, user?.id);
         setEntitlement(status);
       } catch (error) {
         console.error('[Entitlement] Failed to refresh on user change:', error);
@@ -75,12 +75,12 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
   // Refresh entitlement status
   const refreshEntitlement = useCallback(async () => {
     try {
-      const status = await entitlementService.getEntitlementStatus(preferences.appMode);
+      const status = await entitlementService.getEntitlementStatus(preferences.appMode, user?.id);
       setEntitlement(status);
     } catch (error) {
       console.error('[Entitlement] Failed to refresh:', error);
     }
-  }, [preferences.appMode]);
+  }, [preferences.appMode, user?.id]);
 
   // Show paywall modal
   const showPaywall = useCallback((tier: PurchaseTier, reason?: LockReason) => {

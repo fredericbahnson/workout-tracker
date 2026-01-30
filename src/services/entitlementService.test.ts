@@ -6,12 +6,24 @@
  * - Access level determination
  * - Feature gating logic
  * - Lock reason messaging
+ * - userId parameter for web platform entitlement lookup
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { entitlementService } from './entitlementService';
 import { trialService } from './trialService';
 import { TRIAL_CONFIG } from '@/types/entitlement';
+
+// Mock entitlementSync for userId-aware tests
+const mockGetEntitlement = vi.fn();
+
+vi.mock('./entitlementSync', () => ({
+  entitlementSync: {
+    getEntitlement: (...args: unknown[]) => mockGetEntitlement(...args),
+    syncToSupabase: vi.fn().mockResolvedValue(undefined),
+    refreshFromSupabase: vi.fn().mockResolvedValue(null),
+  },
+}));
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -430,5 +442,83 @@ describe('Trial and Entitlement Integration', () => {
     expect(status2.trial.startedAt!.toISOString()).toBe(status3.trial.startedAt!.toISOString());
     expect(status1.effectiveLevel).toBe(status2.effectiveLevel);
     expect(status2.effectiveLevel).toBe(status3.effectiveLevel);
+  });
+});
+
+describe('Entitlement Service - userId Web Platform Support', () => {
+  beforeEach(() => {
+    localStorageMock.clear();
+    vi.useFakeTimers();
+    mockGetEntitlement.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should return entitlement from sync when userId is provided on web', async () => {
+    // Expire trial so only purchase provides access
+    trialService.startTrialIfNeeded();
+    vi.advanceTimersByTime((TRIAL_CONFIG.DURATION_DAYS + 1) * 24 * 60 * 60 * 1000);
+
+    mockGetEntitlement.mockResolvedValue({
+      tier: 'advanced',
+      type: 'lifetime',
+      purchasedAt: new Date('2025-06-01T00:00:00Z'),
+      expiresAt: null,
+      willRenew: false,
+      productId: 'com.ascend.advanced.lifetime',
+    });
+
+    const status = await entitlementService.getEntitlementStatus(undefined, 'user-123');
+
+    expect(mockGetEntitlement).toHaveBeenCalledWith('user-123');
+    expect(status.purchase).not.toBeNull();
+    expect(status.purchase!.tier).toBe('advanced');
+    expect(status.effectiveLevel).toBe('advanced');
+    expect(status.canAccessAdvanced).toBe(true);
+  });
+
+  it('should return null purchase when no userId is provided on web', async () => {
+    // Expire trial
+    trialService.startTrialIfNeeded();
+    vi.advanceTimersByTime((TRIAL_CONFIG.DURATION_DAYS + 1) * 24 * 60 * 60 * 1000);
+
+    const status = await entitlementService.getEntitlementStatus();
+
+    // Without userId, web gets no purchase info
+    expect(status.purchase).toBeNull();
+    expect(status.effectiveLevel).toBe('none');
+  });
+
+  it('should pass userId through initialize', async () => {
+    mockGetEntitlement.mockResolvedValue(null);
+
+    await entitlementService.initialize('user-456');
+
+    // initialize calls getEntitlementStatus internally, which calls getPurchaseInfo(userId)
+    // On web (non-native), this delegates to entitlementSync.getEntitlement
+    expect(mockGetEntitlement).toHaveBeenCalledWith('user-456');
+  });
+
+  it('should grant standard access when user has standard purchase via sync', async () => {
+    // Expire trial
+    trialService.startTrialIfNeeded();
+    vi.advanceTimersByTime((TRIAL_CONFIG.DURATION_DAYS + 1) * 24 * 60 * 60 * 1000);
+
+    mockGetEntitlement.mockResolvedValue({
+      tier: 'standard',
+      type: 'lifetime',
+      purchasedAt: new Date('2025-06-01T00:00:00Z'),
+      expiresAt: null,
+      willRenew: false,
+    });
+
+    const status = await entitlementService.getEntitlementStatus(undefined, 'user-std');
+
+    expect(status.purchase!.tier).toBe('standard');
+    expect(status.effectiveLevel).toBe('standard');
+    expect(status.canAccessStandard).toBe(true);
+    expect(status.canAccessAdvanced).toBe(false);
   });
 });

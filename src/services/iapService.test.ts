@@ -28,11 +28,24 @@ vi.mock('@revenuecat/purchases-capacitor', () => ({
   Purchases: mockPurchases,
 }));
 
+// Mock entitlementSync
+const mockGetEntitlement = vi.fn();
+const mockSyncToSupabase = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('./entitlementSync', () => ({
+  entitlementSync: {
+    getEntitlement: (...args: unknown[]) => mockGetEntitlement(...args),
+    syncToSupabase: (...args: unknown[]) => mockSyncToSupabase(...args),
+  },
+}));
+
 import { Capacitor } from '@capacitor/core';
 
 describe('IAPService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetEntitlement.mockReset();
+    mockSyncToSupabase.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -60,7 +73,7 @@ describe('IAPService', () => {
       expect(iapService.isAvailable()).toBe(false);
     });
 
-    it('should return null for getPurchaseInfo on web', async () => {
+    it('should return null for getPurchaseInfo on web without userId', async () => {
       vi.resetModules();
       vi.doMock('@capacitor/core', () => ({
         Capacitor: {
@@ -73,6 +86,33 @@ describe('IAPService', () => {
       const result = await iapService.getPurchaseInfo();
 
       expect(result).toBeNull();
+    });
+
+    it('should delegate to entitlementSync on web when userId is set', async () => {
+      vi.resetModules();
+      vi.doMock('@capacitor/core', () => ({
+        Capacitor: {
+          isNativePlatform: () => false,
+        },
+      }));
+
+      const mockEntitlement = {
+        tier: 'advanced' as const,
+        type: 'lifetime' as const,
+        purchasedAt: new Date('2025-06-01T00:00:00Z'),
+        expiresAt: null,
+        willRenew: false,
+        productId: 'com.ascend.advanced.lifetime',
+      };
+      mockGetEntitlement.mockResolvedValue(mockEntitlement);
+
+      const { iapService } = await import('./iapService');
+
+      await iapService.setUserId('user-123');
+      const result = await iapService.getPurchaseInfo();
+
+      expect(mockGetEntitlement).toHaveBeenCalledWith('user-123');
+      expect(result).toEqual(mockEntitlement);
     });
 
     it('should return null for getOfferings on web', async () => {
@@ -425,6 +465,223 @@ describe('IAPService', () => {
 
       await expect(iapService.initialize()).rejects.toThrow('SDK error');
       expect(iapService.isAvailable()).toBe(false);
+    });
+
+    it('should sync to Supabase after successful getPurchaseInfo', async () => {
+      const mockCustomerInfo = {
+        entitlements: {
+          active: {
+            advanced: {
+              latestPurchaseDate: '2024-01-01T00:00:00Z',
+              expirationDate: null,
+              willRenew: false,
+              productIdentifier: 'com.ascend.advanced.lifetime',
+            },
+          },
+        },
+      };
+
+      const mockConfigure = vi.fn().mockResolvedValue(undefined);
+      const mockGetCustomerInfo = vi.fn().mockResolvedValue({ customerInfo: mockCustomerInfo });
+      const mockLogIn = vi.fn().mockResolvedValue({});
+
+      vi.doMock('@revenuecat/purchases-capacitor', () => ({
+        Purchases: {
+          configure: mockConfigure,
+          getCustomerInfo: mockGetCustomerInfo,
+          logIn: mockLogIn,
+        },
+      }));
+
+      const { iapService } = await import('./iapService');
+
+      await iapService.initialize();
+      await iapService.setUserId('user-123');
+      await iapService.getPurchaseInfo();
+
+      // Allow fire-and-forget promise to resolve
+      await vi.waitFor(() => {
+        expect(mockSyncToSupabase).toHaveBeenCalledWith(
+          'user-123',
+          expect.objectContaining({ tier: 'advanced', type: 'lifetime' })
+        );
+      });
+    });
+
+    it('should fall back to entitlementSync when getPurchaseInfo fails on native', async () => {
+      const mockConfigure = vi.fn().mockResolvedValue(undefined);
+      const mockGetCustomerInfo = vi.fn().mockRejectedValue(new Error('Network error'));
+      const mockLogIn = vi.fn().mockResolvedValue({});
+
+      vi.doMock('@revenuecat/purchases-capacitor', () => ({
+        Purchases: {
+          configure: mockConfigure,
+          getCustomerInfo: mockGetCustomerInfo,
+          logIn: mockLogIn,
+        },
+      }));
+
+      const mockCachedEntitlement = {
+        tier: 'advanced' as const,
+        type: 'lifetime' as const,
+        purchasedAt: new Date('2025-06-01T00:00:00Z'),
+        expiresAt: null,
+        willRenew: false,
+      };
+      mockGetEntitlement.mockResolvedValue(mockCachedEntitlement);
+
+      const { iapService } = await import('./iapService');
+
+      await iapService.initialize();
+      await iapService.setUserId('user-123');
+      const result = await iapService.getPurchaseInfo();
+
+      expect(mockGetEntitlement).toHaveBeenCalledWith('user-123');
+      expect(result).toEqual(mockCachedEntitlement);
+    });
+
+    it('should sync to Supabase after successful purchase', async () => {
+      const mockCustomerInfo = {
+        entitlements: {
+          active: {
+            advanced: {
+              latestPurchaseDate: '2024-01-01T00:00:00Z',
+              expirationDate: null,
+              willRenew: false,
+              productIdentifier: 'com.ascend.advanced.lifetime',
+            },
+          },
+        },
+      };
+
+      const mockOfferings = {
+        current: {
+          identifier: 'default',
+          availablePackages: [
+            {
+              identifier: 'advanced',
+              product: {
+                identifier: 'com.ascend.advanced.lifetime',
+                priceString: '$49.99',
+                title: 'Advanced Lifetime',
+                description: 'One-time purchase',
+              },
+            },
+          ],
+        },
+        all: {},
+      };
+
+      const mockConfigure = vi.fn().mockResolvedValue(undefined);
+      const mockGetOfferings = vi.fn().mockResolvedValue(mockOfferings);
+      const mockPurchasePackage = vi.fn().mockResolvedValue({ customerInfo: mockCustomerInfo });
+      const mockLogIn = vi.fn().mockResolvedValue({});
+
+      vi.doMock('@revenuecat/purchases-capacitor', () => ({
+        Purchases: {
+          configure: mockConfigure,
+          getOfferings: mockGetOfferings,
+          purchasePackage: mockPurchasePackage,
+          logIn: mockLogIn,
+        },
+      }));
+
+      const { iapService } = await import('./iapService');
+
+      await iapService.initialize();
+      await iapService.setUserId('user-456');
+      await iapService.purchase('advanced');
+
+      await vi.waitFor(() => {
+        expect(mockSyncToSupabase).toHaveBeenCalledWith(
+          'user-456',
+          expect.objectContaining({ tier: 'advanced' })
+        );
+      });
+    });
+
+    it('should sync to Supabase after successful restore', async () => {
+      const mockCustomerInfo = {
+        entitlements: {
+          active: {
+            standard: {
+              latestPurchaseDate: '2024-01-01T00:00:00Z',
+              expirationDate: null,
+              willRenew: false,
+              productIdentifier: 'com.ascend.standard',
+            },
+          },
+        },
+      };
+
+      const mockConfigure = vi.fn().mockResolvedValue(undefined);
+      const mockRestorePurchases = vi.fn().mockResolvedValue({ customerInfo: mockCustomerInfo });
+      const mockLogIn = vi.fn().mockResolvedValue({});
+
+      vi.doMock('@revenuecat/purchases-capacitor', () => ({
+        Purchases: {
+          configure: mockConfigure,
+          restorePurchases: mockRestorePurchases,
+          logIn: mockLogIn,
+        },
+      }));
+
+      const { iapService } = await import('./iapService');
+
+      await iapService.initialize();
+      await iapService.setUserId('user-789');
+      await iapService.restorePurchases();
+
+      await vi.waitFor(() => {
+        expect(mockSyncToSupabase).toHaveBeenCalledWith(
+          'user-789',
+          expect.objectContaining({ tier: 'standard' })
+        );
+      });
+    });
+  });
+
+  describe('userId tracking', () => {
+    it('should store userId on setUserId even when not on native', async () => {
+      vi.resetModules();
+      vi.doMock('@capacitor/core', () => ({
+        Capacitor: {
+          isNativePlatform: () => false,
+        },
+      }));
+
+      mockGetEntitlement.mockResolvedValue({
+        tier: 'advanced',
+        type: 'lifetime',
+        purchasedAt: new Date(),
+        expiresAt: null,
+      });
+
+      const { iapService } = await import('./iapService');
+
+      await iapService.setUserId('user-web');
+      const result = await iapService.getPurchaseInfo();
+
+      expect(mockGetEntitlement).toHaveBeenCalledWith('user-web');
+      expect(result).not.toBeNull();
+    });
+
+    it('should clear userId on clearUserId even when not on native', async () => {
+      vi.resetModules();
+      vi.doMock('@capacitor/core', () => ({
+        Capacitor: {
+          isNativePlatform: () => false,
+        },
+      }));
+
+      const { iapService } = await import('./iapService');
+
+      await iapService.setUserId('user-web');
+      await iapService.clearUserId();
+      const result = await iapService.getPurchaseInfo();
+
+      // After clearing userId, should return null without calling entitlementSync
+      expect(result).toBeNull();
     });
   });
 });
