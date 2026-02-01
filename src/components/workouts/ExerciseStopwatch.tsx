@@ -2,9 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Check, X, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { formatTime } from '@/types';
-import { createScopedLogger } from '@/utils/logger';
-
-const log = createScopedLogger('Stopwatch');
+import { getAudioContext, playStopSound, playNewRecordSound } from '@/utils/audio';
 
 interface ExerciseStopwatchProps {
   exerciseName: string;
@@ -12,76 +10,8 @@ interface ExerciseStopwatchProps {
   onRecordMax: (seconds: number) => void;
   onCancel: () => void;
   onSkipToLog: () => void;
-}
-
-// Audio context for generating sounds
-let audioContext: AudioContext | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new (
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    )();
-  }
-  return audioContext;
-}
-
-function playStopSound() {
-  // Single confirmation tone
-  try {
-    const ctx = getAudioContext();
-
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
-
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.frequency.value = 660; // E5
-    oscillator.type = 'sine';
-
-    gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.3);
-  } catch (e) {
-    log.warn('Audio playback failed:', e);
-  }
-}
-
-function playNewRecordSound() {
-  // Celebratory ascending tones for new record
-  try {
-    const ctx = getAudioContext();
-
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
-
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      const startTime = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.35, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
-      osc.start(startTime);
-      osc.stop(startTime + 0.25);
-    });
-  } catch (e) {
-    log.warn('Audio playback failed:', e);
-  }
+  /** Volume 0-100, default 40 */
+  volume?: number;
 }
 
 export function ExerciseStopwatch({
@@ -90,6 +20,7 @@ export function ExerciseStopwatch({
   onRecordMax,
   onCancel,
   onSkipToLog,
+  volume = 40,
 }: ExerciseStopwatchProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -109,9 +40,10 @@ export function ExerciseStopwatch({
     };
   }, []);
 
-  const startStopwatch = useCallback(() => {
+  const startStopwatch = useCallback(async () => {
     // Initialize audio context on user interaction
-    getAudioContext();
+    const ctx = getAudioContext();
+    await ctx.resume();
 
     setIsRunning(true);
     setIsStopped(false);
@@ -141,11 +73,11 @@ export function ExerciseStopwatch({
     setIsStopped(true);
 
     if (isNewRecord) {
-      playNewRecordSound();
+      playNewRecordSound(volume);
     } else {
-      playStopSound();
+      playStopSound(volume);
     }
-  }, [pauseStopwatch, isNewRecord]);
+  }, [pauseStopwatch, isNewRecord, volume]);
 
   const resetStopwatch = useCallback(() => {
     pauseStopwatch();

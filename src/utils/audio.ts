@@ -32,9 +32,7 @@ export function getAudioContext(): AudioContext {
  */
 export async function resumeAudioContext(): Promise<void> {
   const ctx = getAudioContext();
-  if (ctx.state === 'suspended') {
-    await ctx.resume();
-  }
+  await ctx.resume();
 }
 
 /**
@@ -44,9 +42,7 @@ export async function resumeAudioContext(): Promise<void> {
 export function initAudioOnInteraction(): void {
   try {
     const ctx = getAudioContext();
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
+    ctx.resume();
   } catch (_e) {
     log.debug('Audio context initialization failed');
   }
@@ -64,10 +60,7 @@ export function playBeep(frequency: number, duration: number, volume: number): v
 
   try {
     const ctx = getAudioContext();
-
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
+    ctx.resume();
 
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -111,10 +104,7 @@ export function playCompletionSound(volume: number): void {
 
   try {
     const ctx = getAudioContext();
-
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
+    ctx.resume();
 
     // Convert 0-100 volume to 0-1 gain
     const gain = Math.min(1, Math.max(0, volume / 100));
@@ -141,6 +131,48 @@ export function playCompletionSound(volume: number): void {
     });
   } catch (_e) {
     log.debug('Completion sound playback failed');
+  }
+}
+
+/**
+ * Play a single confirmation tone for stopwatch stop.
+ *
+ * @param volume - Volume 0-100
+ */
+export function playStopSound(volume: number): void {
+  playBeep(660, 0.3, volume);
+}
+
+/**
+ * Play celebratory ascending tones for a new record.
+ *
+ * @param volume - Volume 0-100
+ */
+export function playNewRecordSound(volume: number): void {
+  if (volume === 0) return;
+
+  try {
+    const ctx = getAudioContext();
+    ctx.resume();
+
+    const gain = Math.min(1, Math.max(0, volume / 100));
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      const startTime = ctx.currentTime + i * 0.12;
+      gainNode.gain.setValueAtTime(gain, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+      osc.start(startTime);
+      osc.stop(startTime + 0.25);
+    });
+  } catch (_e) {
+    log.debug('New record sound playback failed');
   }
 }
 

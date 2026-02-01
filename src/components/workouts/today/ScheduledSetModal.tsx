@@ -101,6 +101,7 @@ export function ScheduledSetModal({
                 }}
                 onCancel={handleClose}
                 onSkipToLog={() => setShowStopwatchMode(false)}
+                volume={timerVolume}
               />
             );
           }

@@ -2,12 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { formatTime } from '@/types';
-import {
-  getAudioContext,
-  initAudioOnInteraction,
-  playCountdownBeep,
-  playCompletionSound,
-} from '@/utils/audio';
+import { getAudioContext, playCountdownBeep, playCompletionSound } from '@/utils/audio';
 
 interface ExerciseTimerProps {
   targetSeconds: number;
@@ -66,10 +61,10 @@ export function ExerciseTimer({
     }
   }, [timeRemaining, isRunning, volume]);
 
-  const startTimer = useCallback(() => {
+  const startTimer = useCallback(async () => {
     // Initialize audio context on user interaction (required by browsers)
-    getAudioContext();
-    initAudioOnInteraction();
+    const ctx = getAudioContext();
+    await ctx.resume();
 
     setIsRunning(true);
     lastBeepRef.current = null;
