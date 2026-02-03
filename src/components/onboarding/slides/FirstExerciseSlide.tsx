@@ -14,6 +14,7 @@ import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
 export interface FirstExerciseData {
   name: string;
   type: string;
+  measurementType: 'reps' | 'time';
 }
 
 interface FirstExerciseSlideProps {
@@ -24,6 +25,7 @@ export function FirstExerciseSlide({ onNext }: FirstExerciseSlideProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState('push');
+  const [measurementType, setMeasurementType] = useState<'reps' | 'time'>('reps');
 
   // Animate in on mount
   useEffect(() => {
@@ -34,11 +36,12 @@ export function FirstExerciseSlide({ onNext }: FirstExerciseSlideProps) {
   const handleSuggestionSelect = (suggestion: ExerciseSuggestion) => {
     setName(suggestion.name);
     setType(suggestion.type);
+    setMeasurementType(suggestion.measurementType);
   };
 
   const handleSubmit = () => {
     if (!name.trim()) return;
-    onNext({ name: name.trim(), type });
+    onNext({ name: name.trim(), type, measurementType });
   };
 
   const typeOptions = EXERCISE_TYPES.map(t => ({
@@ -115,6 +118,48 @@ export function FirstExerciseSlide({ onNext }: FirstExerciseSlideProps) {
               onChange={e => setType(e.target.value)}
               options={typeOptions}
             />
+
+            {/* Measurement Type Toggle */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Measurement
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMeasurementType('reps')}
+                  className={`
+                    flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors
+                    ${
+                      measurementType === 'reps'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }
+                  `}
+                >
+                  Reps
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMeasurementType('time')}
+                  className={`
+                    flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors
+                    ${
+                      measurementType === 'time'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }
+                  `}
+                >
+                  Time
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {measurementType === 'reps'
+                  ? 'Count repetitions (push-ups, pull-ups, squats)'
+                  : 'Track duration (planks, holds, stretches)'}
+              </p>
+            </div>
 
             {/* Helpful note */}
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">

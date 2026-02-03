@@ -20,6 +20,7 @@ import {
   Target,
   X,
   Edit3,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { OnboardingSlide } from './OnboardingSlide';
@@ -164,8 +165,8 @@ export function AppTour({
                     <span>Rest timer starts automatically</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Dumbbell className="w-4 h-4 text-primary-500" />
-                    <span>Log ad-hoc sets anytime</span>
+                    <Plus className="w-4 h-4 text-primary-500" />
+                    <span>Tap + to add extra sets anytime</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <X className="w-4 h-4 text-primary-500" />
@@ -306,7 +307,8 @@ export function AppTour({
                 </div>
 
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Or skip cycles entirely and log workouts freestyle.
+                  The cycle wizard walks you through each step in about a minute. Or skip cycles
+                  entirely and log workouts freestyle.
                 </p>
               </div>
             }
@@ -378,7 +380,8 @@ export function AppTour({
                 </div>
 
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Sync with an account to access your data on any device.
+                  Sync with an account to access your data on any device. Visit{' '}
+                  <strong>Settings</strong> to customize rest timers, training defaults, and more.
                 </p>
               </div>
             }

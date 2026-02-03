@@ -164,7 +164,7 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         name: exerciseData.name,
         type: exerciseData.type as 'push' | 'pull' | 'legs' | 'core' | 'other',
         mode: 'standard',
-        measurementType: 'reps',
+        measurementType: exerciseData.measurementType,
         notes: '',
         customParameters: [],
       });
@@ -321,13 +321,18 @@ export function OnboardingFlow({ onComplete, onSkip }: OnboardingFlowProps) {
         {phase === 'first-exercise' && <FirstExerciseSlide onNext={handleFirstExerciseComplete} />}
 
         {phase === 'record-max' && exerciseData && (
-          <RecordMaxSlide exerciseName={exerciseData.name} onNext={handleRecordMaxComplete} />
+          <RecordMaxSlide
+            exerciseName={exerciseData.name}
+            measurementType={exerciseData.measurementType}
+            onNext={handleRecordMaxComplete}
+          />
         )}
 
         {phase === 'ready' && exerciseData && (
           <ExerciseSuccessSlide
             exerciseName={exerciseData.name}
             maxReps={maxReps}
+            measurementType={exerciseData.measurementType}
             onContinue={handleExerciseSuccessContinue}
           />
         )}

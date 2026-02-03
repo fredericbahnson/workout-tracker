@@ -11,12 +11,13 @@ import { Button, NumberInput } from '@/components/ui';
 
 interface RecordMaxSlideProps {
   exerciseName: string;
-  onNext: (maxReps: number | null) => void;
+  measurementType: 'reps' | 'time';
+  onNext: (maxValue: number | null) => void;
 }
 
-export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
+export function RecordMaxSlide({ exerciseName, measurementType, onNext }: RecordMaxSlideProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [maxReps, setMaxReps] = useState<number>(10);
+  const [maxValue, setMaxValue] = useState<number>(10);
   const [showTip, setShowTip] = useState(false);
 
   // Animate in on mount
@@ -26,7 +27,7 @@ export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
   }, []);
 
   const handleSubmit = () => {
-    onNext(maxReps > 0 ? maxReps : null);
+    onNext(maxValue > 0 ? maxValue : null);
   };
 
   const handleSkip = () => {
@@ -73,12 +74,26 @@ export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
               ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
             `}
           >
-            How many <strong className="text-gray-900 dark:text-gray-100">{exerciseName}</strong>{' '}
-            can you do in one set,{' '}
-            <span className="font-semibold text-primary-600 dark:text-primary-400">
-              with good form
-            </span>
-            ?
+            {measurementType === 'reps' ? (
+              <>
+                How many{' '}
+                <strong className="text-gray-900 dark:text-gray-100">{exerciseName}</strong> can you
+                do in one set,{' '}
+                <span className="font-semibold text-primary-600 dark:text-primary-400">
+                  with good form
+                </span>
+                ?
+              </>
+            ) : (
+              <>
+                How long can you hold{' '}
+                <strong className="text-gray-900 dark:text-gray-100">{exerciseName}</strong>{' '}
+                <span className="font-semibold text-primary-600 dark:text-primary-400">
+                  with good form
+                </span>
+                ?
+              </>
+            )}
           </p>
 
           {/* Max input */}
@@ -91,13 +106,15 @@ export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
           >
             <div className="flex items-center justify-center gap-4 mb-4">
               <NumberInput
-                value={maxReps}
-                onChange={setMaxReps}
+                value={maxValue}
+                onChange={setMaxValue}
                 min={1}
-                max={100}
+                max={measurementType === 'reps' ? 100 : 600}
                 className="w-24 text-center text-2xl font-bold"
               />
-              <span className="text-lg text-gray-600 dark:text-gray-400">reps</span>
+              <span className="text-lg text-gray-600 dark:text-gray-400">
+                {measurementType === 'reps' ? 'reps' : 'seconds'}
+              </span>
             </div>
 
             {/* Tip toggle */}
@@ -117,8 +134,9 @@ export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
                   <strong>It's okay to estimate!</strong>
                 </p>
                 <p>
-                  Think of a recent workout where you pushed hard but kept good form. That number is
-                  your starting point. You can update it anytime.
+                  {measurementType === 'reps'
+                    ? 'Think of a recent workout where you pushed hard but kept good form. That number is your starting point. You can update it anytime.'
+                    : 'Think of a recent attempt where you held as long as possible with good form. That duration is your starting point. You can update it anytime.'}
                 </p>
               </div>
             )}
@@ -147,7 +165,7 @@ export function RecordMaxSlide({ exerciseName, onNext }: RecordMaxSlideProps) {
       >
         <Button
           onClick={handleSubmit}
-          disabled={maxReps < 1}
+          disabled={maxValue < 1}
           className="w-full py-3 text-base font-medium"
         >
           Save & Continue

@@ -12,12 +12,14 @@ import { Button } from '@/components/ui';
 interface ExerciseSuccessSlideProps {
   exerciseName: string;
   maxReps: number | null;
+  measurementType?: 'reps' | 'time';
   onContinue: () => void;
 }
 
 export function ExerciseSuccessSlide({
   exerciseName,
   maxReps,
+  measurementType = 'reps',
   onContinue,
 }: ExerciseSuccessSlideProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -73,7 +75,9 @@ export function ExerciseSuccessSlide({
               <div className="text-left">
                 <div className="font-medium text-gray-900 dark:text-gray-100">{exerciseName}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {maxReps ? `Max: ${maxReps} reps` : 'Max not set yet'}
+                  {maxReps
+                    ? `Max: ${maxReps} ${measurementType === 'reps' ? 'reps' : 'seconds'}`
+                    : 'Max not set yet'}
                 </div>
               </div>
               <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
@@ -90,7 +94,8 @@ export function ExerciseSuccessSlide({
               ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
             `}
           >
-            You can add more exercises from the Exercises tab after finishing the tour.
+            Add more exercises from the Exercises tab, then create a training cycle—or start logging
+            workouts right away in ad-hoc mode.
           </p>
 
           {/* Continue button */}

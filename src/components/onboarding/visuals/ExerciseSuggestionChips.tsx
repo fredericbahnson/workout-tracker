@@ -10,15 +10,16 @@ import { Check } from 'lucide-react';
 export interface ExerciseSuggestion {
   name: string;
   type: 'push' | 'pull' | 'legs' | 'core';
+  measurementType: 'reps' | 'time';
 }
 
 const SUGGESTIONS: ExerciseSuggestion[] = [
-  { name: 'Pull-ups', type: 'pull' },
-  { name: 'Push-ups', type: 'push' },
-  { name: 'Squats', type: 'legs' },
-  { name: 'Dips', type: 'push' },
-  { name: 'Rows', type: 'pull' },
-  { name: 'Lunges', type: 'legs' },
+  { name: 'Pull-ups', type: 'pull', measurementType: 'reps' },
+  { name: 'Push-ups', type: 'push', measurementType: 'reps' },
+  { name: 'Squats', type: 'legs', measurementType: 'reps' },
+  { name: 'Dips', type: 'push', measurementType: 'reps' },
+  { name: 'Rows', type: 'pull', measurementType: 'reps' },
+  { name: 'Plank', type: 'core', measurementType: 'time' },
 ];
 
 interface ExerciseSuggestionChipsProps {
