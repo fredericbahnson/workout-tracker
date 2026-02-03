@@ -168,20 +168,8 @@ function AppContent() {
     );
   }
 
-  // If Supabase is configured and no user, show auth gate
-  if (isConfigured && !user) {
-    return (
-      <ErrorBoundary level="page">
-        <AuthGate onAuthComplete={handleAuthComplete} />
-      </ErrorBoundary>
-    );
-  }
-
-  // CRITICAL: Health disclaimer gate for ALL users
-  // This catches:
-  // - Existing users who haven't seen the disclaimer
-  // - Users who somehow skipped it
-  // - Users on older app versions updating
+  // PHASE 0: Health disclaimer — first thing ANY visitor sees
+  // Backed by both localStorage and IndexedDB so it survives clearLocalDatabase() on sign-in
   if (!hasAcknowledgedHealthDisclaimer) {
     return (
       <ErrorBoundary level="page">
@@ -189,6 +177,15 @@ function AppContent() {
           onAcknowledge={handleStandaloneHealthAcknowledge}
           isLoading={isAcknowledgingHealth}
         />
+      </ErrorBoundary>
+    );
+  }
+
+  // PHASE 0.5: Auth gate — only after disclaimer is acknowledged
+  if (isConfigured && !user) {
+    return (
+      <ErrorBoundary level="page">
+        <AuthGate onAuthComplete={handleAuthComplete} />
       </ErrorBoundary>
     );
   }

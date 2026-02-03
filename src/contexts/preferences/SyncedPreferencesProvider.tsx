@@ -25,6 +25,7 @@ import { SyncedPreferencesContext } from './SyncedPreferencesContext';
 import { defaultPrefs } from './types';
 
 const log = createScopedLogger('SyncedPrefs');
+const HEALTH_DISCLAIMER_KEY = 'ascend-health-disclaimer-acknowledged';
 
 export function SyncedPreferencesProvider({ children }: { children: ReactNode }) {
   const { syncItem } = useSyncItem();
@@ -69,8 +70,11 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
   const preferences = dbPreferences ?? defaultPrefs;
 
   // Computed: whether user has acknowledged health disclaimer
+  // Checks both localStorage (survives clearLocalDatabase on sign-in) and IndexedDB/cloud
   const hasAcknowledgedHealthDisclaimer = useMemo(
-    () => preferences.healthDisclaimerAcknowledgedAt !== null,
+    () =>
+      localStorage.getItem(HEALTH_DISCLAIMER_KEY) === 'true' ||
+      preferences.healthDisclaimerAcknowledgedAt !== null,
     [preferences.healthDisclaimerAcknowledgedAt]
   );
 
@@ -160,6 +164,7 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
   );
 
   const acknowledgeHealthDisclaimer = useCallback(async () => {
+    localStorage.setItem(HEALTH_DISCLAIMER_KEY, 'true');
     const updated = await UserPreferencesRepo.acknowledgeHealthDisclaimer();
     await saveAndSync(updated);
   }, [saveAndSync]);
