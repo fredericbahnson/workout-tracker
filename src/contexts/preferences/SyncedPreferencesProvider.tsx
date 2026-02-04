@@ -78,6 +78,15 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     [preferences.healthDisclaimerAcknowledgedAt]
   );
 
+  // Keep localStorage in sync with cloud/IndexedDB preference.
+  // Covers the case where acknowledgment arrives via cloud sync
+  // rather than the user clicking "I Understand & Agree" on this device.
+  useEffect(() => {
+    if (preferences.healthDisclaimerAcknowledgedAt !== null) {
+      localStorage.setItem(HEALTH_DISCLAIMER_KEY, 'true');
+    }
+  }, [preferences.healthDisclaimerAcknowledgedAt]);
+
   // Helper to save and sync
   const saveAndSync = useCallback(
     async (updated: UserPreferences) => {
