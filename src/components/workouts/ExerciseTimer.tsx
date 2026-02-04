@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { formatTime } from '@/types';
-import { getAudioContext, playCountdownBeep, playCompletionSound } from '@/utils/audio';
+import { useCountdownTimer } from '@/hooks/useCountdownTimer';
 
 interface ExerciseTimerProps {
   targetSeconds: number;
@@ -22,77 +21,12 @@ export function ExerciseTimer({
   onSkipToLog,
   volume = 40,
 }: ExerciseTimerProps) {
-  const [timeRemaining, setTimeRemaining] = useState(targetSeconds);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const intervalRef = useRef<number | null>(null);
-  const lastBeepRef = useRef<number | null>(null);
+  const { timeRemaining, isRunning, isComplete, start, pause, reset } = useCountdownTimer({
+    totalSeconds: targetSeconds,
+    volume,
+  });
 
   const elapsedTime = targetSeconds - timeRemaining;
-
-  // Clear interval on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-
-  // Handle countdown beeps and completion
-  useEffect(() => {
-    if (isRunning && timeRemaining <= 3 && timeRemaining > 0) {
-      // Play beep for 3, 2, 1
-      if (lastBeepRef.current !== timeRemaining) {
-        playCountdownBeep(volume);
-        lastBeepRef.current = timeRemaining;
-      }
-    }
-
-    if (timeRemaining === 0 && isRunning) {
-      setIsRunning(false);
-      setIsComplete(true);
-      playCompletionSound(volume);
-
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-  }, [timeRemaining, isRunning, volume]);
-
-  const startTimer = useCallback(async () => {
-    // Initialize audio context on user interaction (required by browsers)
-    const ctx = getAudioContext();
-    await ctx.resume();
-
-    setIsRunning(true);
-    lastBeepRef.current = null;
-
-    intervalRef.current = window.setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 0) {
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
-
-  const pauseTimer = useCallback(() => {
-    setIsRunning(false);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  const resetTimer = useCallback(() => {
-    pauseTimer();
-    setTimeRemaining(targetSeconds);
-    setIsComplete(false);
-    lastBeepRef.current = null;
-  }, [targetSeconds, pauseTimer]);
 
   const handleLogElapsedTime = () => {
     onComplete(elapsedTime);
@@ -178,14 +112,14 @@ export function ExerciseTimer({
           <div className="flex items-center gap-4">
             {!isRunning ? (
               <Button
-                onClick={startTimer}
+                onClick={start}
                 className="w-16 h-16 rounded-full p-0 flex items-center justify-center"
               >
                 <Play className="w-8 h-8 ml-1" />
               </Button>
             ) : (
               <Button
-                onClick={pauseTimer}
+                onClick={pause}
                 variant="secondary"
                 className="w-16 h-16 rounded-full p-0 flex items-center justify-center"
               >
@@ -194,7 +128,7 @@ export function ExerciseTimer({
             )}
 
             <Button
-              onClick={resetTimer}
+              onClick={reset}
               variant="ghost"
               className="w-12 h-12 rounded-full p-0 flex items-center justify-center"
             >

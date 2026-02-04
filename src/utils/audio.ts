@@ -12,6 +12,10 @@ const log = createScopedLogger('Audio');
 // Singleton audio context
 let audioContext: AudioContext | null = null;
 
+// Keep-alive oscillator to prevent iOS from suspending AudioContext
+let keepAliveOscillator: OscillatorNode | null = null;
+let keepAliveGain: GainNode | null = null;
+
 /**
  * Get or create the audio context.
  * Must be called from a user interaction for iOS Safari.
@@ -49,18 +53,79 @@ export function initAudioOnInteraction(): void {
 }
 
 /**
+ * Start a near-silent oscillator to keep the AudioContext alive on iOS.
+ * Must be called from a user gesture (e.g., timer start button).
+ * Prevents iOS from suspending the AudioContext when the app is backgrounded.
+ */
+export function startAudioKeepAlive(): void {
+  try {
+    const ctx = getAudioContext();
+    ctx.resume();
+
+    // Already running
+    if (keepAliveOscillator) return;
+
+    keepAliveOscillator = ctx.createOscillator();
+    keepAliveGain = ctx.createGain();
+
+    keepAliveOscillator.connect(keepAliveGain);
+    keepAliveGain.connect(ctx.destination);
+
+    // 1Hz at near-zero gain - inaudible but keeps context active
+    keepAliveOscillator.frequency.value = 1;
+    keepAliveGain.gain.value = 0.001;
+
+    keepAliveOscillator.start();
+    log.debug('Audio keep-alive started');
+  } catch (_e) {
+    log.debug('Audio keep-alive start failed');
+  }
+}
+
+/**
+ * Stop the keep-alive oscillator.
+ * Call when timer completes or component unmounts.
+ */
+export function stopAudioKeepAlive(): void {
+  try {
+    if (keepAliveOscillator) {
+      keepAliveOscillator.stop();
+      keepAliveOscillator.disconnect();
+      keepAliveOscillator = null;
+    }
+    if (keepAliveGain) {
+      keepAliveGain.disconnect();
+      keepAliveGain = null;
+    }
+    log.debug('Audio keep-alive stopped');
+  } catch (_e) {
+    log.debug('Audio keep-alive stop failed');
+  }
+}
+
+/**
+ * Ensure the AudioContext is running, with a single retry.
+ */
+async function ensureContextRunning(): Promise<AudioContext> {
+  const ctx = getAudioContext();
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
+  return ctx;
+}
+
+/**
  * Play a single beep tone.
  *
  * @param frequency - Frequency in Hz (e.g., 880 for A5)
  * @param duration - Duration in seconds
  * @param volume - Volume 0-100 (will be converted to gain 0-1)
  */
-export function playBeep(frequency: number, duration: number, volume: number): void {
+export async function playBeep(frequency: number, duration: number, volume: number): Promise<void> {
   if (volume === 0) return; // Muted
 
   try {
-    const ctx = getAudioContext();
-    ctx.resume();
+    const ctx = await ensureContextRunning();
 
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -99,12 +164,11 @@ export function playCountdownBeep(volume: number): void {
  *
  * @param volume - Volume 0-100
  */
-export function playCompletionSound(volume: number): void {
+export async function playCompletionSound(volume: number): Promise<void> {
   if (volume === 0) return; // Muted
 
   try {
-    const ctx = getAudioContext();
-    ctx.resume();
+    const ctx = await ensureContextRunning();
 
     // Convert 0-100 volume to 0-1 gain
     const gain = Math.min(1, Math.max(0, volume / 100));
@@ -148,12 +212,11 @@ export function playStopSound(volume: number): void {
  *
  * @param volume - Volume 0-100
  */
-export function playNewRecordSound(volume: number): void {
+export async function playNewRecordSound(volume: number): Promise<void> {
   if (volume === 0) return;
 
   try {
-    const ctx = getAudioContext();
-    ctx.resume();
+    const ctx = await ensureContextRunning();
 
     const gain = Math.min(1, Math.max(0, volume / 100));
     const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
@@ -188,4 +251,72 @@ export function playTestSound(volume: number): void {
   setTimeout(() => {
     playCompletionSound(volume);
   }, 300);
+}
+
+/**
+ * Pre-schedule countdown sounds using Web Audio API's internal clock.
+ * This ensures precise timing even if setInterval is delayed by iOS.
+ *
+ * @param secondsRemaining - Current seconds remaining (should be ~5 or less)
+ * @param volume - Volume 0-100
+ * @returns Cancel function to stop scheduled sounds
+ */
+export function scheduleCountdownSounds(secondsRemaining: number, volume: number): () => void {
+  if (volume === 0) return () => {};
+
+  const oscillators: OscillatorNode[] = [];
+
+  try {
+    const ctx = getAudioContext();
+    const gain = Math.min(1, Math.max(0, volume / 100));
+
+    // Schedule countdown beeps at 3, 2, 1
+    for (let s = Math.min(secondsRemaining, 3); s >= 1; s--) {
+      const delay = secondsRemaining - s;
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      const startAt = ctx.currentTime + delay;
+      gainNode.gain.setValueAtTime(gain, startAt);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startAt + 0.15);
+      osc.start(startAt);
+      osc.stop(startAt + 0.15);
+      oscillators.push(osc);
+    }
+
+    // Schedule completion chord at 0
+    const completionDelay = secondsRemaining;
+    const frequencies = [523.25, 659.25, 783.99];
+    frequencies.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      const startAt = ctx.currentTime + completionDelay + i * 0.15;
+      gainNode.gain.setValueAtTime(gain, startAt);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startAt + 0.3);
+      osc.start(startAt);
+      osc.stop(startAt + 0.3);
+      oscillators.push(osc);
+    });
+  } catch (_e) {
+    log.debug('Failed to schedule countdown sounds');
+  }
+
+  // Return cancel function
+  return () => {
+    oscillators.forEach(osc => {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch {
+        // Already stopped
+      }
+    });
+  };
 }
