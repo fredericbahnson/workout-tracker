@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Ascend',
   webDir: 'dist',
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
     preferredContentMode: 'mobile',
     backgroundColor: '#121212',
   },
