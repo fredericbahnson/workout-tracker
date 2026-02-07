@@ -15,11 +15,21 @@
  */
 
 import { useState } from 'react';
-import { Rocket, BookOpen, Calendar, Trophy, Smartphone, ChevronRight, Info } from 'lucide-react';
+import {
+  Rocket,
+  BookOpen,
+  Calendar,
+  Trophy,
+  Smartphone,
+  ChevronRight,
+  ExternalLink,
+  GraduationCap,
+  Info,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui';
 import { RFEMGuide, AppTour } from '@/components/onboarding';
 import { CycleGuide, MaxTestingGuide, QuickStartGuide } from '@/components/help';
-import { APP_VERSION } from '@/constants';
+import { APP_VERSION, EXTERNAL_LINKS } from '@/constants';
 
 type GuideType = 'quick-start' | 'rfem' | 'cycles' | 'max-testing' | 'app-tour' | null;
 
@@ -51,6 +61,36 @@ function HelpItem({ icon, iconBg, title, description, onClick }: HelpItemProps) 
   );
 }
 
+interface ExternalHelpItemProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  description: string;
+  href: string;
+}
+
+function ExternalHelpItem({ icon, iconBg, title, description, href }: ExternalHelpItemProps) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-full flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
+          {icon}
+        </div>
+        <div className="text-left">
+          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">{description}</div>
+        </div>
+      </div>
+      <ExternalLink className="w-4 h-4 text-gray-400" />
+    </a>
+  );
+}
+
 export function HelpSection() {
   const [activeGuide, setActiveGuide] = useState<GuideType>(null);
 
@@ -79,6 +119,31 @@ export function HelpSection() {
             title="Feature Tour"
             description="Explore key features and navigation"
             onClick={() => setActiveGuide('app-tour')}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Detailed Guides */}
+      <Card>
+        <CardContent className="space-y-1">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+            Detailed Guides
+          </h3>
+
+          <ExternalHelpItem
+            icon={<BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400" />}
+            iconBg="bg-teal-100 dark:bg-teal-900/30"
+            title="App Guide"
+            description="Comprehensive guide to using the app"
+            href={EXTERNAL_LINKS.APP_GUIDE}
+          />
+
+          <ExternalHelpItem
+            icon={<GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+            iconBg="bg-indigo-100 dark:bg-indigo-900/30"
+            title="RFEM Methodology"
+            description="Deep dive into RFEM — how and why it works"
+            href={EXTERNAL_LINKS.METHODOLOGY}
           />
         </CardContent>
       </Card>
