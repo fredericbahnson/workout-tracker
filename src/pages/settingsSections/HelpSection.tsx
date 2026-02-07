@@ -195,12 +195,12 @@ export function HelpSection() {
                 Progressive calisthenics training
               </p>
               <a
-                href="https://www.fredericbahnson.com/ascend"
+                href="https://ascend.fredericbahnson.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-primary-600 dark:text-primary-400 hover:underline break-all"
               >
-                www.fredericbahnson.com/ascend
+                ascend.fredericbahnson.com
               </a>
             </div>
           </div>
