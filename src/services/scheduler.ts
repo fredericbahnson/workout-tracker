@@ -216,7 +216,13 @@ function generateWeekSchedule(
   distributeSets(dayAllocations, weeklySetGoals, exercises);
 
   // Convert allocations to scheduled workouts
-  return dayAllocations.map(day => createScheduledWorkout(day, cycle, exercises));
+  // Track group occurrences to rotate round-robin offset for balanced exercise distribution
+  const groupOccurrences = new Map<string, number>();
+  return dayAllocations.map(day => {
+    const occurrence = groupOccurrences.get(day.group.id) || 0;
+    groupOccurrences.set(day.group.id, occurrence + 1);
+    return createScheduledWorkout(day, cycle, exercises, occurrence);
+  });
 }
 
 /**
@@ -278,7 +284,8 @@ function distributeSets(
 function createScheduledWorkout(
   day: DayAllocation,
   cycle: Cycle,
-  exercises: Map<string, Exercise>
+  exercises: Map<string, Exercise>,
+  groupOccurrence: number = 0
 ): Omit<ScheduledWorkout, 'id'> {
   const scheduledSets: ScheduledSet[] = [];
   const cycleMode = getProgressionMode(cycle);
@@ -326,7 +333,7 @@ function createScheduledWorkout(
     if (availableExercises.length === 0 || setsNeeded === 0) continue;
 
     for (let setNum = 0; setNum < setsNeeded; setNum++) {
-      const exIndex = setNum % availableExercises.length;
+      const exIndex = (setNum + groupOccurrence) % availableExercises.length;
       const { exerciseId, assignment } = availableExercises[exIndex];
       const exercise = exercises.get(exerciseId)!;
 
@@ -430,9 +437,9 @@ function createScheduledWorkout(
 
     if (availableExercises.length === 0 || setsNeeded === 0) continue;
 
-    // Round-robin through available exercises
+    // Round-robin through available exercises (offset rotates per group occurrence for balance)
     for (let setNum = 0; setNum < setsNeeded; setNum++) {
-      const exIndex = setNum % availableExercises.length;
+      const exIndex = (setNum + groupOccurrence) % availableExercises.length;
       const { exerciseId, assignment } = availableExercises[exIndex];
       const exercise = exercises.get(exerciseId)!;
       const isConditioning = exercise.mode === 'conditioning';
