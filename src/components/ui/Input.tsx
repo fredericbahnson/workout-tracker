@@ -1,4 +1,11 @@
-import { type InputHTMLAttributes, forwardRef, useState, useEffect, memo } from 'react';
+import {
+  type InputHTMLAttributes,
+  forwardRef,
+  useState,
+  useEffect,
+  useCallback,
+  memo,
+} from 'react';
 import { inputClasses } from '@/styles/classes';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -47,6 +54,8 @@ interface NumberInputProps {
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  step?: number;
+  stepper?: boolean;
   className?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -58,6 +67,8 @@ export const NumberInput = memo(function NumberInput({
   onChange,
   min = 0,
   max,
+  step: stepAmount = 1,
+  stepper = false,
   className = '',
   placeholder,
   disabled = false,
@@ -98,25 +109,82 @@ export const NumberInput = memo(function NumberInput({
     }
   };
 
+  const clamp = useCallback(
+    (v: number) => {
+      const lower = Math.max(min, v);
+      return max !== undefined ? Math.min(lower, max) : lower;
+    },
+    [min, max]
+  );
+
+  const handleIncrement = useCallback(() => {
+    const current = parseInt(displayValue, 10);
+    const base = isNaN(current) ? min : current;
+    const clamped = clamp(base + stepAmount);
+    setDisplayValue(clamped.toString());
+    onChange(clamped);
+  }, [displayValue, min, stepAmount, clamp, onChange]);
+
+  const handleDecrement = useCallback(() => {
+    const current = parseInt(displayValue, 10);
+    const base = isNaN(current) ? min : current;
+    const clamped = clamp(base - stepAmount);
+    setDisplayValue(clamped.toString());
+    onChange(clamped);
+  }, [displayValue, min, stepAmount, clamp, onChange]);
+
   const inputId = typeof label === 'string' ? label.toLowerCase().replace(/\s+/g, '-') : undefined;
   const inputClassName = `${inputClasses.base} ${inputClasses.disabled} ${className}`;
 
+  const stepperBtnClass =
+    'flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl font-bold active:bg-gray-200 dark:active:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors select-none';
+
+  const renderInput = (extraClass?: string) => (
+    <input
+      id={inputId}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={displayValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      disabled={disabled}
+      className={`${extraClass ?? ''} ${inputClassName}`}
+    />
+  );
+
+  const renderStepper = (input: React.ReactNode) => (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleDecrement}
+        disabled={disabled || value <= min}
+        className={stepperBtnClass}
+        aria-label="Decrease"
+      >
+        −
+      </button>
+      {input}
+      <button
+        type="button"
+        onClick={handleIncrement}
+        disabled={disabled || (max !== undefined && value >= max)}
+        className={stepperBtnClass}
+        aria-label="Increase"
+      >
+        +
+      </button>
+    </div>
+  );
+
   // If there's no label, render just the input (for inline use)
   if (!label) {
-    return (
-      <input
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={displayValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        disabled={disabled}
-        className={inputClassName}
-      />
-    );
+    const input = renderInput(stepper ? 'flex-1 min-w-0 text-center' : undefined);
+    return stepper ? renderStepper(input) : input;
   }
+
+  const input = renderInput(stepper ? `flex-1 min-w-0 text-center` : inputClasses.fullWidth);
 
   return (
     <div className="w-full">
@@ -126,18 +194,7 @@ export const NumberInput = memo(function NumberInput({
       >
         {label}
       </label>
-      <input
-        id={inputId}
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={displayValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        disabled={disabled}
-        className={`${inputClasses.fullWidth} ${inputClassName}`}
-      />
+      {stepper ? renderStepper(input) : input}
     </div>
   );
 });

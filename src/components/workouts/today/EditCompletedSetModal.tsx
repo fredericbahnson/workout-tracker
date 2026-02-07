@@ -81,6 +81,7 @@ export function EditCompletedSetModal({
             value={editReps}
             onChange={setEditReps}
             min={0}
+            stepper={exercise.measurementType !== 'time'}
           />
 
           {/* Weight Input - only show if exercise has weight tracking enabled */}

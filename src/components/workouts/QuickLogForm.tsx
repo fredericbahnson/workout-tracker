@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Button, Input, Select } from '@/components/ui';
+import { Button, Input, NumberInput, Select } from '@/components/ui';
 import { formatWeightLabel, formatWeightAt } from '@/constants';
 import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from '@/types';
 
@@ -29,12 +29,15 @@ export function QuickLogForm({
 }: QuickLogFormProps) {
   const isTimeBased = exercise.measurementType === 'time';
 
-  // For time-based exercises, store as formatted string for easier editing
-  const [value, setValue] = useState(() => {
-    if (suggestedReps !== undefined) {
-      return isTimeBased ? formatTime(suggestedReps) : suggestedReps.toString();
-    }
+  // Time-based: string state for flexible format parsing (M:SS, 90s, etc.)
+  const [timeValue, setTimeValue] = useState(() => {
+    if (isTimeBased && suggestedReps !== undefined) return formatTime(suggestedReps);
     return '';
+  });
+  // Rep-based: numeric state for stepper +/- buttons
+  const [repValue, setRepValue] = useState(() => {
+    if (!isTimeBased && suggestedReps !== undefined) return suggestedReps;
+    return 0;
   });
   const [notes, setNotes] = useState('');
   // Use suggested weight, then fall back to exercise default
@@ -59,12 +62,12 @@ export function QuickLogForm({
 
     let numericValue: number;
     if (isTimeBased) {
-      const parsed = parseTimeInput(value);
+      const parsed = parseTimeInput(timeValue);
       if (parsed === null || parsed < 0) return;
       numericValue = parsed;
     } else {
-      numericValue = parseInt(value, 10);
-      if (isNaN(numericValue) || numericValue < 0) return;
+      if (repValue < 0) return;
+      numericValue = repValue;
     }
 
     const weightValue = weight ? parseFloat(weight) : undefined;
@@ -80,13 +83,12 @@ export function QuickLogForm({
 
   // Validate the current value
   const isValid = () => {
-    if (!value) return false;
     if (isTimeBased) {
-      const parsed = parseTimeInput(value);
+      if (!timeValue) return false;
+      const parsed = parseTimeInput(timeValue);
       return parsed !== null && parsed >= 0;
     }
-    const num = parseInt(value, 10);
-    return !isNaN(num) && num >= 0;
+    return repValue >= 0;
   };
 
   // Format suggested value for display
@@ -112,36 +114,29 @@ export function QuickLogForm({
         ) : null}
       </div>
 
-      <Input
-        label={
-          isTimeBased
-            ? isMaxTest
-              ? 'Time Achieved'
-              : 'Time Completed'
-            : isMaxTest
-              ? 'Reps Achieved'
-              : 'Reps Completed'
-        }
-        type={isTimeBased ? 'text' : 'number'}
-        min={isTimeBased ? undefined : 0}
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        placeholder={
-          isTimeBased
-            ? isMaxTest
-              ? 'e.g., 0:45, 1:30'
-              : 'e.g., 0:30, 1:00'
-            : isMaxTest
-              ? 'Enter your max'
-              : 'Enter reps'
-        }
-        required
-        autoFocus
-      />
-      {isTimeBased && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-          Enter as M:SS (1:30), seconds (90), or with units (90s, 1m30s)
-        </p>
+      {isTimeBased ? (
+        <>
+          <Input
+            label={isMaxTest ? 'Time Achieved' : 'Time Completed'}
+            type="text"
+            value={timeValue}
+            onChange={e => setTimeValue(e.target.value)}
+            placeholder={isMaxTest ? 'e.g., 0:45, 1:30' : 'e.g., 0:30, 1:00'}
+            required
+            autoFocus
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+            Enter as M:SS (1:30), seconds (90), or with units (90s, 1m30s)
+          </p>
+        </>
+      ) : (
+        <NumberInput
+          label={isMaxTest ? 'Reps Achieved' : 'Reps Completed'}
+          value={repValue}
+          onChange={setRepValue}
+          min={0}
+          stepper
+        />
       )}
 
       {/* Weight Input - only show if exercise has weight tracking enabled */}
