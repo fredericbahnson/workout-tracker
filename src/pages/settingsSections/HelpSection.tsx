@@ -47,16 +47,16 @@ function HelpItem({ icon, iconBg, title, description, onClick }: HelpItemProps) 
       onClick={onClick}
       className="w-full flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
     >
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
           {icon}
         </div>
-        <div className="text-left">
+        <div className="text-left min-w-0">
           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">{description}</div>
         </div>
       </div>
-      <ChevronRight className="w-4 h-4 text-gray-400" />
+      <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
     </button>
   );
 }
@@ -77,16 +77,16 @@ function ExternalHelpItem({ icon, iconBg, title, description, href }: ExternalHe
       rel="noopener noreferrer"
       className="w-full flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
     >
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
           {icon}
         </div>
-        <div className="text-left">
+        <div className="text-left min-w-0">
           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">{description}</div>
         </div>
       </div>
-      <ExternalLink className="w-4 h-4 text-gray-400" />
+      <ExternalLink className="w-4 h-4 text-gray-400 shrink-0" />
     </a>
   );
 }
@@ -185,10 +185,10 @@ export function HelpSection() {
       <Card>
         <CardContent>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
               <Info className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">About</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Ascend v{APP_VERSION}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -198,7 +198,7 @@ export function HelpSection() {
                 href="https://www.fredericbahnson.com/ascend"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                className="text-sm text-primary-600 dark:text-primary-400 hover:underline break-all"
               >
                 www.fredericbahnson.com/ascend
               </a>
