@@ -74,6 +74,12 @@ interface AppState {
   ) => void;
   resetOnboardingMilestones: () => void;
 
+  // Warmup visibility toggles (persisted)
+  showWarmupSets: boolean;
+  setShowWarmupSets: (show: boolean) => void;
+  showTimedWarmups: boolean;
+  setShowTimedWarmups: (show: boolean) => void;
+
   // UI state (not persisted)
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -111,6 +117,12 @@ export const useAppStore = create<AppState>()(
         })),
       resetOnboardingMilestones: () => set({ onboardingMilestones: DEFAULT_MILESTONES }),
 
+      // Warmup visibility toggles
+      showWarmupSets: true,
+      setShowWarmupSets: show => set({ showWarmupSets: show }),
+      showTimedWarmups: true,
+      setShowTimedWarmups: show => set({ showTimedWarmups: show }),
+
       // UI state
       sidebarOpen: false,
       setSidebarOpen: open => set({ sidebarOpen: open }),
@@ -124,6 +136,8 @@ export const useAppStore = create<AppState>()(
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         hasStartedOnboarding: state.hasStartedOnboarding,
         onboardingMilestones: state.onboardingMilestones,
+        showWarmupSets: state.showWarmupSets,
+        showTimedWarmups: state.showTimedWarmups,
         // Note: sidebarOpen is not persisted
       }),
       // Migration for existing users: if hasCompletedOnboarding is true but no milestones,

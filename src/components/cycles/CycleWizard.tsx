@@ -63,10 +63,6 @@ export function CycleWizard({
     setRfemRotation,
     conditioningWeeklyRepIncrement,
     setConditioningWeeklyRepIncrement,
-    includeWarmupSets,
-    setIncludeWarmupSets,
-    includeTimedWarmups,
-    setIncludeTimedWarmups,
     schedulingMode,
     setSchedulingMode,
     selectedDays,
@@ -179,10 +175,6 @@ export function CycleWizard({
             conditioningWeeklyRepIncrement={conditioningWeeklyRepIncrement}
             setConditioningWeeklyRepIncrement={setConditioningWeeklyRepIncrement}
             workoutDaysPerWeek={workoutDaysPerWeek}
-            includeWarmupSets={includeWarmupSets}
-            setIncludeWarmupSets={setIncludeWarmupSets}
-            includeTimedWarmups={includeTimedWarmups}
-            setIncludeTimedWarmups={setIncludeTimedWarmups}
           />
         )}
 
@@ -197,8 +189,6 @@ export function CycleWizard({
             weeklySetGoals={weeklySetGoals}
             groupRotation={groupRotation}
             rfemRotation={rfemRotation}
-            includeWarmupSets={includeWarmupSets}
-            includeTimedWarmups={includeTimedWarmups}
             validation={validation}
           />
         )}

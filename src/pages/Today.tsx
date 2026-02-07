@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Dumbbell, Trophy, Target, Calendar, AlertTriangle } from 'lucide-react';
+import { Plus, Dumbbell, Trophy, Target, Calendar, AlertTriangle, Flame } from 'lucide-react';
 import {
   CompletedSetRepo,
   ExerciseRepo,
@@ -10,6 +10,7 @@ import {
   MaxRecordRepo,
 } from '@/data/repositories';
 import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/scheduler';
+import { useAppStore } from '@/stores/appStore';
 import { useSyncedPreferences } from '@/contexts';
 import { useSyncItem } from '@/contexts';
 import {
@@ -61,6 +62,10 @@ export function TodayPage() {
   const navigate = useNavigate();
   const { preferences } = useSyncedPreferences();
   const { syncItem, deleteItem } = useSyncItem();
+  const showWarmupSets = useAppStore(s => s.showWarmupSets);
+  const setShowWarmupSets = useAppStore(s => s.setShowWarmupSets);
+  const showTimedWarmups = useAppStore(s => s.showTimedWarmups);
+  const setShowTimedWarmups = useAppStore(s => s.setShowTimedWarmups);
 
   // Consolidated modal state via useReducer
   const modals = useTodayModals({
@@ -200,14 +205,32 @@ export function TodayPage() {
     [workoutCompletedSets]
   );
 
+  // Filter warmup sets based on toggle state
+  const isWarmupVisible = useCallback(
+    (set: ScheduledSet): boolean => {
+      if (!set.isWarmup) return true;
+      if (!showWarmupSets) return false;
+      if (!showTimedWarmups) {
+        const exercise = exerciseMap.get(set.exerciseId);
+        if (exercise?.measurementType === 'time') return false;
+      }
+      return true;
+    },
+    [showWarmupSets, showTimedWarmups, exerciseMap]
+  );
+
   const { scheduledSetsRemaining, scheduledSetsCompleted } = useMemo(
     () => ({
       scheduledSetsRemaining:
-        displayWorkout?.scheduledSets.filter(s => !completedScheduledSetIds.has(s.id)) || [],
+        displayWorkout?.scheduledSets.filter(
+          s => !completedScheduledSetIds.has(s.id) && isWarmupVisible(s)
+        ) || [],
       scheduledSetsCompleted:
-        displayWorkout?.scheduledSets.filter(s => completedScheduledSetIds.has(s.id)) || [],
+        displayWorkout?.scheduledSets.filter(
+          s => completedScheduledSetIds.has(s.id) && isWarmupVisible(s)
+        ) || [],
     }),
-    [displayWorkout?.scheduledSets, completedScheduledSetIds]
+    [displayWorkout?.scheduledSets, completedScheduledSetIds, isWarmupVisible]
   );
 
   // Helper functions - memoized to prevent unnecessary re-renders
@@ -297,6 +320,12 @@ export function TodayPage() {
     [adHocCompletedSets, exerciseMap]
   );
 
+  // Count of visible (non-hidden-warmup) scheduled sets for completion checks
+  const visibleSetsCount = useMemo(
+    () => displayWorkout?.scheduledSets.filter(s => isWarmupVisible(s)).length || 0,
+    [displayWorkout?.scheduledSets, isWarmupVisible]
+  );
+
   // Event handlers - memoized to prevent unnecessary re-renders of child components
   const handleSkipWorkout = useCallback(async () => {
     if (!nextPendingWorkout) return;
@@ -363,7 +392,7 @@ export function TodayPage() {
       const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
         displayWorkout.id
       );
-      if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
+      if (actualCompletedCount >= visibleSetsCount) {
         const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
         if (updated) await syncItem('scheduled_workouts', updated);
         markWorkoutCompleted(displayWorkout.id);
@@ -387,6 +416,7 @@ export function TodayPage() {
       preferences.restTimer,
       modals,
       syncItem,
+      visibleSetsCount,
     ]
   );
 
@@ -417,7 +447,7 @@ export function TodayPage() {
     const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
       displayWorkout.id
     );
-    if (actualCompletedCount >= displayWorkout.scheduledSets.length) {
+    if (actualCompletedCount >= visibleSetsCount) {
       const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
       if (updated) await syncItem('scheduled_workouts', updated);
       markWorkoutCompleted(displayWorkout.id);
@@ -426,7 +456,7 @@ export function TodayPage() {
       if (updated) await syncItem('scheduled_workouts', updated);
     }
     modals.closeSkipSetConfirm();
-  }, [modals, displayWorkout, markWorkoutCompleted, syncItem]);
+  }, [modals, displayWorkout, markWorkoutCompleted, syncItem, visibleSetsCount]);
 
   const handleEditCompletedSet = useCallback(
     (completedSet: NonNullable<typeof workoutCompletedSets>[number]) => {
@@ -513,12 +543,11 @@ export function TodayPage() {
           }
 
           // Query actual count from DB to avoid race conditions with React state
-          const totalSets = displayWorkout?.scheduledSets.length || 0;
           const actualCompletedCount = displayWorkout
             ? await CompletedSetRepo.countCompletedScheduledSets(displayWorkout.id)
             : 0;
 
-          if (actualCompletedCount >= totalSets && displayWorkout) {
+          if (actualCompletedCount >= visibleSetsCount && displayWorkout) {
             const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
             if (updated) await syncItem('scheduled_workouts', updated);
             markWorkoutCompleted(displayWorkout.id);
@@ -561,6 +590,7 @@ export function TodayPage() {
       syncItem,
       displayWorkout,
       markWorkoutCompleted,
+      visibleSetsCount,
     ]
   );
 
@@ -683,8 +713,57 @@ export function TodayPage() {
                 </div>
               )}
 
-            {/* Max testing warmup reminder */}
+            {/* Warmup sets toggle */}
+            {!isShowingCompletedWorkout &&
+              !isShowingAdHocWorkout &&
+              displayWorkout.scheduledSets.some(s => s.isWarmup) && (
+                <div className="mx-4 mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Flame className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Warmup Sets</span>
+                      <button
+                        onClick={() => setShowWarmupSets(!showWarmupSets)}
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${
+                          showWarmupSets ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                            showWarmupSets ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    {showWarmupSets &&
+                      displayWorkout.scheduledSets.some(s => {
+                        if (!s.isWarmup) return false;
+                        const ex = exerciseMap.get(s.exerciseId);
+                        return ex?.measurementType === 'time';
+                      }) && (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-xs text-gray-400 dark:text-gray-500">Timed</span>
+                          <button
+                            onClick={() => setShowTimedWarmups(!showTimedWarmups)}
+                            className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${
+                              showTimedWarmups ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                                showTimedWarmups ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
+
+            {/* Max testing warmup reminder - only show when warmup sets are hidden */}
             {activeCycle?.cycleType === 'max_testing' &&
+              !showWarmupSets &&
               !isShowingAdHocWorkout &&
               !isShowingCompletedWorkout && (
                 <div className="mx-4 mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">

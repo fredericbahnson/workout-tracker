@@ -21,10 +21,6 @@ export function GoalsStep({
   conditioningWeeklyRepIncrement,
   setConditioningWeeklyRepIncrement,
   workoutDaysPerWeek,
-  includeWarmupSets,
-  setIncludeWarmupSets,
-  includeTimedWarmups,
-  setIncludeTimedWarmups,
 }: GoalsStepProps) {
   const isSimpleMode = progressionMode === 'simple';
   const isMixedMode = progressionMode === 'mixed';
@@ -177,61 +173,6 @@ export function GoalsStep({
             min={0}
             className="w-24"
           />
-        </div>
-      )}
-
-      {/* Warmup Sets - for RFEM and Simple modes (mixed mode handles per-exercise) */}
-      {!isMixedMode && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Warmup Sets
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            Add warmup sets before working sets for each exercise
-          </p>
-
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeWarmupSets}
-                onChange={e => {
-                  setIncludeWarmupSets(e.target.checked);
-                  if (!e.target.checked) {
-                    setIncludeTimedWarmups(false);
-                  }
-                }}
-                className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-              />
-              <div>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  Include warmup sets
-                </span>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  2 warmup sets at 20% and 40% intensity before working sets
-                </p>
-              </div>
-            </label>
-
-            {includeWarmupSets && (
-              <label className="flex items-center gap-3 cursor-pointer ml-8">
-                <input
-                  type="checkbox"
-                  checked={includeTimedWarmups}
-                  onChange={e => setIncludeTimedWarmups(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                />
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    Include time-based warmups
-                  </span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Generate warmups for time-based exercises as well
-                  </p>
-                </div>
-              </label>
-            )}
-          </div>
         </div>
       )}
     </div>

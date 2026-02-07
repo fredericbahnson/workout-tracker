@@ -21,8 +21,6 @@ export function ReviewStep({
   weeklySetGoals,
   groupRotation,
   rfemRotation,
-  includeWarmupSets,
-  includeTimedWarmups,
   validation,
 }: ReviewStepProps) {
   const isSimpleMode = progressionMode === 'simple';
@@ -165,24 +163,6 @@ export function ReviewStep({
           ))}
         </div>
       </Card>
-
-      {/* Warmup Configuration (for non-mixed modes) */}
-      {!isMixedMode && (
-        <Card className="p-4">
-          <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Warmup Sets</h3>
-          {includeWarmupSets ? (
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              <p>✓ Warmup sets enabled (20% and 40% intensity)</p>
-              {includeTimedWarmups && <p>✓ Including time-based exercise warmups</p>}
-              {!includeTimedWarmups && (
-                <p className="text-gray-500">• Time-based warmups disabled</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">No warmup sets</p>
-          )}
-        </Card>
-      )}
 
       {/* Simple Mode: Exercise Targets Summary */}
       {isSimpleMode && (

@@ -95,8 +95,6 @@ export interface WizardFormState {
   groupRotation: string[];
   rfemRotation: number[];
   conditioningWeeklyRepIncrement: number;
-  includeWarmupSets: boolean;
-  includeTimedWarmups: boolean;
 }
 
 // Props for step components
@@ -169,10 +167,6 @@ export interface GoalsStepProps {
   conditioningWeeklyRepIncrement: number;
   setConditioningWeeklyRepIncrement: (v: number) => void;
   workoutDaysPerWeek: number;
-  includeWarmupSets: boolean;
-  setIncludeWarmupSets: (v: boolean) => void;
-  includeTimedWarmups: boolean;
-  setIncludeTimedWarmups: (v: boolean) => void;
 }
 
 export interface ReviewStepProps {
@@ -185,8 +179,6 @@ export interface ReviewStepProps {
   weeklySetGoals: Record<ExerciseType, number>;
   groupRotation: string[];
   rfemRotation: number[];
-  includeWarmupSets: boolean;
-  includeTimedWarmups: boolean;
   validation: ValidationResult;
 }
 

@@ -224,17 +224,6 @@ export function MixedExerciseConfig({
           onUpdate={onUpdate}
         />
       )}
-
-      {/* Warmup Toggle */}
-      <label className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200/60 dark:border-gray-700/40 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={assignment.includeWarmup ?? false}
-          onChange={e => onUpdate({ includeWarmup: e.target.checked })}
-          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-        />
-        <span className="text-xs text-gray-600 dark:text-gray-400">Include warmup sets</span>
-      </label>
     </div>
   );
 }

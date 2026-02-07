@@ -574,13 +574,17 @@ describe('generateSchedule', () => {
 
     const workouts = generateSchedule({ cycle, exercises });
 
-    // Day 1 (group-a) should have all 6 push sets
-    const day1PushSets = workouts[0].scheduledSets.filter(s => s.exerciseType === 'push');
-    expect(day1PushSets.length).toBe(6);
+    // Day 1 (group-a) should have all 6 push working sets (plus warmup sets)
+    const day1PushWorkingSets = workouts[0].scheduledSets.filter(
+      s => s.exerciseType === 'push' && !s.isWarmup
+    );
+    expect(day1PushWorkingSets.length).toBe(6);
 
-    // Day 2 (group-b) should have all 4 pull sets
-    const day2PullSets = workouts[1].scheduledSets.filter(s => s.exerciseType === 'pull');
-    expect(day2PullSets.length).toBe(4);
+    // Day 2 (group-b) should have all 4 pull working sets (plus warmup sets)
+    const day2PullWorkingSets = workouts[1].scheduledSets.filter(
+      s => s.exerciseType === 'pull' && !s.isWarmup
+    );
+    expect(day2PullWorkingSets.length).toBe(4);
   });
 
   it('all scheduled sets have required fields', () => {
@@ -1385,9 +1389,13 @@ describe('Mixed Mode', () => {
       const schedule = generateSchedule({ cycle, exercises });
       const firstWorkout = schedule[0];
 
-      // Find RFEM and simple sets
-      const rfemSet = firstWorkout.scheduledSets.find(s => s.exerciseId === 'rfem-ex');
-      const simpleSet = firstWorkout.scheduledSets.find(s => s.exerciseId === 'simple-ex');
+      // Find RFEM and simple working sets (not warmups)
+      const rfemSet = firstWorkout.scheduledSets.find(
+        s => s.exerciseId === 'rfem-ex' && !s.isWarmup
+      );
+      const simpleSet = firstWorkout.scheduledSets.find(
+        s => s.exerciseId === 'simple-ex' && !s.isWarmup
+      );
 
       expect(rfemSet?.progressionMode).toBe('rfem');
       expect(simpleSet?.progressionMode).toBe('simple');
@@ -1684,16 +1692,17 @@ describe('Mixed Mode', () => {
   // ============================================================================
   // Warmup Sets Tests
   // ============================================================================
+  // Note: Warmup sets are now ALWAYS generated for non-conditioning exercises.
+  // Visibility (show/hide) is controlled at display time via appStore toggles.
 
   describe('Warmup Sets', () => {
     describe('RFEM mode warmups', () => {
-      it('generates 2 warmup sets when includeWarmupSets is enabled', () => {
+      it('always generates 2 warmup sets for standard exercises', () => {
         const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -1721,7 +1730,6 @@ describe('Mixed Mode', () => {
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -1742,7 +1750,7 @@ describe('Mixed Mode', () => {
         expect(workingSets[0].setNumber).toBe(3);
       });
 
-      it('does not generate warmups when includeWarmupSets is false', () => {
+      it('generates warmups even without includeWarmupSets flag (always generated)', () => {
         const exercises = new Map([['ex-1', createMockExercise({ id: 'ex-1', type: 'push' })]]);
 
         const cycle = createMockCycle({
@@ -1761,7 +1769,7 @@ describe('Mixed Mode', () => {
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
 
-        expect(warmupSets).toHaveLength(0);
+        expect(warmupSets).toHaveLength(2);
       });
 
       it('does not generate warmups for conditioning exercises', () => {
@@ -1781,7 +1789,6 @@ describe('Mixed Mode', () => {
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -1797,7 +1804,7 @@ describe('Mixed Mode', () => {
         expect(warmupSets).toHaveLength(0);
       });
 
-      it('skips time-based exercise warmups when includeTimedWarmups is false', () => {
+      it('always generates warmups for time-based exercises', () => {
         const exercises = new Map([
           [
             'time-ex',
@@ -1813,41 +1820,6 @@ describe('Mixed Mode', () => {
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 0, balance: 5, mobility: 0, other: 0 },
-          includeWarmupSets: true,
-          includeTimedWarmups: false,
-          groups: [
-            createMockGroup({
-              id: 'group-a',
-              exerciseAssignments: [{ exerciseId: 'time-ex' }],
-            }),
-          ],
-          groupRotation: ['group-a'],
-        });
-
-        const workouts = generateSchedule({ cycle, exercises });
-        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-
-        expect(warmupSets).toHaveLength(0);
-      });
-
-      it('generates time-based warmups when includeTimedWarmups is true', () => {
-        const exercises = new Map([
-          [
-            'time-ex',
-            createMockExercise({
-              id: 'time-ex',
-              type: 'balance',
-              measurementType: 'time',
-            }),
-          ],
-        ]);
-
-        const cycle = createMockCycle({
-          numberOfWeeks: 1,
-          workoutDaysPerWeek: 1,
-          weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 0, balance: 5, mobility: 0, other: 0 },
-          includeWarmupSets: true,
-          includeTimedWarmups: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -1873,7 +1845,6 @@ describe('Mixed Mode', () => {
           progressionMode: 'simple',
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -1905,7 +1876,6 @@ describe('Mixed Mode', () => {
           progressionMode: 'simple',
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -1932,10 +1902,10 @@ describe('Mixed Mode', () => {
     });
 
     describe('Mixed mode warmups', () => {
-      it('respects per-exercise warmup toggle in mixed mode', () => {
+      it('generates warmups for all standard exercises in mixed mode (ignores per-exercise toggle)', () => {
         const exercises = new Map([
-          ['warmup-ex', createMockExercise({ id: 'warmup-ex', type: 'push' })],
-          ['no-warmup-ex', createMockExercise({ id: 'no-warmup-ex', type: 'pull' })],
+          ['ex-a', createMockExercise({ id: 'ex-a', type: 'push' })],
+          ['ex-b', createMockExercise({ id: 'ex-b', type: 'pull' })],
         ]);
 
         const cycle = createMockCycle({
@@ -1947,8 +1917,8 @@ describe('Mixed Mode', () => {
             createMockGroup({
               id: 'group-a',
               exerciseAssignments: [
-                { exerciseId: 'warmup-ex', progressionMode: 'rfem', includeWarmup: true },
-                { exerciseId: 'no-warmup-ex', progressionMode: 'rfem', includeWarmup: false },
+                { exerciseId: 'ex-a', progressionMode: 'rfem' },
+                { exerciseId: 'ex-b', progressionMode: 'rfem' },
               ],
             }),
           ],
@@ -1957,13 +1927,16 @@ describe('Mixed Mode', () => {
 
         const workouts = generateSchedule({ cycle, exercises });
         const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-        const warmupExerciseIds = warmupSets.map(s => s.exerciseId);
 
-        expect(warmupSets).toHaveLength(2); // Only 2 warmups for warmup-ex
-        expect(warmupExerciseIds.every(id => id === 'warmup-ex')).toBe(true);
+        // Both exercises get 2 warmup sets = 4 total
+        expect(warmupSets).toHaveLength(4);
+        const exAWarmups = warmupSets.filter(s => s.exerciseId === 'ex-a');
+        const exBWarmups = warmupSets.filter(s => s.exerciseId === 'ex-b');
+        expect(exAWarmups).toHaveLength(2);
+        expect(exBWarmups).toHaveLength(2);
       });
 
-      it('generates warmups for RFEM exercises in mixed mode when per-exercise enabled', () => {
+      it('generates warmups for RFEM exercises in mixed mode', () => {
         const exercises = new Map([
           ['rfem-ex', createMockExercise({ id: 'rfem-ex', type: 'push' })],
         ]);
@@ -1975,9 +1948,7 @@ describe('Mixed Mode', () => {
           groups: [
             createMockGroup({
               id: 'group-a',
-              exerciseAssignments: [
-                { exerciseId: 'rfem-ex', progressionMode: 'rfem', includeWarmup: true },
-              ],
+              exerciseAssignments: [{ exerciseId: 'rfem-ex', progressionMode: 'rfem' }],
             }),
           ],
           groupRotation: ['group-a'],
@@ -1990,7 +1961,7 @@ describe('Mixed Mode', () => {
         expect(warmupSets[0].progressionMode).toBe('rfem');
       });
 
-      it('generates warmups for simple exercises in mixed mode when per-exercise enabled', () => {
+      it('generates warmups for simple exercises in mixed mode', () => {
         const exercises = new Map([
           ['simple-ex', createMockExercise({ id: 'simple-ex', type: 'legs' })],
         ]);
@@ -2007,7 +1978,6 @@ describe('Mixed Mode', () => {
                 {
                   exerciseId: 'simple-ex',
                   progressionMode: 'simple',
-                  includeWarmup: true,
                   simpleBaseReps: 15,
                   simpleRepProgressionType: 'per_week',
                   simpleRepIncrement: 2,
@@ -2036,7 +2006,6 @@ describe('Mixed Mode', () => {
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -2078,7 +2047,6 @@ describe('Mixed Mode', () => {
           progressionMode: 'simple',
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -2109,7 +2077,7 @@ describe('Mixed Mode', () => {
         });
       });
 
-      it('handles time-based exercise warmups when enabled', () => {
+      it('always generates warmups for time-based exercises', () => {
         const exercises = new Map([
           [
             'time-ex',
@@ -2124,8 +2092,6 @@ describe('Mixed Mode', () => {
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
-          includeTimedWarmups: true,
           weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
           groups: [
             createMockGroup({
@@ -2144,39 +2110,6 @@ describe('Mixed Mode', () => {
           expect(warmup.measurementType).toBe('time');
           expect(warmup.warmupPercentage).toBeDefined();
         });
-      });
-
-      it('does NOT generate warmups for time-based exercises when disabled', () => {
-        const exercises = new Map([
-          [
-            'time-ex',
-            createMockExercise({
-              id: 'time-ex',
-              type: 'core',
-              measurementType: 'time',
-            }),
-          ],
-        ]);
-
-        const cycle = createMockCycle({
-          numberOfWeeks: 1,
-          workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
-          includeTimedWarmups: false, // Explicitly disabled
-          weeklySetGoals: { push: 0, pull: 0, legs: 0, core: 5, balance: 0, mobility: 0, other: 0 },
-          groups: [
-            createMockGroup({
-              id: 'group-a',
-              exerciseAssignments: [{ exerciseId: 'time-ex' }],
-            }),
-          ],
-          groupRotation: ['group-a'],
-        });
-
-        const workouts = generateSchedule({ cycle, exercises });
-        const warmupSets = workouts[0].scheduledSets.filter(s => s.isWarmup);
-
-        expect(warmupSets).toHaveLength(0);
       });
 
       it('handles max test warmups with previous max value', () => {
@@ -2199,7 +2132,6 @@ describe('Mixed Mode', () => {
           cycleType: 'max_testing',
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',
@@ -2222,7 +2154,6 @@ describe('Mixed Mode', () => {
         const cycle = createMockCycle({
           numberOfWeeks: 1,
           workoutDaysPerWeek: 1,
-          includeWarmupSets: true,
           groups: [
             createMockGroup({
               id: 'group-a',

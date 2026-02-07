@@ -882,24 +882,16 @@ function roundToWeightIncrement(
  */
 function shouldGenerateWarmups(
   exercise: Exercise,
-  assignment: ExerciseAssignment,
-  cycle: Cycle,
-  cycleMode: 'rfem' | 'simple' | 'mixed'
+  _assignment: ExerciseAssignment,
+  _cycle: Cycle,
+  _cycleMode: 'rfem' | 'simple' | 'mixed'
 ): boolean {
   // Conditioning exercises never get warmups
   if (exercise.mode === 'conditioning') return false;
 
-  // Time-based exercises only get warmups if includeTimedWarmups is enabled
-  const isTimeBased = exercise.measurementType === 'time';
-  if (isTimeBased && !cycle.includeTimedWarmups) return false;
-
-  // For mixed mode, check per-exercise setting
-  if (cycleMode === 'mixed') {
-    return assignment.includeWarmup === true;
-  }
-
-  // For RFEM/Simple modes, check global cycle setting
-  return cycle.includeWarmupSets === true;
+  // All non-conditioning exercises (including time-based) always get warmup sets generated.
+  // Visibility is controlled at display time via appStore toggles.
+  return true;
 }
 
 interface WarmupParams {

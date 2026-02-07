@@ -69,7 +69,6 @@ export function MaxTestingWizard({
   const [schedulingMode, setSchedulingMode] = useState<SchedulingMode>('sequence');
   // Selected days for date mode (not currently used in UI but stored for future use)
   const [selectedDays] = useState<DayOfWeek[]>([1, 3, 5]); // Mon, Wed, Fri default
-  const [includeWarmupSets, setIncludeWarmupSets] = useState(true);
 
   // Load exercises and their current maxes
   useEffect(() => {
@@ -385,8 +384,8 @@ export function MaxTestingWizard({
           const exerciseInfo = standardExercises.find(e => e.exerciseId === assignment.exerciseId);
           if (!exerciseInfo) continue;
 
-          // Create 3 warmup sets at 20%, 30%, and 40% of previous max (if enabled)
-          if (includeWarmupSets && exerciseInfo.previousMaxReps) {
+          // Create 3 warmup sets at 20%, 30%, and 40% of previous max
+          if (exerciseInfo.previousMaxReps) {
             for (const percentage of WARMUP.MAX_TEST_PERCENTAGES) {
               scheduledSets.push({
                 id: generateId(),
@@ -617,29 +616,7 @@ export function MaxTestingWizard({
         )}
 
         {step === 'schedule_mode' && (
-          <div className="space-y-6">
-            <ScheduleModeStep schedulingMode={schedulingMode} onSelectMode={setSchedulingMode} />
-
-            {/* Warmup Sets Toggle */}
-            <div className="border-t border-gray-200 dark:border-dark-border pt-6">
-              <label className="flex items-center justify-between cursor-pointer">
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    Include warmup sets
-                  </span>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Add 3 warmup sets at 20%, 30%, and 40% of your previous max
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={includeWarmupSets}
-                  onChange={e => setIncludeWarmupSets(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-              </label>
-            </div>
-          </div>
+          <ScheduleModeStep schedulingMode={schedulingMode} onSelectMode={setSchedulingMode} />
         )}
 
         {step === 'conditioning_baselines' && (

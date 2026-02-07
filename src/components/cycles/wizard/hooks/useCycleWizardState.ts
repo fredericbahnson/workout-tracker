@@ -91,16 +91,6 @@ export function useCycleWizardState({
     editCycle?.conditioningWeeklyRepIncrement ?? preferences.conditioningWeeklyIncrement
   );
 
-  // Warmup settings
-  const [includeWarmupSets, setIncludeWarmupSets] = useState<boolean>(() => {
-    if (editCycle) return editCycle.includeWarmupSets ?? false;
-    return false;
-  });
-  const [includeTimedWarmups, setIncludeTimedWarmups] = useState<boolean>(() => {
-    if (editCycle) return editCycle.includeTimedWarmups ?? false;
-    return false;
-  });
-
   // Scheduling settings - default to last used mode, or 'date' (Fixed Days) if no prior
   const [schedulingMode, setSchedulingMode] = useState<SchedulingMode>(() => {
     if (editCycle) return editCycle.schedulingMode ?? 'sequence';
@@ -121,20 +111,6 @@ export function useCycleWizardState({
 
   // Exercise map for quick lookups
   const exerciseMap = useMemo(() => new Map(exercises?.map(e => [e.id, e]) || []), [exercises]);
-
-  // Smart defaults from most recent completed cycle (for new cycles only)
-  useEffect(() => {
-    if (editCycle || !allCycles || !initialProgressionMode) return;
-
-    const recentCycle = allCycles
-      .filter(c => c.cycleType === 'training' && c.status === 'completed')
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
-
-    if (recentCycle) {
-      setIncludeWarmupSets(recentCycle.includeWarmupSets ?? false);
-      setIncludeTimedWarmups(recentCycle.includeTimedWarmups ?? false);
-    }
-  }, [allCycles, editCycle, initialProgressionMode]);
 
   // Count completed training cycles by progression mode for naming
   const cycleCountByMode = useMemo(() => {
@@ -185,8 +161,6 @@ export function useCycleWizardState({
       setNumberOfWeeks(sourceCycle.numberOfWeeks);
       setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
       setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
-      setIncludeWarmupSets(sourceCycle.includeWarmupSets ?? false);
-      setIncludeTimedWarmups(sourceCycle.includeTimedWarmups ?? false);
       setName(getDefaultCycleName());
       setCurrentStep('schedule_mode');
     },
@@ -548,8 +522,6 @@ export function useCycleWizardState({
           groupRotation,
           rfemRotation,
           conditioningWeeklyRepIncrement,
-          includeWarmupSets,
-          includeTimedWarmups,
           schedulingMode,
           selectedDays: schedulingMode === 'date' ? selectedDays : undefined,
           updatedAt: new Date(),
@@ -629,8 +601,6 @@ export function useCycleWizardState({
           groupRotation,
           rfemRotation,
           conditioningWeeklyRepIncrement,
-          includeWarmupSets,
-          includeTimedWarmups,
           schedulingMode,
           selectedDays: schedulingMode === 'date' ? selectedDays : undefined,
           status: 'active',
@@ -682,8 +652,6 @@ export function useCycleWizardState({
     groupRotation,
     rfemRotation,
     conditioningWeeklyRepIncrement,
-    includeWarmupSets,
-    includeTimedWarmups,
     schedulingMode,
     selectedDays,
     exerciseMap,
@@ -736,10 +704,6 @@ export function useCycleWizardState({
     setRfemRotation,
     conditioningWeeklyRepIncrement,
     setConditioningWeeklyRepIncrement,
-    includeWarmupSets,
-    setIncludeWarmupSets,
-    includeTimedWarmups,
-    setIncludeTimedWarmups,
     schedulingMode,
     setSchedulingMode,
     selectedDays,

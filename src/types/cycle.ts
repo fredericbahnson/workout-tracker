@@ -46,8 +46,8 @@ export interface ExerciseAssignment {
   progressionMode?: ExerciseProgressionMode;
 
   /**
-   * Per-exercise warmup toggle (for mixed cycles only).
-   * In pure RFEM/simple modes, global cycle value is used.
+   * @deprecated Warmup visibility is now controlled at display time via appStore toggles.
+   * Kept for backward compatibility with existing DB data.
    */
   includeWarmup?: boolean;
 
@@ -110,9 +110,15 @@ export interface Cycle {
   conditioningWeeklyRepIncrement: number;
   /** Global fallback for conditioning time increment */
   conditioningWeeklyTimeIncrement?: number;
-  /** Whether to generate warmup sets for exercises */
+  /**
+   * @deprecated Warmup visibility is now controlled at display time via appStore toggles.
+   * Kept for backward compatibility with existing DB data.
+   */
   includeWarmupSets?: boolean;
-  /** Include warmups for time-based exercises (when warmups enabled) */
+  /**
+   * @deprecated Warmup visibility is now controlled at display time via appStore toggles.
+   * Kept for backward compatibility with existing DB data.
+   */
   includeTimedWarmups?: boolean;
   /**
    * Scheduling mode - defaults to 'sequence' for backwards compatibility.
