@@ -34,6 +34,18 @@ export interface OnboardingMilestones {
   adHocSessionCount: number;
 }
 
+export interface RatingPromptState {
+  ratingPromptCount: number;
+  ratingLastPromptedAt: number;
+  ratingCompleted: boolean;
+}
+
+const DEFAULT_RATING_PROMPT: RatingPromptState = {
+  ratingPromptCount: 0,
+  ratingLastPromptedAt: 0,
+  ratingCompleted: false,
+};
+
 const DEFAULT_MILESTONES: OnboardingMilestones = {
   identityShown: false,
   swipeDemoPracticed: false,
@@ -80,6 +92,10 @@ interface AppState {
   showTimedWarmups: boolean;
   setShowTimedWarmups: (show: boolean) => void;
 
+  // Rating prompt
+  ratingPrompt: RatingPromptState;
+  setRatingPrompt: (updates: Partial<RatingPromptState>) => void;
+
   // UI state (not persisted)
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -117,6 +133,13 @@ export const useAppStore = create<AppState>()(
         })),
       resetOnboardingMilestones: () => set({ onboardingMilestones: DEFAULT_MILESTONES }),
 
+      // Rating prompt
+      ratingPrompt: DEFAULT_RATING_PROMPT,
+      setRatingPrompt: updates =>
+        set(state => ({
+          ratingPrompt: { ...state.ratingPrompt, ...updates },
+        })),
+
       // Warmup visibility toggles
       showWarmupSets: true,
       setShowWarmupSets: show => set({ showWarmupSets: show }),
@@ -138,32 +161,35 @@ export const useAppStore = create<AppState>()(
         onboardingMilestones: state.onboardingMilestones,
         showWarmupSets: state.showWarmupSets,
         showTimedWarmups: state.showTimedWarmups,
+        ratingPrompt: state.ratingPrompt,
         // Note: sidebarOpen is not persisted
       }),
       // Migration for existing users: if hasCompletedOnboarding is true but no milestones,
       // initialize all milestones as true (they've already been through onboarding)
       migrate: (persistedState: unknown, _version: number) => {
         const state = persistedState as Partial<AppState>;
+        // v1: Initialize milestones for existing users
         if (state.hasCompletedOnboarding && !state.onboardingMilestones) {
-          return {
-            ...state,
-            onboardingMilestones: {
-              identityShown: true,
-              swipeDemoPracticed: true,
-              firstExerciseCreated: true,
-              firstMaxRecorded: true,
-              firstSetLogged: true,
-              firstCycleCreated: true,
-              rfemDeepDiveSeen: true,
-              cycleIntroSeen: true,
-              maxTestingIntroSeen: true,
-              adHocSessionCount: 0,
-            },
+          (state as Record<string, unknown>).onboardingMilestones = {
+            identityShown: true,
+            swipeDemoPracticed: true,
+            firstExerciseCreated: true,
+            firstMaxRecorded: true,
+            firstSetLogged: true,
+            firstCycleCreated: true,
+            rfemDeepDiveSeen: true,
+            cycleIntroSeen: true,
+            maxTestingIntroSeen: true,
+            adHocSessionCount: 0,
           };
+        }
+        // v2: Initialize rating prompt state
+        if (!state.ratingPrompt) {
+          (state as Record<string, unknown>).ratingPrompt = DEFAULT_RATING_PROMPT;
         }
         return state;
       },
-      version: 1,
+      version: 2,
     }
   )
 );

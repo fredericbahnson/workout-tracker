@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell, Trophy, Target, Calendar, AlertTriangle, Flame } from 'lucide-react';
@@ -19,6 +19,7 @@ import {
   useAdHocWorkout,
   useTodayModals,
   useScheduledWorkoutStatus,
+  useRatingPrompt,
 } from '@/hooks';
 import { PageHeader } from '@/components/layout';
 import { Button, Modal, EmptyState, Card } from '@/components/ui';
@@ -44,6 +45,7 @@ import {
   OverdueWorkoutModal,
   RestDayCard,
 } from '@/components/workouts/today';
+import { AppStoreRatingModal } from '@/components/engagement/AppStoreRatingModal';
 import {
   CycleWizard,
   MaxTestingWizard,
@@ -127,6 +129,19 @@ export function TodayPage() {
     nextPendingWorkout,
     inProgressAdHocWorkout,
   });
+
+  // App Store rating prompt
+  const ratingPrompt = useRatingPrompt();
+  const prevShowingCompleted = useRef(false);
+  useEffect(() => {
+    if (isShowingCompletedWorkout && !prevShowingCompleted.current) {
+      const timer = setTimeout(() => {
+        ratingPrompt.checkRatingPrompt();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    prevShowingCompleted.current = isShowingCompletedWorkout;
+  }, [isShowingCompletedWorkout, ratingPrompt.checkRatingPrompt]);
 
   const handleProceedToNextWorkout = () => {
     if (displayWorkout) {
@@ -1049,6 +1064,12 @@ export function TodayPage() {
         onDoWorkout={handleDoOverdueWorkout}
         onSkip={handleSkipOverdueWorkout}
         onClose={() => setShowOverdueModal(false)}
+      />
+      <AppStoreRatingModal
+        isOpen={ratingPrompt.showRatingModal}
+        onRate={ratingPrompt.handleRate}
+        onFeedback={ratingPrompt.handleFeedback}
+        onDismiss={ratingPrompt.handleDismiss}
       />
     </>
   );

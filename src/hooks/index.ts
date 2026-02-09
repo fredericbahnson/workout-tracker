@@ -23,3 +23,4 @@ export type {
 } from './today';
 
 export { useScheduleModals, useScheduleData } from './schedule';
+export { useRatingPrompt } from './useRatingPrompt';
