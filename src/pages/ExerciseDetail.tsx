@@ -14,11 +14,13 @@ import {
 } from '@/components/exercises';
 import { formatWeightIncrement } from '@/constants';
 import { EXERCISE_TYPE_LABELS, formatTime, type ExerciseFormData } from '@/types';
+import { useSyncItem } from '@/contexts';
 
 export function ExerciseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { repDisplayMode } = useAppStore();
+  const { deleteItem } = useSyncItem();
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [showMaxForm, setShowMaxForm] = useState(false);
@@ -108,8 +110,18 @@ export function ExerciseDetailPage() {
     if (!id) return;
     setIsDeleting(true);
     try {
+      // Capture IDs before local deletion wipes them
+      const maxRecordIds = (maxRecords ?? []).map(r => r.id);
+
       await ExerciseRepo.delete(id);
       await MaxRecordRepo.deleteAllForExercise(id);
+
+      // Sync deletions to cloud (no-op if offline or unauthenticated)
+      await deleteItem('exercises', id);
+      for (const maxRecordId of maxRecordIds) {
+        await deleteItem('max_records', maxRecordId);
+      }
+
       navigate('/exercises');
     } finally {
       setIsDeleting(false);
