@@ -235,8 +235,8 @@ describe('calculateTargetReps', () => {
 
       const target = calculateTargetReps(set, workout, maxRecord, 5, 5, 10);
 
-      // For time-based: max - (rfem * 3) = 60 - 6 = 54
-      expect(target).toBe(54);
+      // For time-based: max × (1 - rfem × 0.1) = 60 × 0.8 = 48
+      expect(target).toBe(48);
     });
 
     it('calculates time-based conditioning exercise targets', () => {

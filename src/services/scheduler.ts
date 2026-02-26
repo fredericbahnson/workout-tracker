@@ -701,7 +701,7 @@ export function calculateTargetReps(
         const max = maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
         const workingTarget = Math.max(
           RFEM.MIN_TARGET_TIME_SECONDS,
-          max - workout.rfem * RFEM.TIME_SCALE_FACTOR
+          Math.round(max * (1 - workout.rfem * RFEM.TIME_RFEM_PERCENTAGE))
         );
         return Math.max(WARMUP.MIN_TIME_SECONDS, Math.round(workingTarget * percentage));
       } else {
@@ -740,10 +740,13 @@ export function calculateTargetReps(
       return baseReps + (workout.weekNumber - 1) * increment;
     }
   } else {
-    // Standard/Progressive RFEM: max - RFEM (scaled by TIME_SCALE_FACTOR for time-based)
+    // Standard/Progressive RFEM: max × (1 - rfem × 10%) for time-based
     if (isTimeBased) {
       const max = maxRecord?.maxTime || RFEM.DEFAULT_TIME_MAX;
-      return Math.max(RFEM.MIN_TARGET_TIME_SECONDS, max - workout.rfem * RFEM.TIME_SCALE_FACTOR);
+      return Math.max(
+        RFEM.MIN_TARGET_TIME_SECONDS,
+        Math.round(max * (1 - workout.rfem * RFEM.TIME_RFEM_PERCENTAGE))
+      );
     } else {
       const max = maxRecord?.maxReps || defaultMax;
       return Math.max(RFEM.MIN_TARGET_REPS, max - workout.rfem);

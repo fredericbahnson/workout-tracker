@@ -62,10 +62,11 @@ export const WARMUP = {
  */
 export const RFEM = {
   /**
-   * Time scaling factor for RFEM calculations on time-based exercises.
-   * Each RFEM point equals approximately 3 seconds.
+   * Percentage of max time removed per RFEM point for time-based exercises.
+   * Each RFEM point removes 10% of the recorded max time.
+   * e.g., RFEM-3 = maxTime × (1 - 0.3) = 70% of max
    */
-  TIME_SCALE_FACTOR: 3,
+  TIME_RFEM_PERCENTAGE: 0.1,
 
   /**
    * Minimum target reps for standard exercises.
