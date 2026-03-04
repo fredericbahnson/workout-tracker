@@ -20,42 +20,43 @@ struct SimpleEntry: TimelineEntry {
     let date: Date
 }
 
+struct MountainShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+
+        // Single triangle peak
+        let peak  = CGPoint(x: w * 0.50, y: h * 0.18)
+        let left  = CGPoint(x: w * 0.08, y: h * 0.78)
+        let right = CGPoint(x: w * 0.92, y: h * 0.78)
+
+        path.move(to: peak)
+        path.addLine(to: left)
+        path.addLine(to: right)
+        path.closeSubpath()
+
+        // Base line
+        path.move(to:    CGPoint(x: w * 0.08, y: h * 0.84))
+        path.addLine(to: CGPoint(x: w * 0.92, y: h * 0.84))
+
+        return path
+    }
+}
+
 struct AscendWidgetEntryView: View {
     var entry: SimpleEntry
-    @Environment(\.widgetFamily) var family
 
     var body: some View {
-        switch family {
-        case .accessoryCircular:
-            ZStack {
-                AccessoryWidgetBackground()
-                Image("WidgetIcon")
-                    .resizable()
-                    .scaledToFit()
-                    .clipShape(Circle())
-                    .padding(4)
-            }
-            .widgetURL(URL(string: "ascend://today"))
-
-        case .accessoryRectangular:
-            HStack(spacing: 8) {
-                Image("WidgetIcon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 26, height: 26)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                Text("Ascend")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .widgetURL(URL(string: "ascend://today"))
-
-        default:
-            Image("WidgetIcon")
-                .resizable()
-                .scaledToFit()
-                .widgetURL(URL(string: "ascend://today"))
+        ZStack {
+            AccessoryWidgetBackground()
+            MountainShape()
+                .stroke(.primary, lineWidth: 0)  // zero stroke, fill only
+            MountainShape()
+                .fill(.primary)
+                .padding(6)
         }
+        .widgetURL(URL(string: "ascend://today"))
     }
 }
 
