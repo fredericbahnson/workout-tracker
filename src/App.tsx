@@ -1,6 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { App as CapApp } from '@capacitor/app';
 import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSkeleton } from './components/ui/Skeleton';
@@ -151,6 +152,23 @@ function AppContent() {
       setIsAcknowledgingHealth(false);
     }
   };
+
+  // Handle deep links (e.g. ascend://today from lock screen widget)
+  useEffect(() => {
+    const listenerPromise = CapApp.addListener('appUrlOpen', event => {
+      try {
+        const url = new URL(event.url);
+        if (url.host === 'today') {
+          navigate('/');
+        }
+      } catch (e) {
+        console.error('Deep link parse error:', e);
+      }
+    });
+    return () => {
+      listenerPromise.then(l => l.remove());
+    };
+  }, [navigate]);
 
   // Hide the native splash screen once loading is complete
   useEffect(() => {
