@@ -96,6 +96,12 @@ VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=xxx
 ```
 
+## iOS Widget Notes
+
+**WidgetKit iOS 17+ requirement:** Widgets must call `.containerBackground(for: .widget)` or WidgetKit refuses to render and shows `(!)`. Since the deployment target is iOS 16, this is applied conditionally via a `widgetContainerBackground()` ViewBuilder extension in `ios/App/AscendWidget/AscendWidget.swift`. Use `.clear` for lock screen (accessory) widgets — `AccessoryWidgetBackground()` handles the visual background internally.
+
+**Lock screen icon rendering:** PNG image assets render as blank shapes on the lock screen due to iOS greyscale/vibrancy treatment. Use SwiftUI vector shapes with `.primary` color instead — iOS adapts `.primary` automatically for lock screen vibrancy.
+
 ## Conventions
 
 - Components: PascalCase files
