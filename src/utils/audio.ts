@@ -21,6 +21,9 @@ let keepAliveGain: GainNode | null = null;
  * Must be called from a user interaction for iOS Safari.
  */
 export function getAudioContext(): AudioContext {
+  if (audioContext && audioContext.state === 'closed') {
+    audioContext = null;
+  }
   if (!audioContext) {
     audioContext = new (
       window.AudioContext ||
@@ -57,10 +60,9 @@ export function initAudioOnInteraction(): void {
  * Must be called from a user gesture (e.g., timer start button).
  * Prevents iOS from suspending the AudioContext when the app is backgrounded.
  */
-export function startAudioKeepAlive(): void {
+export async function startAudioKeepAlive(): Promise<void> {
   try {
-    const ctx = getAudioContext();
-    ctx.resume();
+    const ctx = await ensureContextRunning();
 
     // Already running
     if (keepAliveOscillator) return;
@@ -87,26 +89,34 @@ export function startAudioKeepAlive(): void {
  * Call when timer completes or component unmounts.
  */
 export function stopAudioKeepAlive(): void {
-  try {
-    if (keepAliveOscillator) {
+  if (keepAliveOscillator) {
+    try {
       keepAliveOscillator.stop();
+    } catch {
+      /* already stopped */
+    }
+    try {
       keepAliveOscillator.disconnect();
-      keepAliveOscillator = null;
+    } catch {
+      /* already disconnected */
     }
-    if (keepAliveGain) {
-      keepAliveGain.disconnect();
-      keepAliveGain = null;
-    }
-    log.debug('Audio keep-alive stopped');
-  } catch (_e) {
-    log.debug('Audio keep-alive stop failed');
+    keepAliveOscillator = null;
   }
+  if (keepAliveGain) {
+    try {
+      keepAliveGain.disconnect();
+    } catch {
+      /* already disconnected */
+    }
+    keepAliveGain = null;
+  }
+  log.debug('Audio keep-alive stopped');
 }
 
 /**
  * Ensure the AudioContext is running, with a single retry.
  */
-async function ensureContextRunning(): Promise<AudioContext> {
+export async function ensureContextRunning(): Promise<AudioContext> {
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') {
     await ctx.resume();

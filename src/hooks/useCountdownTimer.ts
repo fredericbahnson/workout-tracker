@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  getAudioContext,
+  ensureContextRunning,
   startAudioKeepAlive,
   stopAudioKeepAlive,
   playCountdownBeep,
@@ -24,7 +24,7 @@ interface UseCountdownTimerReturn {
   timeRemaining: number;
   isRunning: boolean;
   isComplete: boolean;
-  start: () => void;
+  start: () => Promise<void>;
   pause: () => void;
   reset: () => void;
   addTime: (seconds: number) => void;
@@ -71,11 +71,15 @@ export function useCountdownTimer({
   // Complete the timer
   const completeTimer = useCallback(() => {
     clearTimer();
+    const hadScheduledSounds = scheduledSoundsCancelRef.current !== null;
     cancelScheduledSounds();
     setTimeRemaining(0);
     setIsRunning(false);
     setIsComplete(true);
-    playCompletionSound(volume);
+    // Only play completion sound if it wasn't already pre-scheduled
+    if (!hadScheduledSounds) {
+      playCompletionSound(volume);
+    }
     stopAudioKeepAlive();
     if (notificationIdRef.current !== null) {
       cancelTimerNotification(notificationIdRef.current);
@@ -98,13 +102,12 @@ export function useCountdownTimer({
   }, [completeTimer]);
 
   // Start or resume the timer
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     if (isComplete) return;
 
-    // Init audio context from user gesture
-    const ctx = getAudioContext();
-    ctx.resume();
-    startAudioKeepAlive();
+    // Init audio context from user gesture and ensure it's running
+    await ensureContextRunning();
+    await startAudioKeepAlive();
 
     startTimeRef.current = Date.now();
     // pausedRemainingRef already holds the correct value
@@ -112,8 +115,14 @@ export function useCountdownTimer({
     setIsRunning(true);
     lastBeepRef.current = null;
 
-    // Schedule local notification
+    // For short timers (<=5s), pre-schedule sounds immediately
     const remaining = pausedRemainingRef.current;
+    if (remaining <= 5 && volume > 0) {
+      cancelScheduledSounds();
+      scheduledSoundsCancelRef.current = scheduleCountdownSounds(remaining, volume);
+    }
+
+    // Schedule local notification
     scheduleTimerNotification(remaining, 'Timer Complete', 'Your timer has finished.').then(id => {
       notificationIdRef.current = id;
     });
@@ -121,7 +130,7 @@ export function useCountdownTimer({
     // Start interval at 250ms for responsiveness
     clearTimer();
     intervalRef.current = window.setInterval(tick, 250);
-  }, [isComplete, tick, clearTimer]);
+  }, [isComplete, volume, tick, clearTimer, cancelScheduledSounds]);
 
   const pause = useCallback(() => {
     if (!isRunning) return;
@@ -200,8 +209,13 @@ export function useCountdownTimer({
       scheduledSoundsCancelRef.current = scheduleCountdownSounds(5, volume);
     }
 
-    // Reactive countdown beeps as fallback (3, 2, 1)
-    if (timeRemaining <= 3 && timeRemaining > 0 && lastBeepRef.current !== timeRemaining) {
+    // Reactive countdown beeps as fallback (3, 2, 1) — only if sounds weren't pre-scheduled
+    if (
+      timeRemaining <= 3 &&
+      timeRemaining > 0 &&
+      lastBeepRef.current !== timeRemaining &&
+      !scheduledSoundsCancelRef.current
+    ) {
       playCountdownBeep(volume);
       lastBeepRef.current = timeRemaining;
     }

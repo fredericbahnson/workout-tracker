@@ -4,8 +4,9 @@ import { useCountdownTimer } from './useCountdownTimer';
 
 // Mock audio utilities
 vi.mock('@/utils/audio', () => ({
-  getAudioContext: vi.fn(() => ({ resume: vi.fn() })),
-  startAudioKeepAlive: vi.fn(),
+  getAudioContext: vi.fn(() => ({ resume: vi.fn(() => Promise.resolve()) })),
+  ensureContextRunning: vi.fn(() => Promise.resolve({ resume: vi.fn() })),
+  startAudioKeepAlive: vi.fn(() => Promise.resolve()),
   stopAudioKeepAlive: vi.fn(),
   playCountdownBeep: vi.fn(),
   playCompletionSound: vi.fn(),
@@ -37,11 +38,11 @@ describe('useCountdownTimer', () => {
     expect(result.current.isComplete).toBe(false);
   });
 
-  it('starts counting down on start()', () => {
+  it('starts counting down on start()', async () => {
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 10 }));
 
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     expect(result.current.isRunning).toBe(true);
@@ -55,11 +56,11 @@ describe('useCountdownTimer', () => {
     expect(result.current.timeRemaining).toBe(7);
   });
 
-  it('uses wall-clock time, not interval count', () => {
+  it('uses wall-clock time, not interval count', async () => {
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 10 }));
 
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     // Simulate 5 seconds passing but only 1 interval tick
@@ -71,12 +72,12 @@ describe('useCountdownTimer', () => {
     expect(result.current.timeRemaining).toBe(5);
   });
 
-  it('completes when time reaches zero', () => {
+  it('completes when time reaches zero', async () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 5, onComplete }));
 
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     vi.spyOn(Date, 'now').mockReturnValue(5000);
@@ -90,11 +91,11 @@ describe('useCountdownTimer', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('pauses and captures remaining time correctly', () => {
+  it('pauses and captures remaining time correctly', async () => {
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 10 }));
 
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     // Advance 3 seconds then pause
@@ -118,12 +119,12 @@ describe('useCountdownTimer', () => {
     expect(result.current.timeRemaining).toBe(7);
   });
 
-  it('resumes from paused state correctly', () => {
+  it('resumes from paused state correctly', async () => {
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 10 }));
 
     // Start
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     // Run 3s then pause
@@ -137,8 +138,8 @@ describe('useCountdownTimer', () => {
 
     // Resume at t=5000 (2s after pause, but pause captured 7s remaining)
     vi.spyOn(Date, 'now').mockReturnValue(5000);
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     // Run 2 more seconds from resume point
@@ -150,11 +151,11 @@ describe('useCountdownTimer', () => {
     expect(result.current.timeRemaining).toBe(5);
   });
 
-  it('resets to initial state', () => {
+  it('resets to initial state', async () => {
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 10 }));
 
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     vi.spyOn(Date, 'now').mockReturnValue(3000);
@@ -197,12 +198,12 @@ describe('useCountdownTimer', () => {
     expect(result.current.timeRemaining).toBe(0);
   });
 
-  it('addTime resumes from completed state', () => {
+  it('addTime resumes from completed state', async () => {
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 5 }));
 
     // Run to completion
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
     vi.spyOn(Date, 'now').mockReturnValue(5000);
     act(() => {
@@ -222,11 +223,11 @@ describe('useCountdownTimer', () => {
     expect(result.current.isRunning).toBe(false);
   });
 
-  it('handles visibility change by recalculating time', () => {
+  it('handles visibility change by recalculating time', async () => {
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 60 }));
 
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     // Simulate backgrounding for 30 seconds
@@ -244,12 +245,12 @@ describe('useCountdownTimer', () => {
     expect(result.current.timeRemaining).toBe(30);
   });
 
-  it('completes if timer expired while backgrounded', () => {
+  it('completes if timer expired while backgrounded', async () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() => useCountdownTimer({ totalSeconds: 10, onComplete }));
 
-    act(() => {
-      result.current.start();
+    await act(async () => {
+      await result.current.start();
     });
 
     // Simulate backgrounding past timer end
