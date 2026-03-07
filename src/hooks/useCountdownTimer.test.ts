@@ -10,7 +10,7 @@ vi.mock('@/utils/audio', () => ({
   stopAudioKeepAlive: vi.fn(),
   playCountdownBeep: vi.fn(),
   playCompletionSound: vi.fn(),
-  scheduleCountdownSounds: vi.fn(() => vi.fn()),
+  scheduleCountdownSounds: vi.fn(() => Promise.resolve({ cancel: vi.fn(), success: true })),
 }));
 
 // Mock timer notifications

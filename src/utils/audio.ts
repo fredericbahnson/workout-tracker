@@ -118,8 +118,12 @@ export function stopAudioKeepAlive(): void {
  */
 export async function ensureContextRunning(): Promise<AudioContext> {
   const ctx = getAudioContext();
-  if (ctx.state === 'suspended') {
-    await ctx.resume();
+  if (ctx.state !== 'running') {
+    try {
+      await ctx.resume();
+    } catch (_e) {
+      log.debug('AudioContext resume failed, state:', ctx.state);
+    }
   }
   return ctx;
 }
@@ -271,13 +275,24 @@ export function playTestSound(volume: number): void {
  * @param volume - Volume 0-100
  * @returns Cancel function to stop scheduled sounds
  */
-export function scheduleCountdownSounds(secondsRemaining: number, volume: number): () => void {
-  if (volume === 0) return () => {};
+export async function scheduleCountdownSounds(
+  secondsRemaining: number,
+  volume: number
+): Promise<{ cancel: () => void; success: boolean }> {
+  const noop = { cancel: () => {}, success: false };
+  if (volume === 0) return noop;
 
   const oscillators: OscillatorNode[] = [];
 
   try {
-    const ctx = getAudioContext();
+    const ctx = await ensureContextRunning();
+
+    // Verify context is actually running after resume attempt
+    if (ctx.state !== 'running') {
+      log.debug('AudioContext not running after resume, scheduling failed');
+      return noop;
+    }
+
     const gain = Math.min(1, Math.max(0, volume / 100));
 
     // Schedule countdown beeps at 3, 2, 1
@@ -314,19 +329,22 @@ export function scheduleCountdownSounds(secondsRemaining: number, volume: number
       osc.stop(startAt + 0.3);
       oscillators.push(osc);
     });
+
+    return {
+      cancel: () => {
+        oscillators.forEach(osc => {
+          try {
+            osc.stop();
+            osc.disconnect();
+          } catch {
+            // Already stopped
+          }
+        });
+      },
+      success: true,
+    };
   } catch (_e) {
     log.debug('Failed to schedule countdown sounds');
+    return noop;
   }
-
-  // Return cancel function
-  return () => {
-    oscillators.forEach(osc => {
-      try {
-        osc.stop();
-        osc.disconnect();
-      } catch {
-        // Already stopped
-      }
-    });
-  };
 }

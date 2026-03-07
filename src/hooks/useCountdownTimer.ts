@@ -48,6 +48,7 @@ export function useCountdownTimer({
   // Sound tracking refs
   const lastBeepRef = useRef<number | null>(null);
   const scheduledSoundsCancelRef = useRef<(() => void) | null>(null);
+  const scheduledSoundsSucceededRef = useRef<boolean>(false);
   const notificationIdRef = useRef<number | null>(null);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
@@ -66,18 +67,19 @@ export function useCountdownTimer({
       scheduledSoundsCancelRef.current();
       scheduledSoundsCancelRef.current = null;
     }
+    scheduledSoundsSucceededRef.current = false;
   }, []);
 
   // Complete the timer
   const completeTimer = useCallback(() => {
     clearTimer();
-    const hadScheduledSounds = scheduledSoundsCancelRef.current !== null;
+    const soundsWerePreScheduled = scheduledSoundsSucceededRef.current;
     cancelScheduledSounds();
     setTimeRemaining(0);
     setIsRunning(false);
     setIsComplete(true);
-    // Only play completion sound if it wasn't already pre-scheduled
-    if (!hadScheduledSounds) {
+    // Only play completion sound if it wasn't successfully pre-scheduled
+    if (!soundsWerePreScheduled) {
       playCompletionSound(volume);
     }
     stopAudioKeepAlive();
@@ -119,7 +121,9 @@ export function useCountdownTimer({
     const remaining = pausedRemainingRef.current;
     if (remaining <= 5 && volume > 0) {
       cancelScheduledSounds();
-      scheduledSoundsCancelRef.current = scheduleCountdownSounds(remaining, volume);
+      const result = await scheduleCountdownSounds(remaining, volume);
+      scheduledSoundsCancelRef.current = result.cancel;
+      scheduledSoundsSucceededRef.current = result.success;
     }
 
     // Schedule local notification
@@ -206,15 +210,18 @@ export function useCountdownTimer({
 
     // Pre-schedule sounds when we hit 5 seconds
     if (timeRemaining === 5 && !scheduledSoundsCancelRef.current) {
-      scheduledSoundsCancelRef.current = scheduleCountdownSounds(5, volume);
+      scheduleCountdownSounds(5, volume).then(result => {
+        scheduledSoundsCancelRef.current = result.cancel;
+        scheduledSoundsSucceededRef.current = result.success;
+      });
     }
 
-    // Reactive countdown beeps as fallback (3, 2, 1) — only if sounds weren't pre-scheduled
+    // Reactive countdown beeps as fallback (3, 2, 1) — only if pre-scheduling didn't succeed
     if (
       timeRemaining <= 3 &&
       timeRemaining > 0 &&
       lastBeepRef.current !== timeRemaining &&
-      !scheduledSoundsCancelRef.current
+      !scheduledSoundsSucceededRef.current
     ) {
       playCountdownBeep(volume);
       lastBeepRef.current = timeRemaining;
