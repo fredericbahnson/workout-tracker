@@ -1,0 +1,278 @@
+# Android Deployment Plan (Ascend Workout Tracker)
+
+**Goal:** Ship an Android version via Google Play with feature parity to iOS, using the existing React/Vite + Capacitor architecture, Supabase backend, and RevenueCat for IAP.
+
+---
+
+## 0) Assumptions and Non-Goals
+
+### Assumptions
+- Web app is already stable and shipped (or close) via Vercel.
+- Native wrapper uses Capacitor and already exists for iOS.
+- Auth is Supabase; purchases are RevenueCat via `@revenuecat/purchases-capacitor`.
+- Dev environment is macOS.
+
+### Non-goals (for first Android release)
+- Perfect tablet UX
+- Deep-link-based password reset fully inside native (can be web-based initially)
+- Complex background sync
+- Push notifications (unless you explicitly want reminders in v1 Android)
+
+---
+
+## 1) Prereqs: Accounts, Tools, and Local Environment
+
+### Required accounts
+- [ ] Google Play Console developer account (needed to publish)
+- [ ] RevenueCat project access for Android setup
+
+### Required tools on Mac
+- [ ] Android Studio (SDK + emulator + platform tools)
+- [ ] JDK 17 (Temurin/Adoptium recommended)
+- [ ] Node.js LTS (already in use)
+- [ ] Optional but recommended: `fastlane` for repeatable Play releases
+- [ ] Optional but recommended: Sentry or Firebase Crashlytics (crash reporting)
+
+### Local sanity checks
+- [ ] `node -v` matches your repo expectations (LTS)
+- [ ] `java -version` reports 17.x
+- [ ] Android Studio installs:
+  - [ ] Android SDK Platform (target SDK)
+  - [ ] Build Tools
+  - [ ] Platform Tools (adb)
+  - [ ] Emulator + at least one device image
+
+---
+
+## 2) Add Android Platform to Capacitor
+
+### Install the Android platform dependency
+- [ ] `npm i @capacitor/android`
+
+### Add Android project
+- [ ] `npx cap add android`
+
+### Add convenience scripts (package.json)
+Add scripts similar to your existing iOS ones:
+- [ ] `"cap:sync:android": "npm run build && npx cap sync android"`
+- [ ] `"cap:open:android": "npx cap open android"`
+
+### First build + open in Android Studio
+- [ ] `npm run cap:sync:android`
+- [ ] `npm run cap:open:android`
+
+**Milestone:** App launches in Android emulator and on a physical device.
+
+---
+
+## 3) Environment and Config: Things to Decide Early
+
+### App identity
+- [ ] Decide Android package name (applicationId), e.g. `com.yourcompany.ascend`
+- [ ] Decide Play Store app name (display name can differ from package)
+- [ ] Verify Capacitor appId matches intended package
+
+### Signing strategy
+- [ ] Use Play App Signing (recommended)
+- [ ] Keep keystore secure (even if Play manages final signing)
+
+### Versioning strategy
+Android requires:
+- **versionName** (human-readable, e.g. `1.2.0`)
+- **versionCode** (integer, must increase every release)
+- [ ] Adopt a policy (e.g. versionCode = build number)
+
+---
+
+## 4) Highest-Risk Functional Areas to Validate on Android
+
+These tend to behave differently in WebView vs desktop Safari/Chrome:
+
+### Auth & password reset (important)
+- [ ] Confirm password reset links work for Android users.
+- [ ] **Recommendation:** Use a real HTTPS `redirectTo` for reset (e.g. a Vercel-hosted reset page),
+      not `window.location.origin`, because native origins are not public URLs.
+- [ ] Confirm the reset flow is tested end-to-end from an Android email client.
+
+### Storage & offline behavior (Dexie/IndexedDB)
+- [ ] Validate local data persistence across:
+  - [ ] app close/reopen
+  - [ ] device restart
+  - [ ] OS “clear recent apps”
+- [ ] Validate schema migrations if you use Dexie versioning
+- [ ] Validate large-ish dataset behavior (weeks of workouts)
+
+### Network transitions + resume behavior
+- [ ] Put phone in airplane mode mid-session; ensure no corrupt state
+- [ ] Background the app and resume; ensure state rehydrates cleanly
+
+### IAP gating (RevenueCat)
+- [ ] Confirm `Capacitor.isNativePlatform()` gates correctly on Android
+- [ ] Confirm purchase and restore flows work on Android test accounts
+
+**Milestone:** “Core user loop works on Android”: sign in, view workouts, log workout, sync, purchase, premium unlock.
+
+---
+
+## 5) RevenueCat + Google Play Setup (Do This Earlier Than You Think)
+
+This is the slowest part because it touches multiple consoles.
+
+### In Google Play Console
+- [ ] Create the app (package name must match your Android build)
+- [ ] Set up “Internal testing” track
+- [ ] Enable Play App Signing
+- [ ] Upload *an initial* AAB build (can be minimal) to unlock some product config flows
+- [ ] Create subscription products / in-app products matching your iOS offering
+  - [ ] Keep SKU naming consistent and documented
+  - [ ] Match entitlement logic to what your app expects
+
+### In RevenueCat
+- [ ] Add Android app to your existing project
+- [ ] Link Google Play credentials (service account JSON)
+- [ ] Map Google Play products to RevenueCat offerings/entitlements
+- [ ] Verify sandbox/test purchases from:
+  - [ ] Internal testing track users
+  - [ ] License testing accounts (as applicable)
+
+**Milestone:** A test user can purchase premium on Android and your UI unlocks correctly.
+
+---
+
+## 6) Build, Release, and QA Workflow
+
+### Build types
+- Debug: local dev, faster iteration
+- Release: what you ship; must be signed and proguard/r8 may apply
+
+### Suggested cadence
+1. **Internal test build** (fast, minimal friction)
+2. Fix critical Android-specific issues
+3. Add crash reporting + basic analytics
+4. “Closed testing” with a small group
+5. Production release
+
+### QA checklist (before moving beyond internal testing)
+- [ ] Install and open app on:
+  - [ ] Emulator (at least one)
+  - [ ] Physical Android phone (at least one mid-range device if possible)
+- [ ] Auth:
+  - [ ] sign up
+  - [ ] sign in
+  - [ ] sign out
+  - [ ] password reset
+- [ ] Core functionality:
+  - [ ] create/edit/delete workout entries
+  - [ ] data persists across relaunch
+  - [ ] sync works
+- [ ] Purchases:
+  - [ ] purchase
+  - [ ] restore
+  - [ ] entitlement persists after reinstall (if expected)
+- [ ] Connectivity edge cases:
+  - [ ] offline state
+  - [ ] regain connectivity
+- [ ] UI:
+  - [ ] keyboard interactions
+  - [ ] safe areas / status bar overlays
+  - [ ] dark mode (if supported)
+
+---
+
+## 7) Operational Hardening (Recommended Before Production)
+
+### Crash + error monitoring (high leverage)
+Pick one:
+- [ ] Sentry (cross-platform)
+- [ ] Firebase Crashlytics (Android-native strength)
+
+Minimum:
+- [ ] capture unhandled JS errors
+- [ ] capture native crashes
+- [ ] attach app version + platform + device model
+
+### Release automation (optional but saves time)
+- [ ] GitHub Actions workflow that:
+  - [ ] installs deps
+  - [ ] builds web bundle
+  - [ ] runs `npx cap sync android`
+  - [ ] builds AAB in Gradle
+  - [ ] outputs artifact
+
+Later:
+- [ ] fastlane supply to upload to Play tracks
+
+### Secrets and config hygiene
+- [ ] Ensure Supabase keys and endpoints are managed via environment variables properly for Android builds
+- [ ] Avoid shipping secrets inside the binary (public anon keys are ok; service keys are not)
+- [ ] Confirm any redirect URLs / deep link domains are explicitly configured
+
+---
+
+## 8) Play Store Listing + Compliance
+
+### Store assets
+- [ ] App icon (512x512)
+- [ ] Feature graphic
+- [ ] Phone screenshots (at least 2–8)
+- [ ] Short description + full description
+- [ ] Optional: promo video
+
+### Compliance forms (don’t leave for last)
+- [ ] Data safety form (be precise about what you collect/store)
+- [ ] Privacy policy URL (must exist and match behavior)
+- [ ] Content rating questionnaire
+- [ ] Target audience and ads declarations (even if no ads)
+
+**Milestone:** App is “ready to publish” with no missing policy items.
+
+---
+
+## 9) Launch Plan
+
+### Suggested launch steps
+- [ ] Release to Internal testing (same day you get a stable build)
+- [ ] Fix high-severity issues discovered by testers
+- [ ] Move to Closed testing (small group, 1–2 weeks)
+- [ ] Production rollout:
+  - [ ] Start with staged rollout (e.g., 10% → 50% → 100%)
+  - [ ] Monitor crashes and purchase funnel
+
+### Post-launch
+- [ ] Add a weekly check of crash-free sessions and ANR rates
+- [ ] Review RevenueCat dashboards for churn and purchase failures
+- [ ] Plan v1.1 fixes quickly (Android will surface device-specific issues)
+
+---
+
+## 10) Known “Android Surprises” to Watch For
+
+- WebView differences in keyboard/viewport behavior
+- Background/resume state issues
+- Password reset / email link flows breaking on native origins
+- RevenueCat not unlocking due to misconfigured Play products/offerings
+- versionCode not incrementing and blocking release uploads
+
+---
+
+## 11) Suggested Milestones
+
+1. **M1:** App runs in emulator and on physical device (no auth)
+2. **M2:** Auth + core workout tracking works end-to-end
+3. **M3:** RevenueCat purchases + entitlements work in Internal testing
+4. **M4:** Closed testing stable (crash monitoring added)
+5. **M5:** Production release + staged rollout complete
+
+---
+
+## Appendix: Command Cheat Sheet
+
+- `npm i @capacitor/android`
+- `npx cap add android`
+- `npm run build`
+- `npx cap sync android`
+- `npx cap open android`
+
+(Consider adding `cap:sync:android` and `cap:open:android` scripts.)
+
+---
