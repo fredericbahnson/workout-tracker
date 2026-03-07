@@ -2,15 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCountdownTimer } from './useCountdownTimer';
 
-// Mock audio utilities
-vi.mock('@/utils/audio', () => ({
-  getAudioContext: vi.fn(() => ({ resume: vi.fn(() => Promise.resolve()) })),
-  ensureContextRunning: vi.fn(() => Promise.resolve({ resume: vi.fn() })),
-  startAudioKeepAlive: vi.fn(() => Promise.resolve()),
-  stopAudioKeepAlive: vi.fn(),
-  playCountdownBeep: vi.fn(),
-  playCompletionSound: vi.fn(),
-  scheduleCountdownSounds: vi.fn(() => Promise.resolve({ cancel: vi.fn(), success: true })),
+// Mock native timer audio plugin
+vi.mock('@/plugins/timerAudio', () => ({
+  timerAudio: {
+    scheduleCountdown: vi.fn(() => Promise.resolve()),
+    cancelScheduledSounds: vi.fn(() => Promise.resolve()),
+    stopKeepAlive: vi.fn(() => Promise.resolve()),
+  },
 }));
 
 // Mock timer notifications

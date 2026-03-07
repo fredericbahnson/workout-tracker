@@ -1,5 +1,5 @@
 import { Timer, Volume2, VolumeX } from 'lucide-react';
-import { playTestSound, initAudioOnInteraction } from '@/utils/audio';
+import { timerAudio } from '@/plugins/timerAudio';
 import { useSyncedPreferences } from '@/contexts';
 import { Card, CardContent, TimeDurationInput } from '@/components/ui';
 
@@ -111,10 +111,7 @@ export function TimerSection() {
           <div className="flex items-center gap-3">
             {/* Mute button */}
             <button
-              onClick={() => {
-                initAudioOnInteraction();
-                setTimerVolume(preferences.timerVolume === 0 ? 100 : 0);
-              }}
+              onClick={() => setTimerVolume(preferences.timerVolume === 0 ? 100 : 0)}
               className={`
                 p-2 rounded-lg transition-colors
                 ${
@@ -139,10 +136,7 @@ export function TimerSection() {
               max="100"
               step="5"
               value={preferences.timerVolume}
-              onChange={e => {
-                initAudioOnInteraction();
-                setTimerVolume(Number(e.target.value));
-              }}
+              onChange={e => setTimerVolume(Number(e.target.value))}
               className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
             />
 
@@ -154,8 +148,7 @@ export function TimerSection() {
             {/* Test button */}
             <button
               onClick={() => {
-                initAudioOnInteraction();
-                playTestSound(preferences.timerVolume);
+                timerAudio.playTestSound({ volume: preferences.timerVolume });
               }}
               disabled={preferences.timerVolume === 0}
               className={`
