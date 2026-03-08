@@ -123,6 +123,7 @@ export function TodayPage() {
     markWorkoutCompleted,
     handleProceedToNextWorkout: proceedToNextWorkout,
     dismissCompletionView,
+    clearDismissedWorkout,
     resetCompletionState,
   } = useWorkoutDisplay({
     lastCompletedWorkout,
@@ -508,6 +509,11 @@ export function TodayPage() {
         const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
         if (updated) await syncItem('scheduled_workouts', updated);
       }
+
+      // Reset completion view so display falls through to nextPendingWorkout
+      resetCompletionState();
+      setDismissedWorkoutId(null);
+      clearDismissedWorkout();
     }
   }, [
     modals.editingCompletedSet,
@@ -515,6 +521,8 @@ export function TodayPage() {
     workoutCompletedSets?.length,
     deleteItem,
     syncItem,
+    resetCompletionState,
+    clearDismissedWorkout,
   ]);
 
   const handleLogSet = useCallback(
