@@ -35,8 +35,39 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             sampleRate: sampleRate
         )
 
-        // Generate 1 second of silence for keep-alive looping
-        silentData = generateSilentWav(duration: 1.0, sampleRate: sampleRate)
+        // Generate 1 second of near-silent tone for keep-alive looping
+        silentData = generateKeepAliveWav(duration: 1.0, sampleRate: sampleRate)
+
+        // Listen for audio session interruptions (e.g. phone calls)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleInterruption(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        if type == .ended {
+            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    ensureAudioSessionActive()
+                    // Restart keep-alive if it was running
+                    if silentPlayer != nil {
+                        silentPlayer?.stop()
+                        silentPlayer = nil
+                        startSilentKeepAlive()
+                    }
+                }
+            }
+        }
     }
 
     @objc func scheduleCountdown(_ call: CAPPluginCall) {
@@ -115,8 +146,17 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         scheduledWorkItems.removeAll()
     }
 
+    private func ensureAudioSessionActive() {
+        do {
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("TimerAudioPlugin: failed to activate audio session: \(error)")
+        }
+    }
+
     private func playBeep(volume: Float) {
         guard let data = beepData else { return }
+        ensureAudioSessionActive()
         do {
             beepPlayer = try AVAudioPlayer(data: data)
             beepPlayer?.volume = volume
@@ -128,6 +168,7 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private func playChord(volume: Float) {
         guard let data = chordData else { return }
+        ensureAudioSessionActive()
         do {
             chordPlayer = try AVAudioPlayer(data: data)
             chordPlayer?.volume = volume
@@ -235,9 +276,14 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         return generateWavData(samples: samples, sampleRate: sampleRate)
     }
 
-    private func generateSilentWav(duration: Double, sampleRate: Double) -> Data {
+    private func generateKeepAliveWav(duration: Double, sampleRate: Double) -> Data {
         let numSamples = Int(sampleRate * duration)
-        let samples = [Float](repeating: 0, count: numSamples)
+        var samples = [Float](repeating: 0, count: numSamples)
+        for i in 0..<numSamples {
+            let t = Double(i) / sampleRate
+            // 20Hz sub-bass at very low amplitude — inaudible but keeps iOS audio pipeline active
+            samples[i] = 0.002 * Float(sin(2.0 * .pi * 20.0 * t))
+        }
         return generateWavData(samples: samples, sampleRate: sampleRate)
     }
 }

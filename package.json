@@ -13,9 +13,9 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "prepare": "husky",
-    "cap:sync": "npm run build && npx cap sync ios",
+    "cap:sync": "npm run build && npx cap sync ios && node scripts/patch-cap-config.js",
     "cap:open": "npx cap open ios",
-    "cap:build": "npm run build && npx cap sync ios && npx cap open ios"
+    "cap:build": "npm run build && npx cap sync ios && node scripts/patch-cap-config.js && npx cap open ios"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
