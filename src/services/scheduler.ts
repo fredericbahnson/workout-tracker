@@ -188,9 +188,10 @@ function generateWeekSchedule(
   const dayAllocations: DayAllocation[] = [];
 
   for (let dayNum = 1; dayNum <= workoutDaysPerWeek; dayNum++) {
-    // Determine group and RFEM for this day
-    const groupIndex = (dayNum - 1) % groupRotation.length;
-    const rfemIndex = (dayNum - 1) % rfemRotation.length;
+    // Use global day index for rotation continuity across weeks
+    const globalDayIndex = startingSequence + dayNum - 2;
+    const groupIndex = globalDayIndex % groupRotation.length;
+    const rfemIndex = globalDayIndex % rfemRotation.length;
 
     const groupId = groupRotation[groupIndex];
     const group = groups.find(g => g.id === groupId);

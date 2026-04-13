@@ -523,6 +523,187 @@ describe('generateSchedule', () => {
     expect(workouts.map(w => w.rfem)).toEqual([4, 3, 2, 4, 3]);
   });
 
+  it('continues group rotation across weeks without resetting', () => {
+    const groupA = createMockGroup({
+      id: 'group-a',
+      name: 'A',
+      exerciseAssignments: [{ exerciseId: 'push-1' }],
+    });
+    const groupB = createMockGroup({
+      id: 'group-b',
+      name: 'B',
+      exerciseAssignments: [{ exerciseId: 'pull-1' }],
+    });
+    const groupC = createMockGroup({
+      id: 'group-c',
+      name: 'C',
+      exerciseAssignments: [{ exerciseId: 'legs-1' }],
+    });
+
+    const cycle = createMockCycle({
+      numberOfWeeks: 3,
+      workoutDaysPerWeek: 5,
+      groups: [groupA, groupB, groupC],
+      groupRotation: ['group-a', 'group-b', 'group-c'],
+    });
+
+    const workouts = generateSchedule({ cycle, exercises });
+
+    // 3 groups, 5 days/week — rotation continues across weeks:
+    // Week 1 (global 0-4): A, B, C, A, B
+    // Week 2 (global 5-9): C, A, B, C, A
+    // Week 3 (global 10-14): B, C, A, B, C
+    expect(workouts.map(w => w.groupId)).toEqual([
+      'group-a',
+      'group-b',
+      'group-c',
+      'group-a',
+      'group-b',
+      'group-c',
+      'group-a',
+      'group-b',
+      'group-c',
+      'group-a',
+      'group-b',
+      'group-c',
+      'group-a',
+      'group-b',
+      'group-c',
+    ]);
+  });
+
+  it('continues RFEM rotation across weeks without resetting', () => {
+    const cycle = createMockCycle({
+      numberOfWeeks: 3,
+      workoutDaysPerWeek: 5,
+      rfemRotation: [-4, -3, -2, -1],
+      groups: [
+        createMockGroup({
+          id: 'group-a',
+          exerciseAssignments: [{ exerciseId: 'push-1' }],
+        }),
+      ],
+      groupRotation: ['group-a'],
+    });
+
+    const workouts = generateSchedule({ cycle, exercises });
+
+    // 4 RFEM values, 5 days/week — rotation continues across weeks:
+    // Week 1 (global 0-4): -4, -3, -2, -1, -4
+    // Week 2 (global 5-9): -3, -2, -1, -4, -3
+    // Week 3 (global 10-14): -2, -1, -4, -3, -2
+    expect(workouts.map(w => w.rfem)).toEqual([
+      -4, -3, -2, -1, -4, -3, -2, -1, -4, -3, -2, -1, -4, -3, -2,
+    ]);
+  });
+
+  it('continues both group and RFEM rotation independently across weeks', () => {
+    const groupA = createMockGroup({
+      id: 'group-a',
+      name: 'A',
+      exerciseAssignments: [{ exerciseId: 'push-1' }],
+    });
+    const groupB = createMockGroup({
+      id: 'group-b',
+      name: 'B',
+      exerciseAssignments: [{ exerciseId: 'pull-1' }],
+    });
+
+    const cycle = createMockCycle({
+      numberOfWeeks: 2,
+      workoutDaysPerWeek: 3,
+      groups: [groupA, groupB],
+      groupRotation: ['group-a', 'group-b'],
+      rfemRotation: [4, 3, 2],
+    });
+
+    const workouts = generateSchedule({ cycle, exercises });
+
+    // 2 groups, 3 RFEM values, 3 days/week:
+    // Week 1 (global 0-2): A, B, A  |  rfem: 4, 3, 2
+    // Week 2 (global 3-5): B, A, B  |  rfem: 4, 3, 2
+    expect(workouts.map(w => w.groupId)).toEqual([
+      'group-a',
+      'group-b',
+      'group-a',
+      'group-b',
+      'group-a',
+      'group-b',
+    ]);
+    // RFEM rotation length (3) equals workoutDaysPerWeek (3), so it aligns per week
+    expect(workouts.map(w => w.rfem)).toEqual([4, 3, 2, 4, 3, 2]);
+  });
+
+  it('maintains correct rotation when using startFromWorkout', () => {
+    const groupA = createMockGroup({
+      id: 'group-a',
+      name: 'A',
+      exerciseAssignments: [{ exerciseId: 'push-1' }],
+    });
+    const groupB = createMockGroup({
+      id: 'group-b',
+      name: 'B',
+      exerciseAssignments: [{ exerciseId: 'pull-1' }],
+    });
+    const groupC = createMockGroup({
+      id: 'group-c',
+      name: 'C',
+      exerciseAssignments: [{ exerciseId: 'legs-1' }],
+    });
+
+    const cycle = createMockCycle({
+      numberOfWeeks: 2,
+      workoutDaysPerWeek: 3,
+      groups: [groupA, groupB, groupC],
+      groupRotation: ['group-a', 'group-b', 'group-c'],
+      rfemRotation: [4, 3],
+    });
+
+    const fullSchedule = generateSchedule({ cycle, exercises });
+    const partialSchedule = generateSchedule({ cycle, exercises, startFromWorkout: 4 });
+
+    expect(partialSchedule.length).toBe(3);
+    // Partial schedule should match the same positions in the full schedule
+    expect(partialSchedule[0].groupId).toBe(fullSchedule[3].groupId);
+    expect(partialSchedule[1].groupId).toBe(fullSchedule[4].groupId);
+    expect(partialSchedule[2].groupId).toBe(fullSchedule[5].groupId);
+    expect(partialSchedule[0].rfem).toBe(fullSchedule[3].rfem);
+    expect(partialSchedule[1].rfem).toBe(fullSchedule[4].rfem);
+    expect(partialSchedule[2].rfem).toBe(fullSchedule[5].rfem);
+  });
+
+  it('single-week rotation is identical to previous behavior', () => {
+    const groupA = createMockGroup({
+      id: 'group-a',
+      name: 'A',
+      exerciseAssignments: [{ exerciseId: 'push-1' }],
+    });
+    const groupB = createMockGroup({
+      id: 'group-b',
+      name: 'B',
+      exerciseAssignments: [{ exerciseId: 'pull-1' }],
+    });
+
+    const cycle = createMockCycle({
+      numberOfWeeks: 1,
+      workoutDaysPerWeek: 5,
+      groups: [groupA, groupB],
+      groupRotation: ['group-a', 'group-b'],
+      rfemRotation: [4, 3, 2],
+    });
+
+    const workouts = generateSchedule({ cycle, exercises });
+
+    expect(workouts.map(w => w.groupId)).toEqual([
+      'group-a',
+      'group-b',
+      'group-a',
+      'group-b',
+      'group-a',
+    ]);
+    expect(workouts.map(w => w.rfem)).toEqual([4, 3, 2, 4, 3]);
+  });
+
   it('supports startFromWorkout parameter', () => {
     const cycle = createMockCycle({
       numberOfWeeks: 2,
