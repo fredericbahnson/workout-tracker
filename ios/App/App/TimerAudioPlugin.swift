@@ -17,33 +17,42 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     private var beepPlayer: AVAudioPlayer?
     private var chordPlayer: AVAudioPlayer?
     private var silentPlayer: AVAudioPlayer?
-    private var beepData: Data?
-    private var chordData: Data?
-    private var silentData: Data?
 
     override public func load() {
         let sampleRate: Double = 44100
-
-        // Generate beep: 880Hz, 150ms, exponential decay
-        beepData = generateBeepWav(frequency: 880, duration: 0.15, sampleRate: sampleRate)
-
-        // Generate completion chord: C5+E5+G5 staggered
-        chordData = generateChordWav(
+        let beepData = generateBeepWav(frequency: 880, duration: 0.15, sampleRate: sampleRate)
+        let chordData = generateChordWav(
             frequencies: [523.25, 659.25, 783.99],
             stagger: 0.15,
             noteDuration: 0.3,
             sampleRate: sampleRate
         )
+        let silentData = generateKeepAliveWav(duration: 1.0, sampleRate: sampleRate)
 
-        // Generate 1 second of near-silent tone for keep-alive looping
-        silentData = generateKeepAliveWav(duration: 1.0, sampleRate: sampleRate)
-
-        // Defensively (re-)apply audio session category. AppDelegate sets this at launch,
-        // but other Capacitor plugins may mutate it later — re-applying here ensures
-        // mixWithOthers + duckOthers is in effect by the time we play.
         configureAudioSession()
 
-        // Listen for audio session interruptions (e.g. phone calls)
+        // Preload AVAudioPlayer instances once and reuse them. Reallocating fresh
+        // players per beep/chord/keep-alive cycle was causing the audio queue to
+        // cold-start on each subsequent timer — work items fired on schedule but
+        // the audio for them came out late or got dropped, producing the
+        // "set 1 ok, set 2 mistimed, set 3 missing" pattern. Reusing the same
+        // instance with currentTime=0 + play() keeps the hardware buffer
+        // acquired and the queue warm.
+        do {
+            beepPlayer = try AVAudioPlayer(data: beepData)
+            beepPlayer?.prepareToPlay()
+
+            chordPlayer = try AVAudioPlayer(data: chordData)
+            chordPlayer?.prepareToPlay()
+
+            silentPlayer = try AVAudioPlayer(data: silentData)
+            silentPlayer?.numberOfLoops = -1
+            silentPlayer?.volume = 0.01
+            silentPlayer?.prepareToPlay()
+        } catch {
+            print("TimerAudioPlugin: failed to preload players: \(error)")
+        }
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleInterruption),
@@ -75,12 +84,9 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                 if options.contains(.shouldResume) {
                     ensureAudioSessionActive()
-                    // Restart keep-alive if it was running
-                    if silentPlayer != nil {
-                        silentPlayer?.stop()
-                        silentPlayer = nil
-                        startSilentKeepAlive()
-                    }
+                    // Re-prepare and resume keep-alive if it was playing before.
+                    silentPlayer?.prepareToPlay()
+                    silentPlayer?.play()
                 }
             }
         }
@@ -175,51 +181,33 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func playBeep(volume: Float) {
-        guard let data = beepData else { return }
+        guard let player = beepPlayer else { return }
         ensureAudioSessionActive()
-        do {
-            beepPlayer = try AVAudioPlayer(data: data)
-            beepPlayer?.volume = volume
-            beepPlayer?.play()
-        } catch {
-            print("TimerAudioPlugin: beep playback failed: \(error)")
-        }
+        player.volume = volume
+        player.currentTime = 0
+        player.play()
     }
 
     private func playChord(volume: Float) {
-        guard let data = chordData else { return }
+        guard let player = chordPlayer else { return }
         ensureAudioSessionActive()
-        do {
-            chordPlayer = try AVAudioPlayer(data: data)
-            chordPlayer?.volume = volume
-            chordPlayer?.play()
-        } catch {
-            print("TimerAudioPlugin: chord playback failed: \(error)")
-        }
+        player.volume = volume
+        player.currentTime = 0
+        player.play()
     }
 
     private func startSilentKeepAlive() {
-        guard silentPlayer == nil || silentPlayer?.isPlaying == false else { return }
-        guard let data = silentData else { return }
-        // Reactivate the session before play(). Between timers iOS can drop the
-        // session to an inactive sub-state once no players are running, which
-        // makes a fresh AVAudioPlayer.play() return false silently — leaving the
-        // pipeline cold so the scheduled beeps never get heard.
+        guard let player = silentPlayer else { return }
+        if player.isPlaying { return }
         ensureAudioSessionActive()
-        do {
-            silentPlayer = try AVAudioPlayer(data: data)
-            silentPlayer?.volume = 0.01
-            silentPlayer?.numberOfLoops = -1 // Loop indefinitely
-            silentPlayer?.prepareToPlay()
-            silentPlayer?.play()
-        } catch {
-            print("TimerAudioPlugin: silent keep-alive failed: \(error)")
-        }
+        player.currentTime = 0
+        player.play()
     }
 
     private func stopSilentKeepAlive() {
-        silentPlayer?.stop()
-        silentPlayer = nil
+        // Pause rather than stop+nil — keeps the audio queue bound to this
+        // player so the next play() resumes hot instead of cold-starting.
+        silentPlayer?.pause()
     }
 
     // MARK: - WAV generation
