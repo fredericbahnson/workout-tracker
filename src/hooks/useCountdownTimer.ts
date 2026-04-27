@@ -50,17 +50,17 @@ export function useCountdownTimer({
     }
   }, []);
 
-  // Complete the timer
+  // Complete the timer.
+  // The native plugin schedules its own keep-alive stop at completion+1s via
+  // DispatchWorkItem, and that work item is cancelled cleanly when the next
+  // scheduleCountdown is called. Don't duplicate it here with a JS setTimeout —
+  // a stale setTimeout from a previous timer can fire during the next timer
+  // and kill its keep-alive, which compounds across sets.
   const completeTimer = useCallback(() => {
     clearTimer();
     setTimeRemaining(0);
     setIsRunning(false);
     setIsComplete(true);
-    // Native plugin handles completion sound independently via scheduled DispatchWorkItem
-    // Stop keep-alive after a delay to let the completion sound finish
-    setTimeout(() => {
-      timerAudio.stopKeepAlive();
-    }, 1000);
     if (notificationIdRef.current !== null) {
       cancelTimerNotification(notificationIdRef.current);
       notificationIdRef.current = null;
