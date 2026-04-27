@@ -497,6 +497,8 @@ export function TodayPage() {
 
   const handleDeleteCompletedSet = useCallback(async () => {
     if (!modals.editingCompletedSet) return;
+    const wasCompleted = displayWorkout?.status === 'completed';
+
     await CompletedSetRepo.delete(modals.editingCompletedSet.completedSet.id);
     await deleteItem('completed_sets', modals.editingCompletedSet.completedSet.id);
 
@@ -505,15 +507,21 @@ export function TodayPage() {
       if (remainingCompleted === 0) {
         const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'pending');
         if (updated) await syncItem('scheduled_workouts', updated);
-      } else if (displayWorkout.status === 'completed') {
+      } else if (wasCompleted) {
         const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
         if (updated) await syncItem('scheduled_workouts', updated);
       }
 
-      // Reset completion view so display falls through to nextPendingWorkout
-      resetCompletionState();
-      setDismissedWorkoutId(null);
-      clearDismissedWorkout();
+      // Only tear down the completion view when this undo actually transitioned
+      // the workout away from 'completed'. For already-partial/pending workouts
+      // the user is mid-logging via nextPendingWorkout; clearing these flags
+      // would un-dismiss a prior completion view and bounce the display back
+      // to whatever lastCompletedWorkout currently points to.
+      if (wasCompleted) {
+        resetCompletionState();
+        setDismissedWorkoutId(null);
+        clearDismissedWorkout();
+      }
     }
   }, [
     modals.editingCompletedSet,
