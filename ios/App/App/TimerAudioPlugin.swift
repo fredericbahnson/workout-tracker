@@ -31,24 +31,29 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
 
         configureAudioSession()
 
-        // Preload AVAudioPlayer instances once and reuse them. Reallocating fresh
-        // players per beep/chord/keep-alive cycle was causing the audio queue to
-        // cold-start on each subsequent timer — work items fired on schedule but
-        // the audio for them came out late or got dropped, producing the
-        // "set 1 ok, set 2 mistimed, set 3 missing" pattern. Reusing the same
-        // instance with currentTime=0 + play() keeps the hardware buffer
-        // acquired and the queue warm.
+        // Write the generated WAV bytes to the Caches directory and construct
+        // AVAudioPlayer instances from file URLs rather than from Data. Recent
+        // iOS versions tightened how AVAudioPlayer(data:) interacts with the
+        // audio queue when the queue is cold, which manifested as Set 2/3 beeps
+        // being dropped or mistimed. File-based init takes a different
+        // CoreAudio code path that's less affected by those changes.
         do {
-            beepPlayer = try AVAudioPlayer(data: beepData)
-            beepPlayer?.prepareToPlay()
+            if let beepURL = writeWavToCachesIfNeeded(name: "timer_beep.wav", data: beepData) {
+                beepPlayer = try AVAudioPlayer(contentsOf: beepURL)
+                beepPlayer?.prepareToPlay()
+            }
 
-            chordPlayer = try AVAudioPlayer(data: chordData)
-            chordPlayer?.prepareToPlay()
+            if let chordURL = writeWavToCachesIfNeeded(name: "timer_chord.wav", data: chordData) {
+                chordPlayer = try AVAudioPlayer(contentsOf: chordURL)
+                chordPlayer?.prepareToPlay()
+            }
 
-            silentPlayer = try AVAudioPlayer(data: silentData)
-            silentPlayer?.numberOfLoops = -1
-            silentPlayer?.volume = 0.01
-            silentPlayer?.prepareToPlay()
+            if let silentURL = writeWavToCachesIfNeeded(name: "timer_silent.wav", data: silentData) {
+                silentPlayer = try AVAudioPlayer(contentsOf: silentURL)
+                silentPlayer?.numberOfLoops = -1
+                silentPlayer?.volume = 0.01
+                silentPlayer?.prepareToPlay()
+            }
         } catch {
             print("TimerAudioPlugin: failed to preload players: \(error)")
         }
@@ -59,6 +64,22 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             name: AVAudioSession.interruptionNotification,
             object: nil
         )
+    }
+
+    private func writeWavToCachesIfNeeded(name: String, data: Data) -> URL? {
+        guard let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let url = dir.appendingPathComponent(name)
+        // Always rewrite so a future change to the generator (e.g. new frequency)
+        // doesn't get masked by a stale cached file.
+        do {
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            print("TimerAudioPlugin: failed to write \(name) to caches: \(error)")
+            return nil
+        }
     }
 
     private func configureAudioSession() {
