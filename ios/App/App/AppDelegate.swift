@@ -8,9 +8,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Configure audio session to mix with other audio (music) and enable background playback
+        // Configure audio session: mix with other audio (so music keeps playing) and duck
+        // it while our beeps play so they remain audible over loud playback. .playback
+        // category enables background audio (UIBackgroundModes contains "audio").
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers, .duckOthers])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("Failed to configure AVAudioSession: \(error)")

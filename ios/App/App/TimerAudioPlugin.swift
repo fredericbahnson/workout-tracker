@@ -38,6 +38,11 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         // Generate 1 second of near-silent tone for keep-alive looping
         silentData = generateKeepAliveWav(duration: 1.0, sampleRate: sampleRate)
 
+        // Defensively (re-)apply audio session category. AppDelegate sets this at launch,
+        // but other Capacitor plugins may mutate it later — re-applying here ensures
+        // mixWithOthers + duckOthers is in effect by the time we play.
+        configureAudioSession()
+
         // Listen for audio session interruptions (e.g. phone calls)
         NotificationCenter.default.addObserver(
             self,
@@ -45,6 +50,17 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             name: AVAudioSession.interruptionNotification,
             object: nil
         )
+    }
+
+    private func configureAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(
+                .playback,
+                options: [.mixWithOthers, .duckOthers]
+            )
+        } catch {
+            print("TimerAudioPlugin: failed to set audio session category: \(error)")
+        }
     }
 
     @objc private func handleInterruption(notification: Notification) {
@@ -147,6 +163,9 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func ensureAudioSessionActive() {
+        // Re-apply category every time so a stale category (set by another plugin)
+        // can't silently break playback or block ducking.
+        configureAudioSession()
         do {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {

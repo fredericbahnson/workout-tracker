@@ -90,9 +90,11 @@ export function useCountdownTimer({
 
     setIsRunning(true);
 
-    // For short timers (<=5s), schedule native sounds immediately
+    // Hand the entire countdown to the native plugin immediately.
+    // JS setInterval gets throttled/suspended in the background on iOS, so
+    // deferring the schedule until timeRemaining===5 is unreliable for long timers.
     const remaining = pausedRemainingRef.current;
-    if (remaining <= 5 && volume > 0) {
+    if (volume > 0) {
       timerAudio.scheduleCountdown({ secondsRemaining: remaining, volume });
     }
 
@@ -156,8 +158,11 @@ export function useCountdownTimer({
             notificationIdRef.current = id;
           }
         );
-        // Cancel pre-scheduled sounds since timing changed
+        // Reschedule countdown sounds against the new completion time
         timerAudio.cancelScheduledSounds();
+        if (volume > 0 && newRemaining > 0) {
+          timerAudio.scheduleCountdown({ secondsRemaining: newRemaining, volume });
+        }
       } else if (isComplete && seconds > 0) {
         // Resume from completed state with added time
         pausedRemainingRef.current = seconds;
@@ -170,17 +175,8 @@ export function useCountdownTimer({
         setTimeRemaining(Math.max(0, Math.ceil(pausedRemainingRef.current)));
       }
     },
-    [isRunning, isComplete]
+    [isRunning, isComplete, volume]
   );
-
-  // Schedule native sounds when countdown reaches 5 seconds
-  useEffect(() => {
-    if (!isRunning || volume === 0) return;
-
-    if (timeRemaining === 5) {
-      timerAudio.scheduleCountdown({ secondsRemaining: 5, volume });
-    }
-  }, [timeRemaining, isRunning, volume]);
 
   // Handle visibility change: recalculate on return from background
   useEffect(() => {
