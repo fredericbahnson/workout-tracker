@@ -163,9 +163,10 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func ensureAudioSessionActive() {
-        // Re-apply category every time so a stale category (set by another plugin)
-        // can't silently break playback or block ducking.
-        configureAudioSession()
+        // Only reactivate. Don't re-apply category here — calling setCategory while
+        // the keep-alive is currently playing can disrupt the audio pipeline and
+        // cause subsequent scheduled beeps to no-op. Category is set in load() and
+        // AppDelegate; that's sufficient.
         do {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
@@ -200,10 +201,16 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     private func startSilentKeepAlive() {
         guard silentPlayer == nil || silentPlayer?.isPlaying == false else { return }
         guard let data = silentData else { return }
+        // Reactivate the session before play(). Between timers iOS can drop the
+        // session to an inactive sub-state once no players are running, which
+        // makes a fresh AVAudioPlayer.play() return false silently — leaving the
+        // pipeline cold so the scheduled beeps never get heard.
+        ensureAudioSessionActive()
         do {
             silentPlayer = try AVAudioPlayer(data: data)
             silentPlayer?.volume = 0.01
             silentPlayer?.numberOfLoops = -1 // Loop indefinitely
+            silentPlayer?.prepareToPlay()
             silentPlayer?.play()
         } catch {
             print("TimerAudioPlugin: silent keep-alive failed: \(error)")
