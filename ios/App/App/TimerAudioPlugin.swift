@@ -17,25 +17,6 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     private var beepPlayer: AVAudioPlayer?
     private var chordPlayer: AVAudioPlayer?
     private var silentPlayer: AVAudioPlayer?
-    private var timerSequence: Int = 0
-    private var sessionStartTime: TimeInterval = Date().timeIntervalSince1970
-
-    // Diagnostic logging — prefix "TA>" so we can grep clean output from the
-    // Xcode console or Console.app.
-    private func ta(_ message: String) {
-        let elapsed = Date().timeIntervalSince1970 - sessionStartTime
-        NSLog("TA> [%.3f] %@", elapsed, message)
-    }
-
-    private func sessionDescription() -> String {
-        let s = AVAudioSession.sharedInstance()
-        return "category=\(s.category.rawValue) opts=\(s.categoryOptions.rawValue) otherAudio=\(s.isOtherAudioPlaying) outVol=\(s.outputVolume)"
-    }
-
-    private func playerDescription(_ p: AVAudioPlayer?) -> String {
-        guard let p = p else { return "nil" }
-        return "isPlaying=\(p.isPlaying) currentTime=\(String(format: "%.2f", p.currentTime)) dur=\(String(format: "%.2f", p.duration)) vol=\(p.volume)"
-    }
 
     override public func load() {
         let sampleRate: Double = 44100
@@ -49,14 +30,10 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let silentData = generateKeepAliveWav(duration: 1.0, sampleRate: sampleRate)
 
         configureAudioSession()
-        ta("LOAD: plugin loading, session=\(sessionDescription())")
 
-        // Write the generated WAV bytes to the Caches directory and construct
-        // AVAudioPlayer instances from file URLs rather than from Data. Recent
-        // iOS versions tightened how AVAudioPlayer(data:) interacts with the
-        // audio queue when the queue is cold, which manifested as Set 2/3 beeps
-        // being dropped or mistimed. File-based init takes a different
-        // CoreAudio code path that's less affected by those changes.
+        // File-based AVAudioPlayer init takes a different CoreAudio code path than
+        // init(data:) and was less affected by the iOS-side AVAudioPlayer changes
+        // we encountered. Write the generated WAV bytes to Caches and load by URL.
         do {
             if let beepURL = writeWavToCachesIfNeeded(name: "timer_beep.wav", data: beepData) {
                 beepPlayer = try AVAudioPlayer(contentsOf: beepURL)
@@ -91,8 +68,6 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
             return nil
         }
         let url = dir.appendingPathComponent(name)
-        // Always rewrite so a future change to the generator (e.g. new frequency)
-        // doesn't get masked by a stale cached file.
         do {
             try data.write(to: url, options: .atomic)
             return url
@@ -125,7 +100,6 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                 if options.contains(.shouldResume) {
                     ensureAudioSessionActive()
-                    // Re-prepare and resume keep-alive if it was playing before.
                     silentPlayer?.prepareToPlay()
                     silentPlayer?.play()
                 }
@@ -138,34 +112,22 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let volume = call.getDouble("volume") ?? 40.0
         let gain = Float(min(1.0, max(0.0, volume / 100.0)))
 
-        timerSequence += 1
-        let timerN = timerSequence
-        ta("=== scheduleCountdown TIMER #\(timerN) secondsRemaining=\(secondsRemaining) volume=\(volume) ===")
-        ta("TIMER #\(timerN) session: \(sessionDescription())")
-        ta("TIMER #\(timerN) silentPlayer-pre: \(playerDescription(silentPlayer))")
-        ta("TIMER #\(timerN) beepPlayer-pre: \(playerDescription(beepPlayer))")
-        ta("TIMER #\(timerN) chordPlayer-pre: \(playerDescription(chordPlayer))")
-
         cancelAllScheduledTimers()
-        startSilentKeepAlive(timerN: timerN)
+        startSilentKeepAlive()
 
         for s in 1...3 {
             let delay = secondsRemaining - Double(s)
             if delay < 0 { continue }
-            let beepIndex = s
             scheduleStrictTimer(after: delay) { [weak self] in
-                self?.ta("TIMER #\(timerN) BEEP \(beepIndex) timer firing (expected delay \(delay)s)")
-                self?.playBeep(volume: gain, timerN: timerN, beepIndex: beepIndex)
+                self?.playBeep(volume: gain)
             }
         }
 
         scheduleStrictTimer(after: secondsRemaining) { [weak self] in
-            self?.ta("TIMER #\(timerN) CHORD timer firing (expected delay \(secondsRemaining)s)")
-            self?.playChord(volume: gain, timerN: timerN)
+            self?.playChord(volume: gain)
         }
 
         scheduleStrictTimer(after: secondsRemaining + 1.0) { [weak self] in
-            self?.ta("TIMER #\(timerN) STOP timer firing (keep-alive stop)")
             self?.stopSilentKeepAlive()
         }
 
@@ -173,11 +135,9 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /// Schedule a one-shot main-queue callback with strict (zero-leeway) timing.
-    /// `DispatchQueue.main.asyncAfter` allows iOS to coalesce the wake-up for power
-    /// efficiency — measured 3–4s of slop on long deadlines, which collapses our
-    /// T-3/T-2/T-1/T-0 schedule into a tight burst at the end of the timer.
-    /// `DispatchSource.makeTimerSource` with `leeway: .nanoseconds(0)` opts out
-    /// of that coalescing.
+    /// `DispatchQueue.main.asyncAfter` allows iOS to coalesce wake-ups for power
+    /// efficiency, which collapsed the T-3/T-2/T-1/T-0 schedule into a single
+    /// burst at the end of long timers. Zero leeway opts out of that coalescing.
     private func scheduleStrictTimer(after delay: TimeInterval, work: @escaping () -> Void) {
         let timer = DispatchSource.makeTimerSource(queue: .main)
         timer.schedule(deadline: .now() + delay, leeway: .nanoseconds(0))
@@ -222,60 +182,41 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func ensureAudioSessionActive() {
-        // Only reactivate. Don't re-apply category here — calling setCategory while
-        // the keep-alive is currently playing can disrupt the audio pipeline and
-        // cause subsequent scheduled beeps to no-op. Category is set in load() and
-        // AppDelegate; that's sufficient.
         do {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            ta("ensureAudioSessionActive: setActive(true) FAILED \(error)")
+            print("TimerAudioPlugin: failed to activate audio session: \(error)")
         }
     }
 
-    private func playBeep(volume: Float, timerN: Int = -1, beepIndex: Int = -1) {
-        guard let player = beepPlayer else {
-            ta("TIMER #\(timerN) BEEP \(beepIndex): NO PLAYER (nil)")
-            return
-        }
+    private func playBeep(volume: Float) {
+        guard let player = beepPlayer else { return }
         ensureAudioSessionActive()
         player.volume = volume
         player.currentTime = 0
-        let didPlay = player.play()
-        ta("TIMER #\(timerN) BEEP \(beepIndex): play()=\(didPlay) state=\(playerDescription(player)) session=\(sessionDescription())")
+        player.play()
     }
 
-    private func playChord(volume: Float, timerN: Int = -1) {
-        guard let player = chordPlayer else {
-            ta("TIMER #\(timerN) CHORD: NO PLAYER (nil)")
-            return
-        }
+    private func playChord(volume: Float) {
+        guard let player = chordPlayer else { return }
         ensureAudioSessionActive()
         player.volume = volume
         player.currentTime = 0
-        let didPlay = player.play()
-        ta("TIMER #\(timerN) CHORD: play()=\(didPlay) state=\(playerDescription(player)) session=\(sessionDescription())")
+        player.play()
     }
 
-    private func startSilentKeepAlive(timerN: Int = -1) {
-        guard let player = silentPlayer else {
-            ta("TIMER #\(timerN) KEEP-ALIVE: NO PLAYER (nil)")
-            return
-        }
-        if player.isPlaying {
-            ta("TIMER #\(timerN) KEEP-ALIVE: already playing, skipping start")
-            return
-        }
+    private func startSilentKeepAlive() {
+        guard let player = silentPlayer else { return }
+        if player.isPlaying { return }
         ensureAudioSessionActive()
         player.currentTime = 0
-        let didPlay = player.play()
-        ta("TIMER #\(timerN) KEEP-ALIVE: play()=\(didPlay) state=\(playerDescription(player)) session=\(sessionDescription())")
+        player.play()
     }
 
     private func stopSilentKeepAlive() {
-        let wasPlaying = silentPlayer?.isPlaying ?? false
+        // Pause rather than stop+nil — keeps the audio queue bound to this
+        // player so the next play() resumes hot instead of cold-starting.
         silentPlayer?.pause()
-        ta("KEEP-ALIVE: pause() called, wasPlaying=\(wasPlaying), now=\(playerDescription(silentPlayer))")
     }
 
     // MARK: - WAV generation
