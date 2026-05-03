@@ -13,7 +13,7 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "playTestSound", returnType: CAPPluginReturnPromise),
     ]
 
-    private var scheduledWorkItems: [DispatchWorkItem] = []
+    private var scheduledTimers: [DispatchSourceTimer] = []
     private var beepPlayer: AVAudioPlayer?
     private var chordPlayer: AVAudioPlayer?
     private var silentPlayer: AVAudioPlayer?
@@ -146,42 +146,51 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         ta("TIMER #\(timerN) beepPlayer-pre: \(playerDescription(beepPlayer))")
         ta("TIMER #\(timerN) chordPlayer-pre: \(playerDescription(chordPlayer))")
 
-        cancelAllWorkItems()
+        cancelAllScheduledTimers()
         startSilentKeepAlive(timerN: timerN)
-
-        let now = DispatchTime.now()
 
         for s in 1...3 {
             let delay = secondsRemaining - Double(s)
             if delay < 0 { continue }
             let beepIndex = s
-            let workItem = DispatchWorkItem { [weak self] in
-                self?.ta("TIMER #\(timerN) BEEP \(beepIndex) work item firing (expected delay \(delay)s)")
+            scheduleStrictTimer(after: delay) { [weak self] in
+                self?.ta("TIMER #\(timerN) BEEP \(beepIndex) timer firing (expected delay \(delay)s)")
                 self?.playBeep(volume: gain, timerN: timerN, beepIndex: beepIndex)
             }
-            scheduledWorkItems.append(workItem)
-            DispatchQueue.main.asyncAfter(deadline: now + delay, execute: workItem)
         }
 
-        let completionItem = DispatchWorkItem { [weak self] in
-            self?.ta("TIMER #\(timerN) CHORD work item firing (expected delay \(secondsRemaining)s)")
+        scheduleStrictTimer(after: secondsRemaining) { [weak self] in
+            self?.ta("TIMER #\(timerN) CHORD timer firing (expected delay \(secondsRemaining)s)")
             self?.playChord(volume: gain, timerN: timerN)
         }
-        scheduledWorkItems.append(completionItem)
-        DispatchQueue.main.asyncAfter(deadline: now + secondsRemaining, execute: completionItem)
 
-        let stopItem = DispatchWorkItem { [weak self] in
-            self?.ta("TIMER #\(timerN) STOP work item firing (keep-alive stop)")
+        scheduleStrictTimer(after: secondsRemaining + 1.0) { [weak self] in
+            self?.ta("TIMER #\(timerN) STOP timer firing (keep-alive stop)")
             self?.stopSilentKeepAlive()
         }
-        scheduledWorkItems.append(stopItem)
-        DispatchQueue.main.asyncAfter(deadline: now + secondsRemaining + 1.0, execute: stopItem)
 
         call.resolve()
     }
 
+    /// Schedule a one-shot main-queue callback with strict (zero-leeway) timing.
+    /// `DispatchQueue.main.asyncAfter` allows iOS to coalesce the wake-up for power
+    /// efficiency — measured 3–4s of slop on long deadlines, which collapses our
+    /// T-3/T-2/T-1/T-0 schedule into a tight burst at the end of the timer.
+    /// `DispatchSource.makeTimerSource` with `leeway: .nanoseconds(0)` opts out
+    /// of that coalescing.
+    private func scheduleStrictTimer(after delay: TimeInterval, work: @escaping () -> Void) {
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + delay, leeway: .nanoseconds(0))
+        timer.setEventHandler { [weak timer] in
+            work()
+            timer?.cancel()
+        }
+        scheduledTimers.append(timer)
+        timer.resume()
+    }
+
     @objc func cancelScheduledSounds(_ call: CAPPluginCall) {
-        cancelAllWorkItems()
+        cancelAllScheduledTimers()
         // Do NOT stop currently-playing sounds — let them finish
         call.resolve()
     }
@@ -196,22 +205,20 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let gain = Float(min(1.0, max(0.0, volume / 100.0)))
 
         playBeep(volume: gain)
-
-        let chordItem = DispatchWorkItem { [weak self] in
+        scheduleStrictTimer(after: 0.3) { [weak self] in
             self?.playChord(volume: gain)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: chordItem)
 
         call.resolve()
     }
 
     // MARK: - Private helpers
 
-    private func cancelAllWorkItems() {
-        for item in scheduledWorkItems {
-            item.cancel()
+    private func cancelAllScheduledTimers() {
+        for timer in scheduledTimers {
+            timer.cancel()
         }
-        scheduledWorkItems.removeAll()
+        scheduledTimers.removeAll()
     }
 
     private func ensureAudioSessionActive() {
