@@ -108,6 +108,12 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func scheduleCountdown(_ call: CAPPluginCall) {
+        // Anchor every deadline at the moment scheduleCountdown enters, BEFORE
+        // any setup work. startSilentKeepAlive's setActive(true) takes ~200-400ms,
+        // and if we anchored each deadline at a fresh .now() after that, the
+        // beeps would lag the JS visual countdown by exactly that setup cost.
+        let anchor = DispatchTime.now()
+
         let secondsRemaining = call.getDouble("secondsRemaining") ?? 5.0
         let volume = call.getDouble("volume") ?? 40.0
         let gain = Float(min(1.0, max(0.0, volume / 100.0)))
@@ -118,16 +124,16 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         for s in 1...3 {
             let delay = secondsRemaining - Double(s)
             if delay < 0 { continue }
-            scheduleStrictTimer(after: delay) { [weak self] in
+            scheduleStrictTimer(at: anchor + delay) { [weak self] in
                 self?.playBeep(volume: gain)
             }
         }
 
-        scheduleStrictTimer(after: secondsRemaining) { [weak self] in
+        scheduleStrictTimer(at: anchor + secondsRemaining) { [weak self] in
             self?.playChord(volume: gain)
         }
 
-        scheduleStrictTimer(after: secondsRemaining + 1.0) { [weak self] in
+        scheduleStrictTimer(at: anchor + secondsRemaining + 1.0) { [weak self] in
             self?.stopSilentKeepAlive()
         }
 
@@ -138,9 +144,9 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     /// `DispatchQueue.main.asyncAfter` allows iOS to coalesce wake-ups for power
     /// efficiency, which collapsed the T-3/T-2/T-1/T-0 schedule into a single
     /// burst at the end of long timers. Zero leeway opts out of that coalescing.
-    private func scheduleStrictTimer(after delay: TimeInterval, work: @escaping () -> Void) {
+    private func scheduleStrictTimer(at deadline: DispatchTime, work: @escaping () -> Void) {
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + delay, leeway: .nanoseconds(0))
+        timer.schedule(deadline: deadline, leeway: .nanoseconds(0))
         timer.setEventHandler { [weak timer] in
             work()
             timer?.cancel()
@@ -165,7 +171,7 @@ public class TimerAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         let gain = Float(min(1.0, max(0.0, volume / 100.0)))
 
         playBeep(volume: gain)
-        scheduleStrictTimer(after: 0.3) { [weak self] in
+        scheduleStrictTimer(at: .now() + 0.3) { [weak self] in
             self?.playChord(volume: gain)
         }
 
