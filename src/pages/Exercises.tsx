@@ -5,7 +5,7 @@ import { ExerciseRepo, MaxRecordRepo } from '@/data/repositories';
 import { PageHeader } from '@/components/layout';
 import { Button, Input, Modal, EmptyState, FilterChip } from '@/components/ui';
 import { ExerciseCard, ExerciseForm } from '@/components/exercises';
-import { createScopedLogger } from '@/utils/logger';
+import { useCreateExercise } from '@/hooks';
 import {
   EXERCISE_TYPES,
   EXERCISE_TYPE_LABELS,
@@ -13,57 +13,20 @@ import {
   type ExerciseFormData,
 } from '@/types';
 
-const log = createScopedLogger('Exercises');
-
 export function ExercisesPage() {
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<ExerciseType | 'all'>('all');
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { createExercise, isCreating, error, clearError } = useCreateExercise();
 
   // Live queries
   const exercises = useLiveQuery(() => ExerciseRepo.getAll(), []);
   const latestMaxes = useLiveQuery(() => MaxRecordRepo.getLatestForAllExercises(), []);
 
   const handleCreateExercise = async (data: ExerciseFormData) => {
-    setIsCreating(true);
-    setError(null);
-    try {
-      log.debug('Creating exercise:', data.name);
-      const { initialMax, initialMaxTime, startingReps, startingTime, ...exerciseData } = data;
-
-      // Add default conditioning values based on measurement type
-      const exerciseToCreate = {
-        ...exerciseData,
-        defaultConditioningReps:
-          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'reps'
-            ? startingReps
-            : undefined,
-        defaultConditioningTime:
-          exerciseData.mode === 'conditioning' && exerciseData.measurementType === 'time'
-            ? startingTime
-            : undefined,
-      };
-
-      const created = await ExerciseRepo.create(exerciseToCreate);
-      log.debug('Exercise created:', created.id);
-
-      // Create initial max record if provided (standard exercises)
-      if (exerciseData.measurementType === 'reps' && initialMax && initialMax > 0) {
-        await MaxRecordRepo.create(created.id, initialMax, undefined, 'Initial max');
-        log.debug('Initial max reps recorded:', initialMax);
-      } else if (exerciseData.measurementType === 'time' && initialMaxTime && initialMaxTime > 0) {
-        await MaxRecordRepo.create(created.id, undefined, initialMaxTime, 'Initial max');
-        log.debug('Initial max time recorded:', initialMaxTime);
-      }
-
+    const created = await createExercise(data);
+    if (created) {
       setShowForm(false);
-    } catch (err) {
-      log.error(err as Error);
-      setError(err instanceof Error ? err.message : 'Failed to create exercise. Please try again.');
-    } finally {
-      setIsCreating(false);
     }
   };
 
@@ -198,7 +161,7 @@ export function ExercisesPage() {
         isOpen={showForm}
         onClose={() => {
           setShowForm(false);
-          setError(null);
+          clearError();
         }}
         title="Add Exercise"
         size="lg"
@@ -212,7 +175,7 @@ export function ExercisesPage() {
           onSubmit={handleCreateExercise}
           onCancel={() => {
             setShowForm(false);
-            setError(null);
+            clearError();
           }}
           isLoading={isCreating}
         />

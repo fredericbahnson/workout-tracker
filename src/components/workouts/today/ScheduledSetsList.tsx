@@ -105,10 +105,10 @@ export const ScheduledSetsList = memo(function ScheduledSetsList({
                       <div
                         className={`flex items-center gap-4 p-4 text-left ${isWarmupSet ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
                       >
-                        {/* Swipe indicator */}
-                        <div className="flex items-center gap-0.5 flex-shrink-0 text-gray-300 dark:text-gray-600">
-                          <ChevronLeft className="w-4 h-4" />
-                          <ChevronRight className="w-4 h-4" />
+                        {/* Swipe indicator - amber left = skip, green right = complete */}
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <ChevronLeft className="w-4 h-4 text-amber-400/70 dark:text-amber-600" />
+                          <ChevronRight className="w-4 h-4 text-green-400/70 dark:text-green-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-lg font-medium text-gray-900 dark:text-gray-100">

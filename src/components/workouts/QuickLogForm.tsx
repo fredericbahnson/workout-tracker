@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Button, Input, NumberInput, Select } from '@/components/ui';
+import { Button, Input, NumberInput, Select, TimeDurationInput } from '@/components/ui';
 import { formatWeightLabel, formatWeightAt } from '@/constants';
-import { formatTime, parseTimeInput, type Exercise, type CustomParameter } from '@/types';
+import { formatTime, type Exercise, type CustomParameter } from '@/types';
 
 interface QuickLogFormProps {
   exercise: Exercise;
@@ -29,11 +29,10 @@ export function QuickLogForm({
 }: QuickLogFormProps) {
   const isTimeBased = exercise.measurementType === 'time';
 
-  // Time-based: string state for flexible format parsing (M:SS, 90s, etc.)
-  const [timeValue, setTimeValue] = useState(() => {
-    if (isTimeBased && suggestedReps !== undefined) return formatTime(suggestedReps);
-    return '';
-  });
+  // Time-based: seconds, edited via the shared MM:SS duration input
+  const [timeSeconds, setTimeSeconds] = useState(() =>
+    isTimeBased && suggestedReps !== undefined ? suggestedReps : 0
+  );
   // Rep-based: numeric state for stepper +/- buttons
   const [repValue, setRepValue] = useState(() => {
     if (!isTimeBased && suggestedReps !== undefined) return suggestedReps;
@@ -62,9 +61,8 @@ export function QuickLogForm({
 
     let numericValue: number;
     if (isTimeBased) {
-      const parsed = parseTimeInput(timeValue);
-      if (parsed === null || parsed < 0) return;
-      numericValue = parsed;
+      if (timeSeconds <= 0) return;
+      numericValue = timeSeconds;
     } else {
       if (repValue < 0) return;
       numericValue = repValue;
@@ -84,9 +82,7 @@ export function QuickLogForm({
   // Validate the current value
   const isValid = () => {
     if (isTimeBased) {
-      if (!timeValue) return false;
-      const parsed = parseTimeInput(timeValue);
-      return parsed !== null && parsed >= 0;
+      return timeSeconds > 0;
     }
     return repValue >= 0;
   };
@@ -115,20 +111,12 @@ export function QuickLogForm({
       </div>
 
       {isTimeBased ? (
-        <>
-          <Input
-            label={isMaxTest ? 'Time Achieved' : 'Time Completed'}
-            type="text"
-            value={timeValue}
-            onChange={e => setTimeValue(e.target.value)}
-            placeholder={isMaxTest ? 'e.g., 0:45, 1:30' : 'e.g., 0:30, 1:00'}
-            required
-            autoFocus
-          />
-          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-            Enter as M:SS (1:30), seconds (90), or with units (90s, 1m30s)
-          </p>
-        </>
+        <TimeDurationInput
+          label={isMaxTest ? 'Time Achieved' : 'Time Completed'}
+          value={timeSeconds}
+          onChange={setTimeSeconds}
+          maxSeconds={7200}
+        />
       ) : (
         <NumberInput
           label={isMaxTest ? 'Reps Achieved' : 'Reps Completed'}

@@ -8,20 +8,11 @@
  */
 
 import { useMemo } from 'react';
-import { Input, WheelPicker } from '@/components/ui';
-import type { DayOfWeek } from '@/types';
+import { Input, WheelPicker, SegmentedControl } from '@/components/ui';
+import type { DayOfWeek, SchedulingMode } from '@/types';
 import { calculateWorkoutDates } from '@/services/scheduler';
+import { DayOfWeekPicker } from '../components/DayOfWeekPicker';
 import type { ScheduleStepProps } from '../types';
-
-const DAY_LABELS: { day: DayOfWeek; short: string; full: string }[] = [
-  { day: 0, short: 'S', full: 'Sun' },
-  { day: 1, short: 'M', full: 'Mon' },
-  { day: 2, short: 'T', full: 'Tue' },
-  { day: 3, short: 'W', full: 'Wed' },
-  { day: 4, short: 'T', full: 'Thu' },
-  { day: 5, short: 'F', full: 'Fri' },
-  { day: 6, short: 'S', full: 'Sat' },
-];
 
 // Generate week options (1-12 weeks)
 const WEEK_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
@@ -39,6 +30,7 @@ export function ScheduleStep({
   name,
   setName,
   schedulingMode,
+  setSchedulingMode,
   selectedDays,
   setSelectedDays,
   workoutDaysPerWeek,
@@ -49,16 +41,9 @@ export function ScheduleStep({
 }: ScheduleStepProps) {
   const isDateMode = schedulingMode === 'date';
 
-  // Toggle a day selection and update workoutDaysPerWeek when in date mode
-  const handleDayToggle = (day: DayOfWeek) => {
-    const isSelected = selectedDays.includes(day);
-    const newDays = isSelected
-      ? selectedDays.filter(d => d !== day)
-      : [...selectedDays, day].sort((a, b) => a - b);
-
+  // Update selected days and keep workoutDaysPerWeek in sync in date mode
+  const handleDaysChange = (newDays: DayOfWeek[]) => {
     setSelectedDays(newDays);
-
-    // Auto-update workoutDaysPerWeek when in date mode
     if (isDateMode) {
       setWorkoutDaysPerWeek(newDays.length);
     }
@@ -94,6 +79,28 @@ export function ScheduleStep({
         placeholder="e.g., Winter 2026 Block 1"
       />
 
+      {/* Scheduling mode toggle (formerly its own wizard step) */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Scheduling
+        </label>
+        <SegmentedControl<SchedulingMode>
+          aria-label="Scheduling mode"
+          fullWidth
+          options={[
+            { value: 'date', label: 'Fixed Days' },
+            { value: 'sequence', label: 'Flexible' },
+          ]}
+          value={schedulingMode}
+          onChange={setSchedulingMode}
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {isDateMode
+            ? 'Workouts land on specific days of the week.'
+            : 'Do workouts whenever you want - just hit the weekly count.'}
+        </p>
+      </div>
+
       {isDateMode ? (
         /* Fixed Days Mode UI */
         <>
@@ -102,26 +109,7 @@ export function ScheduleStep({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Workout Days
             </label>
-            <div className="flex justify-between gap-1">
-              {DAY_LABELS.map(({ day, short, full }) => {
-                const isSelected = selectedDays.includes(day);
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => handleDayToggle(day)}
-                    title={full}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all ${
-                      isSelected
-                        ? 'bg-primary-100 dark:bg-primary-900/30 border-2 border-primary-500 dark:border-primary-400 text-primary-700 dark:text-primary-300'
-                        : 'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    {short}
-                  </button>
-                );
-              })}
-            </div>
+            <DayOfWeekPicker selectedDays={selectedDays} onChange={handleDaysChange} />
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {selectedDays.length === 0
                 ? 'Select at least one day'

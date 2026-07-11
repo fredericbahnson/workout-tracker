@@ -16,10 +16,11 @@ import type {
 } from '@/types';
 
 // Wizard step definitions
+// (scheduling mode is chosen via a toggle inside the schedule step, not a
+// separate step - see ScheduleStep)
 export type WizardStep =
   | 'start'
   | 'basics'
-  | 'schedule_mode'
   | 'schedule'
   | 'groups'
   | 'progression'
@@ -34,7 +35,6 @@ export interface StepDefinition {
 // Step configuration by progression mode
 export const RFEM_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
-  { key: 'schedule_mode', label: 'Mode' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Groups' },
   { key: 'goals', label: 'Goals' },
@@ -43,7 +43,6 @@ export const RFEM_STEPS: StepDefinition[] = [
 
 export const SIMPLE_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
-  { key: 'schedule_mode', label: 'Mode' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Groups' },
   { key: 'progression', label: 'Targets' },
@@ -53,7 +52,6 @@ export const SIMPLE_STEPS: StepDefinition[] = [
 
 export const MIXED_STEPS: StepDefinition[] = [
   { key: 'start', label: 'Start' },
-  { key: 'schedule_mode', label: 'Mode' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'groups', label: 'Exercises' },
   { key: 'goals', label: 'Goals' },
@@ -114,8 +112,9 @@ export interface ScheduleStepProps {
   // Name field (merged from BasicsStep)
   name: string;
   setName: (v: string) => void;
-  // Scheduling mode (read-only, set in previous step)
+  // Scheduling mode - toggled inline at the top of this step
   schedulingMode: SchedulingMode;
+  setSchedulingMode: (mode: SchedulingMode) => void;
   // Fixed days mode
   selectedDays: DayOfWeek[];
   setSelectedDays: (v: DayOfWeek[]) => void;
@@ -160,6 +159,7 @@ export interface GoalsStepProps {
   weeklySetGoals: Record<ExerciseType, number>;
   setWeeklySetGoals: (v: Record<ExerciseType, number>) => void;
   groups: Group[];
+  exerciseMap: Map<string, Exercise>;
   groupRotation: string[];
   setGroupRotation: (v: string[]) => void;
   rfemRotation: number[];
@@ -214,7 +214,11 @@ export interface WizardProgressProps {
 
 export interface WizardNavigationProps {
   currentStep: WizardStep;
+  /** True when this is the wizard's first visible step (Back exits the wizard) */
+  isFirstStep: boolean;
   canProceed: boolean;
+  /** Why Next/Create is disabled, shown above the buttons (null when it isn't) */
+  disabledReason?: string | null;
   isCreating: boolean;
   isEditing: boolean;
   onBack: () => void;

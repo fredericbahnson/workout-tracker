@@ -10,7 +10,7 @@ interface EditCompletedSetModalProps {
   exercise: Exercise | null;
   /** Called when user saves changes */
   onSave: (reps: number, weight: number | undefined, notes: string) => Promise<void>;
-  /** Called when user wants to delete and redo the set */
+  /** Called when user wants to delete the set (returns it to the remaining list) */
   onDelete: () => Promise<void>;
   /** Called when modal is closed */
   onClose: () => void;
@@ -18,7 +18,7 @@ interface EditCompletedSetModalProps {
 
 /**
  * Modal for editing a completed set's reps, weight, and notes.
- * Also allows undoing the set to redo it.
+ * Also allows deleting the set, which returns it to the remaining list.
  */
 export function EditCompletedSetModal({
   completedSet,
@@ -122,7 +122,7 @@ export function EditCompletedSetModal({
               disabled={isSaving}
               className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
             >
-              Undo & Redo
+              Delete Set
             </Button>
             <Button variant="secondary" onClick={onClose} className="flex-1" disabled={isSaving}>
               Cancel

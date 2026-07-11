@@ -25,14 +25,21 @@ import {
 import { useSyncedPreferences } from '@/contexts';
 import { useSyncItem } from '@/contexts';
 import { PageHeader } from '@/components/layout';
-import { Card, Badge, EmptyState, Button, Modal } from '@/components/ui';
-import { CycleWizard, CycleTypeSelector, MaxTestingWizard } from '@/components/cycles';
+import {
+  Card,
+  Badge,
+  EmptyState,
+  Button,
+  SegmentedControl,
+  ScheduleListSkeleton,
+} from '@/components/ui';
 import { SwipeableWorkoutCard, WorkoutCalendar } from '@/components/workouts';
 import {
   WorkoutPreviewModal,
   WorkoutHistoryModal,
   DeleteWorkoutModal,
   CalendarDateModal,
+  CycleModals,
 } from '@/components/schedule';
 import { createScopedLogger } from '@/utils/logger';
 import {
@@ -69,7 +76,8 @@ export function SchedulePage() {
   const [selectedDateWorkouts, setSelectedDateWorkouts] = useState<ScheduledWorkout[]>([]);
 
   // Live queries
-  const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
+  // null = loaded with no active cycle, undefined = still loading
+  const activeCycle = useLiveQuery(async () => (await CycleRepo.getActive()) ?? null, []);
 
   const allWorkouts = useLiveQuery(async () => {
     if (!activeCycle) return [];
@@ -213,6 +221,51 @@ export function SchedulePage() {
     navigate('/');
   }, [activeCycle, syncItem, navigate]);
 
+  // Shared cycle-lifecycle modals (type selector -> wizard / max testing),
+  // rendered identically from the empty-state and active-cycle branches
+  const cycleModals = (
+    <CycleModals
+      showTypeSelector={showCycleTypeSelector}
+      showWizard={showCycleWizard}
+      showMaxTesting={showMaxTestingWizard}
+      editCycle={isEditingCycle && activeCycle ? activeCycle : undefined}
+      progressionMode={wizardProgressionMode}
+      onSelectTraining={mode => {
+        setShowCycleTypeSelector(false);
+        setIsEditingCycle(false);
+        setWizardProgressionMode(mode);
+        setShowCycleWizard(true);
+      }}
+      onSelectMaxTesting={() => {
+        setShowCycleTypeSelector(false);
+        setShowMaxTestingWizard(true);
+      }}
+      onCloseTypeSelector={() => setShowCycleTypeSelector(false)}
+      onCloseWizard={() => setShowCycleWizard(false)}
+      onCloseMaxTesting={() => setShowMaxTestingWizard(false)}
+      onWizardBackToSelector={() => {
+        setShowCycleWizard(false);
+        setShowCycleTypeSelector(true);
+      }}
+      onMaxTestingBackToSelector={() => {
+        setShowMaxTestingWizard(false);
+        setShowCycleTypeSelector(true);
+      }}
+    />
+  );
+
+  // Loading state (Dexie queries resolve asynchronously on first render)
+  if (activeCycle === undefined) {
+    return (
+      <>
+        <PageHeader title="Schedule" />
+        <div className="px-4 py-4">
+          <ScheduleListSkeleton />
+        </div>
+      </>
+    );
+  }
+
   // Empty state
   if (!activeCycle) {
     return (
@@ -234,40 +287,7 @@ export function SchedulePage() {
             action={<Button onClick={() => setShowCycleTypeSelector(true)}>Create Cycle</Button>}
           />
         </div>
-        <CycleTypeSelectorModal
-          isOpen={showCycleTypeSelector}
-          onSelectTraining={mode => {
-            setShowCycleTypeSelector(false);
-            setIsEditingCycle(false);
-            setWizardProgressionMode(mode);
-            setShowCycleWizard(true);
-          }}
-          onSelectMaxTesting={() => {
-            setShowCycleTypeSelector(false);
-            setShowMaxTestingWizard(true);
-          }}
-          onClose={() => setShowCycleTypeSelector(false)}
-        />
-        <CycleWizardModal
-          isOpen={showCycleWizard}
-          editCycle={isEditingCycle ? activeCycle : undefined}
-          progressionMode={wizardProgressionMode}
-          onClose={() => setShowCycleWizard(false)}
-          onBackToSelector={() => {
-            setShowCycleWizard(false);
-            setShowCycleTypeSelector(true);
-          }}
-        />
-        {showMaxTestingWizard && (
-          <MaxTestingWizard
-            onComplete={() => setShowMaxTestingWizard(false)}
-            onCancel={() => setShowMaxTestingWizard(false)}
-            onBackToSelector={() => {
-              setShowMaxTestingWizard(false);
-              setShowCycleTypeSelector(true);
-            }}
-          />
-        )}
+        {cycleModals}
       </>
     );
   }
@@ -319,7 +339,17 @@ export function SchedulePage() {
         </div>
 
         {/* View Toggle */}
-        <ViewToggle showCalendarView={showCalendarView} onToggle={setShowCalendarView} />
+        <div className="flex justify-center">
+          <SegmentedControl
+            aria-label="Schedule view"
+            options={[
+              { value: 'list', label: 'List', icon: List },
+              { value: 'calendar', label: 'Calendar', icon: CalendarDays },
+            ]}
+            value={showCalendarView ? 'calendar' : 'list'}
+            onChange={v => setShowCalendarView(v === 'calendar')}
+          />
+        </div>
 
         {/* Calendar View */}
         {showCalendarView && (
@@ -331,7 +361,8 @@ export function SchedulePage() {
         )}
 
         {/* List View */}
-        {!showCalendarView && (
+        {!showCalendarView && allWorkouts === undefined && <ScheduleListSkeleton />}
+        {!showCalendarView && allWorkouts !== undefined && (
           <>
             {/* Cycle Progress or Complete */}
             {pendingWorkouts.length === 0 && passedWorkouts.length > 0 ? (
@@ -398,42 +429,7 @@ export function SchedulePage() {
       </div>
 
       {/* Modals */}
-      <CycleTypeSelectorModal
-        isOpen={showCycleTypeSelector}
-        onSelectTraining={mode => {
-          setShowCycleTypeSelector(false);
-          setIsEditingCycle(false);
-          setWizardProgressionMode(mode);
-          setShowCycleWizard(true);
-        }}
-        onSelectMaxTesting={() => {
-          setShowCycleTypeSelector(false);
-          setShowMaxTestingWizard(true);
-        }}
-        onClose={() => setShowCycleTypeSelector(false)}
-      />
-
-      <CycleWizardModal
-        isOpen={showCycleWizard}
-        editCycle={isEditingCycle ? activeCycle : undefined}
-        progressionMode={wizardProgressionMode}
-        onClose={() => setShowCycleWizard(false)}
-        onBackToSelector={() => {
-          setShowCycleWizard(false);
-          setShowCycleTypeSelector(true);
-        }}
-      />
-
-      {showMaxTestingWizard && (
-        <MaxTestingWizard
-          onComplete={() => setShowMaxTestingWizard(false)}
-          onCancel={() => setShowMaxTestingWizard(false)}
-          onBackToSelector={() => {
-            setShowMaxTestingWizard(false);
-            setShowCycleTypeSelector(true);
-          }}
-        />
-      )}
+      {cycleModals}
 
       {previewWorkout && (
         <WorkoutPreviewModal
@@ -496,43 +492,6 @@ export function SchedulePage() {
 }
 
 // Helper Components
-
-function ViewToggle({
-  showCalendarView,
-  onToggle,
-}: {
-  showCalendarView: boolean;
-  onToggle: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex justify-center">
-      <div className="inline-flex rounded-lg border border-gray-200 dark:border-dark-border p-0.5 bg-gray-100 dark:bg-gray-800">
-        <button
-          onClick={() => onToggle(false)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            !showCalendarView
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <List className="w-4 h-4" />
-          List
-        </button>
-        <button
-          onClick={() => onToggle(true)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            showCalendarView
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <CalendarDays className="w-4 h-4" />
-          Calendar
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function CycleProgressCard({
   passedCount,
@@ -756,59 +715,5 @@ function WorkoutSection({
         })}
       </div>
     </div>
-  );
-}
-
-function CycleTypeSelectorModal({
-  isOpen,
-  onSelectTraining,
-  onSelectMaxTesting,
-  onClose,
-}: {
-  isOpen: boolean;
-  onSelectTraining: (mode: ProgressionMode) => void;
-  onSelectMaxTesting: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Cycle">
-      <CycleTypeSelector
-        onSelectTraining={onSelectTraining}
-        onSelectMaxTesting={onSelectMaxTesting}
-        onCancel={onClose}
-      />
-    </Modal>
-  );
-}
-
-function CycleWizardModal({
-  isOpen,
-  editCycle,
-  progressionMode,
-  onClose,
-  onBackToSelector,
-}: {
-  isOpen: boolean;
-  editCycle?: NonNullable<Awaited<ReturnType<typeof CycleRepo.getActive>>>;
-  progressionMode: ProgressionMode;
-  onClose: () => void;
-  onBackToSelector?: () => void;
-}) {
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={editCycle ? 'Edit Cycle' : 'Create Training Cycle'}
-      size="full"
-    >
-      <div className="h-[80vh]">
-        <CycleWizard
-          onComplete={onClose}
-          onCancel={editCycle ? onClose : onBackToSelector || onClose}
-          editCycle={editCycle}
-          initialProgressionMode={progressionMode}
-        />
-      </div>
-    </Modal>
   );
 }

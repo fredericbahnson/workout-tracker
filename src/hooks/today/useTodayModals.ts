@@ -64,6 +64,12 @@ interface ModalState {
   selectedExercise: Exercise | null;
   wizardProgressionMode: ProgressionMode;
   restTimerDuration: number;
+  /**
+   * Incremented every time the rest timer is (re)opened. Used as a React key
+   * so logging another set mid-timer remounts the timer component - the only
+   * way to restart it, since useCountdownTimer reads its duration at mount.
+   */
+  restTimerKey: number;
   isLogging: boolean;
 }
 
@@ -78,6 +84,7 @@ type ModalAction =
   | { type: 'SET_SELECTED_EXERCISE'; exercise: Exercise | null }
   | { type: 'SET_WIZARD_MODE'; mode: ProgressionMode }
   | { type: 'SET_REST_TIMER_DURATION'; duration: number }
+  | { type: 'OPEN_REST_TIMER'; duration?: number }
   | { type: 'SET_IS_LOGGING'; isLogging: boolean };
 
 const initialState: ModalState = {
@@ -93,6 +100,7 @@ const initialState: ModalState = {
   selectedExercise: null,
   wizardProgressionMode: 'rfem',
   restTimerDuration: 90,
+  restTimerKey: 0,
   isLogging: false,
 };
 
@@ -134,6 +142,14 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
 
     case 'SET_REST_TIMER_DURATION':
       return { ...state, restTimerDuration: action.duration };
+
+    case 'OPEN_REST_TIMER':
+      return {
+        ...state,
+        restTimer: true,
+        restTimerDuration: action.duration ?? state.restTimerDuration,
+        restTimerKey: state.restTimerKey + 1,
+      };
 
     case 'SET_IS_LOGGING':
       return { ...state, isLogging: action.isLogging };
@@ -256,10 +272,7 @@ export function useTodayModals(options: UseTodayModalsOptions = {}) {
 
   // Rest timer
   const openRestTimer = useCallback((duration?: number) => {
-    if (duration !== undefined) {
-      dispatch({ type: 'SET_REST_TIMER_DURATION', duration });
-    }
-    dispatch({ type: 'OPEN_MODAL', modal: 'restTimer' });
+    dispatch({ type: 'OPEN_REST_TIMER', duration });
   }, []);
 
   const closeRestTimer = useCallback(() => {
@@ -289,6 +302,7 @@ export function useTodayModals(options: UseTodayModalsOptions = {}) {
     selectedExercise: state.selectedExercise,
     wizardProgressionMode: state.wizardProgressionMode,
     restTimerDuration: state.restTimerDuration,
+    restTimerKey: state.restTimerKey,
     isLogging: state.isLogging,
 
     // Generic controls

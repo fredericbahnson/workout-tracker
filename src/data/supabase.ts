@@ -9,14 +9,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
   logger.warn('Supabase', 'Supabase credentials not configured. Cloud sync disabled.');
 }
 
-// Using generic client for flexibility with our schema
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+// Using generic client for flexibility with our schema.
+// Placeholder values keep createClient from throwing at module load when the
+// env vars are absent (which previously blanked the whole app); every caller
+// gates actual usage behind isSupabaseConfigured().
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  }
+);
 
 // Helper to check if Supabase is configured
 export const isSupabaseConfigured = () => {

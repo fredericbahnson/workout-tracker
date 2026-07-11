@@ -19,3 +19,8 @@ export {
   PageSkeleton,
 } from './Skeleton';
 export { WheelPicker } from './WheelPicker';
+export { Toggle } from './Toggle';
+export { SegmentedControl } from './SegmentedControl';
+export type { SegmentedControlOption } from './SegmentedControl';
+export { SelectionCard } from './SelectionCard';
+export { StatTile } from './StatTile';

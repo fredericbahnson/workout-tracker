@@ -15,7 +15,6 @@ import {
   WizardNavigation,
   EditModeModal,
   StartStep,
-  ScheduleModeStep,
   ScheduleStep,
   GroupsStep,
   ProgressionStep,
@@ -40,7 +39,6 @@ export function CycleWizard({
     // State
     progressionMode,
     currentStep,
-    setCurrentStep,
     isCreating,
     error,
     setEditMode,
@@ -79,6 +77,7 @@ export function CycleWizard({
     // Validation & Navigation
     validation,
     canProceed,
+    proceedBlockReason,
     displaySteps,
 
     // Actions
@@ -119,15 +118,12 @@ export function CycleWizard({
           />
         )}
 
-        {currentStep === 'schedule_mode' && (
-          <ScheduleModeStep schedulingMode={schedulingMode} onSelectMode={setSchedulingMode} />
-        )}
-
         {currentStep === 'schedule' && (
           <ScheduleStep
             name={name}
             setName={setName}
             schedulingMode={schedulingMode}
+            setSchedulingMode={setSchedulingMode}
             selectedDays={selectedDays}
             setSelectedDays={setSelectedDays}
             workoutDaysPerWeek={workoutDaysPerWeek}
@@ -168,6 +164,7 @@ export function CycleWizard({
             weeklySetGoals={weeklySetGoals}
             setWeeklySetGoals={setWeeklySetGoals}
             groups={groups}
+            exerciseMap={exerciseMap}
             groupRotation={groupRotation}
             setGroupRotation={setGroupRotation}
             rfemRotation={rfemRotation}
@@ -198,16 +195,12 @@ export function CycleWizard({
       {currentStep !== 'start' && (
         <WizardNavigation
           currentStep={currentStep}
+          isFirstStep={currentStep === 'schedule'}
           canProceed={canProceed()}
+          disabledReason={proceedBlockReason()}
           isCreating={isCreating}
           isEditing={!!editCycle}
-          onBack={
-            currentStep === 'schedule_mode' && !editCycle
-              ? initialProgressionMode
-                ? onCancel // Exit wizard if came from cycle type selector
-                : () => setCurrentStep('start') // Go to start step if started fresh
-              : prevStep
-          }
+          onBack={prevStep}
           onNext={nextStep}
           onCancel={onCancel}
           onSubmit={handleCreate}

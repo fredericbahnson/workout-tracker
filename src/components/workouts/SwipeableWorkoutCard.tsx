@@ -81,12 +81,11 @@ export function SwipeableWorkoutCard({
       const duration = endTime - startTimeRef.current;
       const velocity = Math.abs(translateX) / duration;
 
-      // Check if it was a tap (minimal horizontal AND vertical movement, short duration)
+      // Check if it was a tap (minimal horizontal AND vertical movement, any duration)
       const isMinimalXMovement = Math.abs(translateX) < TAP_THRESHOLD.movementX;
       const isMinimalYMovement = maxYMovementRef.current < TAP_THRESHOLD.movementY;
-      const isShortDuration = duration < TAP_THRESHOLD.duration;
 
-      if (isMinimalXMovement && isMinimalYMovement && isShortDuration) {
+      if (isMinimalXMovement && isMinimalYMovement) {
         setTranslateX(0);
         setIsDragging(false);
         onTap();
@@ -162,12 +161,11 @@ export function SwipeableWorkoutCard({
     const duration = endTime - startTimeRef.current;
     const velocity = Math.abs(translateX) / duration;
 
-    // Check if it was a click (minimal horizontal AND vertical movement, short duration)
+    // Check if it was a click (minimal horizontal AND vertical movement, any duration)
     const isMinimalXMovement = Math.abs(translateX) < TAP_THRESHOLD.movementX;
     const isMinimalYMovement = maxYMovementRef.current < TAP_THRESHOLD.movementY;
-    const isShortDuration = duration < TAP_THRESHOLD.duration;
 
-    if (isMinimalXMovement && isMinimalYMovement && isShortDuration) {
+    if (isMinimalXMovement && isMinimalYMovement) {
       setTranslateX(0);
       setIsDragging(false);
       onTap();

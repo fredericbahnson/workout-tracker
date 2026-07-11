@@ -18,8 +18,8 @@ import {
   useRatingPrompt,
 } from '@/hooks';
 import { PageHeader } from '@/components/layout';
-import { Button, Modal, EmptyState, Card } from '@/components/ui';
-import { QuickLogForm, RestTimer } from '@/components/workouts';
+import { Button, Modal, EmptyState, Card, Toggle } from '@/components/ui';
+import { QuickLogForm, RestTimerBanner } from '@/components/workouts';
 import {
   WorkoutCompletionBanner,
   ScheduledSetsList,
@@ -374,7 +374,7 @@ export function TodayPage() {
         }
       />
 
-      <div className="px-4 py-4 space-y-4">
+      <div className={`px-4 py-4 space-y-4 ${modals.showRestTimer ? 'pb-24' : ''}`}>
         <CycleProgressHeader
           activeCycle={activeCycle}
           cycleProgress={cycleProgress}
@@ -458,18 +458,12 @@ export function TodayPage() {
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Flame className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                       <span className="text-xs text-gray-500 dark:text-gray-400">Warmup Sets</span>
-                      <button
-                        onClick={() => setShowWarmupSets(!showWarmupSets)}
-                        className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${
-                          showWarmupSets ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
-                            showWarmupSets ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                          }`}
-                        />
-                      </button>
+                      <Toggle
+                        checked={showWarmupSets}
+                        onChange={setShowWarmupSets}
+                        size="sm"
+                        aria-label="Show warmup sets"
+                      />
                     </div>
                     {showWarmupSets &&
                       displayWorkout.scheduledSets.some(s => {
@@ -479,18 +473,12 @@ export function TodayPage() {
                       }) && (
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="text-xs text-gray-400 dark:text-gray-500">Timed</span>
-                          <button
-                            onClick={() => setShowTimedWarmups(!showTimedWarmups)}
-                            className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${
-                              showTimedWarmups ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
-                                showTimedWarmups ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                              }`}
-                            />
-                          </button>
+                          <Toggle
+                            checked={showTimedWarmups}
+                            onChange={setShowTimedWarmups}
+                            size="sm"
+                            aria-label="Show timed warmup sets"
+                          />
                         </div>
                       )}
                   </div>
@@ -709,13 +697,17 @@ export function TodayPage() {
         onConfirm={handleEndWorkout}
       />
 
-      <Modal isOpen={modals.showRestTimer} onClose={modals.closeRestTimer} title="Rest Timer">
-        <RestTimer
+      {/* Non-blocking rest timer banner. The key remounts the banner when a
+          new timer is opened mid-countdown - the only way to restart it,
+          since useCountdownTimer reads its duration at mount. */}
+      {modals.showRestTimer && (
+        <RestTimerBanner
+          key={modals.restTimerKey}
           initialSeconds={modals.restTimerDuration}
           onDismiss={modals.closeRestTimer}
           volume={preferences.timerVolume}
         />
-      </Modal>
+      )}
 
       <SkipSetConfirmModal
         setToSkip={modals.setToSkip}

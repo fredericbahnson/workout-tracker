@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { Button, Input, NumberInput, Select } from '@/components/ui';
+import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Button, Input, NumberInput, Select, Toggle } from '@/components/ui';
+import { ExerciseSuggestionChips } from '@/components/onboarding/visuals/ExerciseSuggestionChips';
 import { useSyncedPreferences } from '@/contexts';
 import { createScopedLogger } from '@/utils/logger';
 import { getWeightUnitLabel } from '@/constants';
@@ -49,6 +50,17 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   const [defaultWeight, setDefaultWeight] = useState<string>(
     initialData?.defaultWeight?.toString() || ''
   );
+  const [nameError, setNameError] = useState<string | undefined>(undefined);
+  // Advanced options start collapsed, but auto-expand when editing an
+  // exercise that already uses any of them
+  const [showAdvanced, setShowAdvanced] = useState(
+    () =>
+      !!initialData &&
+      (initialData.mode !== 'standard' ||
+        !!initialData.weightEnabled ||
+        !!initialData.notes ||
+        initialData.customParameters.length > 0)
+  );
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -58,6 +70,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
   const submitForm = () => {
     if (!name.trim()) {
       log.debug('Form validation failed: name is empty');
+      setNameError('Exercise name is required');
       return;
     }
 
@@ -153,11 +166,27 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
       <Input
         label="Exercise Name"
         value={name}
-        onChange={e => setName(e.target.value)}
+        onChange={e => {
+          setName(e.target.value);
+          if (nameError) setNameError(undefined);
+        }}
         placeholder="e.g., Ring Rows"
+        error={nameError}
         required
         autoFocus
       />
+
+      {!initialData && (
+        <ExerciseSuggestionChips
+          selectedExercise={name || null}
+          onSelect={suggestion => {
+            setName(suggestion.name);
+            setType(suggestion.type);
+            setMeasurementType(suggestion.measurementType);
+            if (nameError) setNameError(undefined);
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <Select
@@ -175,103 +204,117 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         />
       </div>
 
-      <Select
-        label="Mode"
-        value={mode}
-        onChange={e => setMode(e.target.value as typeof mode)}
-        options={modeOptions}
-      />
-
-      {/* Weight Tracking Toggle */}
-      <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Track Added Weight
-            </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Weighted vest, barbell, dumbbells, dip belt, etc.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setWeightEnabled(!weightEnabled)}
-            className={`
-              relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-              ${weightEnabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'}
-            `}
-          >
-            <span
-              className={`
-                inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                ${weightEnabled ? 'translate-x-6' : 'translate-x-1'}
-              `}
-            />
-          </button>
-        </div>
-
-        {weightEnabled && (
-          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-border">
-            <Input
-              label={`Default Weight (${getWeightUnitLabel()}, optional)`}
-              type="number"
-              min={0}
-              step={0.5}
-              value={defaultWeight}
-              onChange={e => setDefaultWeight(e.target.value)}
-              placeholder="e.g., 20"
-            />
-          </div>
-        )}
+      {/* Advanced options - collapsed by default; a basic exercise only needs the fields above */}
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          aria-expanded={showAdvanced}
+          className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+        >
+          {showAdvanced ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+          More options
+        </button>
       </div>
 
-      {/* Initial Max - only show when creating and in standard mode */}
-      {!initialData && mode === 'standard' && measurementType === 'reps' && (
-        <Input
-          label="Initial Max Reps (optional)"
-          type="number"
-          min={1}
-          value={initialMax}
-          onChange={e => setInitialMax(e.target.value)}
-          placeholder="Leave blank to set later"
-        />
-      )}
+      {showAdvanced && (
+        <>
+          <Select
+            label="Mode"
+            value={mode}
+            onChange={e => setMode(e.target.value as typeof mode)}
+            options={modeOptions}
+          />
 
-      {/* Initial Max Time - only show when creating and in standard/time mode */}
-      {!initialData && mode === 'standard' && measurementType === 'time' && (
-        <Input
-          label="Initial Max Time (optional)"
-          value={initialMaxTime}
-          onChange={e => setInitialMaxTime(e.target.value)}
-          placeholder="e.g., 0:45, 1:30"
-        />
-      )}
+          {/* Weight Tracking Toggle */}
+          <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Track Added Weight
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Weighted vest, barbell, dumbbells, dip belt, etc.
+                </p>
+              </div>
+              <Toggle
+                checked={weightEnabled}
+                onChange={setWeightEnabled}
+                aria-label="Track added weight"
+              />
+            </div>
 
-      {/* Base Reps - show for conditioning/reps mode (create or edit) */}
-      {mode === 'conditioning' && measurementType === 'reps' && (
-        <NumberInput label="Base Reps" value={baselineReps} onChange={setBaselineReps} min={1} />
-      )}
+            {weightEnabled && (
+              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-dark-border">
+                <Input
+                  label={`Default Weight (${getWeightUnitLabel()}, optional)`}
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={defaultWeight}
+                  onChange={e => setDefaultWeight(e.target.value)}
+                  placeholder="e.g., 20"
+                />
+              </div>
+            )}
+          </div>
 
-      {/* Base Time - show for conditioning/time mode (create or edit) */}
-      {mode === 'conditioning' && measurementType === 'time' && (
-        <Input
-          label="Base Time"
-          value={baselineTime}
-          onChange={e => setBaselineTime(e.target.value)}
-          placeholder="e.g., 0:30, 1:00"
-        />
-      )}
+          {/* Initial Max - only show when creating and in standard mode */}
+          {!initialData && mode === 'standard' && measurementType === 'reps' && (
+            <Input
+              label="Initial Max Reps (optional)"
+              type="number"
+              min={1}
+              value={initialMax}
+              onChange={e => setInitialMax(e.target.value)}
+              placeholder="Leave blank to set later"
+            />
+          )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Notes
-        </label>
-        <textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          placeholder="Form cues, variations, equipment needed..."
-          rows={3}
-          className="
+          {/* Initial Max Time - only show when creating and in standard/time mode */}
+          {!initialData && mode === 'standard' && measurementType === 'time' && (
+            <Input
+              label="Initial Max Time (optional)"
+              value={initialMaxTime}
+              onChange={e => setInitialMaxTime(e.target.value)}
+              placeholder="e.g., 0:45, 1:30"
+            />
+          )}
+
+          {/* Base Reps - show for conditioning/reps mode (create or edit) */}
+          {mode === 'conditioning' && measurementType === 'reps' && (
+            <NumberInput
+              label="Base Reps"
+              value={baselineReps}
+              onChange={setBaselineReps}
+              min={1}
+            />
+          )}
+
+          {/* Base Time - show for conditioning/time mode (create or edit) */}
+          {mode === 'conditioning' && measurementType === 'time' && (
+            <Input
+              label="Base Time"
+              value={baselineTime}
+              onChange={e => setBaselineTime(e.target.value)}
+              placeholder="e.g., 0:30, 1:00"
+            />
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Notes
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Form cues, variations, equipment needed..."
+              rows={3}
+              className="
             w-full px-3 py-2 rounded-lg border transition-colors
             bg-white dark:bg-gray-800
             text-gray-900 dark:text-gray-100
@@ -279,111 +322,119 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
             focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
             placeholder:text-gray-400 dark:placeholder:text-gray-500
           "
-        />
-      </div>
-
-      {/* Custom Parameters */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Custom Parameters
-          </label>
-          <Button type="button" variant="ghost" size="sm" onClick={addParameter}>
-            <Plus className="w-4 h-4 mr-1" />
-            Add
-          </Button>
-        </div>
-
-        {customParameters.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            No custom parameters. Add parameters to track things like strap length, band resistance,
-            etc.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {customParameters.map((param, index) => (
-              <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-2">
-                <div className="flex items-start gap-2">
-                  <div className="flex-1 grid grid-cols-2 gap-2">
-                    <Input
-                      placeholder="Parameter name"
-                      value={param.name}
-                      onChange={e => updateParameter(index, { name: e.target.value })}
-                    />
-                    <Select
-                      value={param.type}
-                      onChange={e =>
-                        updateParameter(index, { type: e.target.value as CustomParameter['type'] })
-                      }
-                      options={paramTypeOptions}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeParameter(index)}
-                    className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Options input for select type */}
-                {param.type === 'select' && (
-                  <Input
-                    placeholder="Options (comma-separated, e.g.: 3 holes, 4 holes, 5 holes)"
-                    value={param.options?.join(', ') || ''}
-                    onChange={e =>
-                      updateParameter(index, {
-                        options: e.target.value
-                          .split(',')
-                          .map(s => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                )}
-
-                {/* Default value input */}
-                {param.type === 'select' && param.options && param.options.length > 0 ? (
-                  <Select
-                    value={String(param.defaultValue || '')}
-                    onChange={e =>
-                      updateParameter(index, { defaultValue: e.target.value || undefined })
-                    }
-                    options={[
-                      { value: '', label: 'No default' },
-                      ...param.options.map(opt => ({ value: opt, label: opt })),
-                    ]}
-                  />
-                ) : param.type === 'number' ? (
-                  <Input
-                    type="number"
-                    placeholder="Default value (optional)"
-                    value={param.defaultValue !== undefined ? String(param.defaultValue) : ''}
-                    onChange={e =>
-                      updateParameter(index, {
-                        defaultValue: e.target.value ? parseFloat(e.target.value) : undefined,
-                      })
-                    }
-                  />
-                ) : param.type === 'text' ? (
-                  <Input
-                    placeholder="Default value (optional)"
-                    value={param.defaultValue !== undefined ? String(param.defaultValue) : ''}
-                    onChange={e =>
-                      updateParameter(index, {
-                        defaultValue: e.target.value || undefined,
-                      })
-                    }
-                  />
-                ) : null}
-              </div>
-            ))}
+            />
           </div>
-        )}
-      </div>
+
+          {/* Custom Parameters */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Custom Parameters
+              </label>
+              <Button type="button" variant="ghost" size="sm" onClick={addParameter}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
+            </div>
+
+            {customParameters.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No custom parameters. Add parameters to track things like strap length, band
+                resistance, etc.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {customParameters.map((param, index) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-2"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Parameter name"
+                          value={param.name}
+                          onChange={e => updateParameter(index, { name: e.target.value })}
+                        />
+                        <Select
+                          value={param.type}
+                          onChange={e =>
+                            updateParameter(index, {
+                              type: e.target.value as CustomParameter['type'],
+                            })
+                          }
+                          options={paramTypeOptions}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeParameter(index)}
+                        aria-label="Remove parameter"
+                        className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {/* Options input for select type */}
+                    {param.type === 'select' && (
+                      <Input
+                        placeholder="Options (comma-separated, e.g.: 3 holes, 4 holes, 5 holes)"
+                        value={param.options?.join(', ') || ''}
+                        onChange={e =>
+                          updateParameter(index, {
+                            options: e.target.value
+                              .split(',')
+                              .map(s => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                    )}
+
+                    {/* Default value input */}
+                    {param.type === 'select' && param.options && param.options.length > 0 ? (
+                      <Select
+                        value={String(param.defaultValue || '')}
+                        onChange={e =>
+                          updateParameter(index, { defaultValue: e.target.value || undefined })
+                        }
+                        options={[
+                          { value: '', label: 'No default' },
+                          ...param.options.map(opt => ({ value: opt, label: opt })),
+                        ]}
+                      />
+                    ) : param.type === 'number' ? (
+                      <Input
+                        type="number"
+                        placeholder="Default value (optional)"
+                        value={param.defaultValue !== undefined ? String(param.defaultValue) : ''}
+                        onChange={e =>
+                          updateParameter(index, {
+                            defaultValue: e.target.value ? parseFloat(e.target.value) : undefined,
+                          })
+                        }
+                      />
+                    ) : param.type === 'text' ? (
+                      <Input
+                        placeholder="Default value (optional)"
+                        value={param.defaultValue !== undefined ? String(param.defaultValue) : ''}
+                        onChange={e =>
+                          updateParameter(index, {
+                            defaultValue: e.target.value || undefined,
+                          })
+                        }
+                      />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-dark-border">
@@ -392,7 +443,7 @@ export function ExerciseForm({ initialData, onSubmit, onCancel, isLoading }: Exe
         </Button>
         <Button
           type="submit"
-          disabled={!name.trim() || isLoading}
+          disabled={isLoading}
           className="flex-1"
           onClick={e => {
             // Explicit click handler as mobile Safari fallback

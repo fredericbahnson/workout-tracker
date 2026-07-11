@@ -27,6 +27,8 @@ import type {
   DayOfWeek,
 } from '@/types';
 import { ScheduleModeStep } from './wizard/steps/ScheduleModeStep';
+import { DayOfWeekPicker } from './wizard/components/DayOfWeekPicker';
+import { calculateWorkoutDates } from '@/services/scheduler';
 
 const log = createScopedLogger('MaxTestingWizard');
 
@@ -67,8 +69,8 @@ export function MaxTestingWizard({
   const [error, setError] = useState<string | null>(null);
   const [maxTestingCycleCount, setMaxTestingCycleCount] = useState(0);
   const [schedulingMode, setSchedulingMode] = useState<SchedulingMode>('sequence');
-  // Selected days for date mode (not currently used in UI but stored for future use)
-  const [selectedDays] = useState<DayOfWeek[]>([1, 3, 5]); // Mon, Wed, Fri default
+  // Selected days for date mode (editable via the day picker on the schedule step)
+  const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>([1, 3, 5]); // Mon, Wed, Fri default
 
   // Load exercises and their current maxes
   useEffect(() => {
@@ -348,6 +350,20 @@ export function MaxTestingWizard({
       const startDate = new Date();
       startDate.setHours(0, 0, 0, 0);
 
+      // In date mode, compute concrete workout dates from the selected days
+      // (previously the days were stored on the cycle but workouts never got
+      // scheduledDate, so date mode behaved like sequence mode)
+      const workoutDates =
+        schedulingMode === 'date' && selectedDays.length > 0
+          ? calculateWorkoutDates(
+              startDate,
+              // +1 week buffer: the first week contributes fewer days when the
+              // start date falls after some of the selected days
+              Math.ceil(actualNumberOfDays / selectedDays.length) + 1,
+              selectedDays
+            )
+          : [];
+
       // Deactivate any existing active cycle first
       const existingActive = await CycleRepo.getActive();
       if (existingActive) {
@@ -423,6 +439,7 @@ export function MaxTestingWizard({
           rfem: 0,
           scheduledSets,
           status: 'pending',
+          scheduledDate: workoutDates[dayIndex],
         };
 
         const savedWorkout = await ScheduledWorkoutRepo.create(workoutData);
@@ -616,7 +633,24 @@ export function MaxTestingWizard({
         )}
 
         {step === 'schedule_mode' && (
-          <ScheduleModeStep schedulingMode={schedulingMode} onSelectMode={setSchedulingMode} />
+          <div className="space-y-6">
+            <ScheduleModeStep schedulingMode={schedulingMode} onSelectMode={setSchedulingMode} />
+            {schedulingMode === 'date' && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Workout Days
+                </label>
+                <DayOfWeekPicker selectedDays={selectedDays} onChange={setSelectedDays} />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {selectedDays.length === 0
+                    ? 'Select at least one day'
+                    : `Max test days will land on ${selectedDays.length} day${
+                        selectedDays.length !== 1 ? 's' : ''
+                      } per week`}
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         {step === 'conditioning_baselines' && (
@@ -770,7 +804,10 @@ export function MaxTestingWizard({
         ) : (
           <Button
             onClick={handleNext}
-            disabled={includedStandard.length === 0 && includedConditioning.length === 0}
+            disabled={
+              (includedStandard.length === 0 && includedConditioning.length === 0) ||
+              (step === 'schedule_mode' && schedulingMode === 'date' && selectedDays.length === 0)
+            }
             className="flex-1"
           >
             Next

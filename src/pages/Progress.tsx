@@ -1,10 +1,17 @@
-import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { BarChart3, TrendingUp, Calendar, Dumbbell, ChevronDown } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Dumbbell } from 'lucide-react';
 import { CompletedSetRepo, ExerciseRepo, CycleRepo } from '@/data/repositories';
 import { useAppStore, type RepDisplayMode } from '@/stores/appStore';
 import { PageHeader } from '@/components/layout';
-import { Card, CardContent, Badge, EmptyState, Button } from '@/components/ui';
+import {
+  Card,
+  CardContent,
+  Badge,
+  EmptyState,
+  SegmentedControl,
+  StatTile,
+  StatsCardSkeleton,
+} from '@/components/ui';
 import {
   EXERCISE_TYPE_LABELS,
   EXERCISE_TYPES,
@@ -22,7 +29,6 @@ const TIME_PERIOD_LABELS: Record<RepDisplayMode, string> = {
 
 export function ProgressPage() {
   const { repDisplayMode, setRepDisplayMode } = useAppStore();
-  const [showPeriodPicker, setShowPeriodPicker] = useState(false);
 
   // Get active cycle for cycle-based filtering
   const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
@@ -132,7 +138,20 @@ export function ProgressPage() {
     {} as Record<string, number>
   );
 
-  if (!allSets || allSets.length === 0) {
+  // Loading state (Dexie queries resolve asynchronously on first render)
+  if (allSets === undefined) {
+    return (
+      <>
+        <PageHeader title="Progress" />
+        <div className="px-4 py-4 space-y-4">
+          <StatsCardSkeleton />
+          <StatsCardSkeleton />
+        </div>
+      </>
+    );
+  }
+
+  if (allSets.length === 0) {
     return (
       <>
         <PageHeader title="Progress" />
@@ -149,44 +168,7 @@ export function ProgressPage() {
 
   return (
     <>
-      <PageHeader
-        title="Progress"
-        action={
-          <div className="relative">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowPeriodPicker(!showPeriodPicker)}
-            >
-              {TIME_PERIOD_LABELS[repDisplayMode]}
-              <ChevronDown className="w-4 h-4 ml-1" />
-            </Button>
-            {showPeriodPicker && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowPeriodPicker(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-dark-border py-1 min-w-[140px]">
-                  {(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => (
-                    <button
-                      key={mode}
-                      onClick={() => {
-                        setRepDisplayMode(mode);
-                        setShowPeriodPicker(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                        repDisplayMode === mode
-                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {TIME_PERIOD_LABELS[mode]}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        }
-      />
+      <PageHeader title="Progress" />
 
       <div className="px-4 py-4 pb-20 space-y-4">
         {/* Sets by Day (always last 30 days) */}
@@ -234,21 +216,16 @@ export function ProgressPage() {
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
               Progress Totals Timeframe
             </h3>
-            <div className="flex gap-2">
-              {(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setRepDisplayMode(mode)}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                    repDisplayMode === mode
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {TIME_PERIOD_LABELS[mode]}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl<RepDisplayMode>
+              aria-label="Progress totals timeframe"
+              fullWidth
+              options={(['week', 'cycle', 'allTime'] as RepDisplayMode[]).map(mode => ({
+                value: mode,
+                label: TIME_PERIOD_LABELS[mode],
+              }))}
+              value={repDisplayMode}
+              onChange={setRepDisplayMode}
+            />
           </CardContent>
         </Card>
 
@@ -256,38 +233,17 @@ export function ProgressPage() {
         <Card>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  {stats.totalSets}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Sets</p>
-              </div>
-              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  {stats.totalReps.toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Reps</p>
-              </div>
+              <StatTile value={stats.totalSets} label="Total Sets" />
+              <StatTile value={stats.totalReps.toLocaleString()} label="Total Reps" />
               {stats.totalTime > 0 && (
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {formatDuration(stats.totalTime)}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Timed Sets</p>
-                </div>
+                <StatTile
+                  value={formatDuration(stats.totalTime)}
+                  label="Timed Sets"
+                  valueClassName="text-2xl"
+                />
               )}
-              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  {stats.workoutDays}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Workout Days</p>
-              </div>
-              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  {stats.uniqueExercises}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Exercises</p>
-              </div>
+              <StatTile value={stats.workoutDays} label="Workout Days" />
+              <StatTile value={stats.uniqueExercises} label="Exercises" />
             </div>
           </CardContent>
         </Card>

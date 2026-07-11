@@ -6,9 +6,11 @@
  */
 
 import { useState, useEffect, useRef, memo } from 'react';
-import { Plus, Trash2, Check } from 'lucide-react';
+import { Plus, Trash2, Check, Dumbbell } from 'lucide-react';
 import { Button, Input, NumberInput, Card, Badge, Modal } from '@/components/ui';
-import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS } from '@/types';
+import { ExerciseForm } from '@/components/exercises';
+import { useCreateExercise } from '@/hooks';
+import { EXERCISE_TYPES, EXERCISE_TYPE_LABELS, type ExerciseFormData } from '@/types';
 import { MixedExerciseConfig } from '../components/MixedExerciseConfig';
 import type { GroupsStepProps } from '../types';
 
@@ -84,7 +86,25 @@ export function GroupsStep({
 }: GroupsStepProps) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showCreateExercise, setShowCreateExercise] = useState(false);
+  const { createExercise, isCreating, error: createError, clearError } = useCreateExercise();
   const isMixedMode = progressionMode === 'mixed';
+
+  const handleCreateExercise = async (data: ExerciseFormData) => {
+    const created = await createExercise(data);
+    if (created) {
+      // If the user came from a group's picker, add the new exercise directly
+      if (selectedGroup) {
+        onAddExercise(selectedGroup, created.id);
+      }
+      setShowCreateExercise(false);
+    }
+  };
+
+  const closeCreateExercise = () => {
+    setShowCreateExercise(false);
+    clearError();
+  };
 
   return (
     <div className="space-y-4">
@@ -104,6 +124,22 @@ export function GroupsStep({
           : 'Create groups of exercises that will be performed together on the same day.'}
       </p>
 
+      {exercises.length === 0 && (
+        <Card className="p-4 text-center space-y-3">
+          <Dumbbell className="w-8 h-8 mx-auto text-gray-400" />
+          <div>
+            <p className="font-medium text-gray-900 dark:text-gray-100">No exercises yet</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Create your first exercise to start building workout groups.
+            </p>
+          </div>
+          <Button onClick={() => setShowCreateExercise(true)}>
+            <Plus className="w-4 h-4 mr-1" />
+            Create Exercise
+          </Button>
+        </Card>
+      )}
+
       <div className="space-y-3">
         {groups.map(group => (
           <Card key={group.id} className="p-2">
@@ -120,6 +156,7 @@ export function GroupsStep({
                   setSelectedGroup(group.id);
                   setShowExercisePicker(true);
                 }}
+                aria-label={`Add exercises to ${group.name}`}
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -128,6 +165,7 @@ export function GroupsStep({
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveGroup(group.id)}
+                  aria-label={`Remove ${group.name}`}
                   className="text-red-500 hover:text-red-600"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -185,6 +223,7 @@ export function GroupsStep({
                           variant="ghost"
                           size="sm"
                           onClick={() => onRemoveExercise(group.id, assignment.exerciseId)}
+                          aria-label={`Remove ${exercise.name}`}
                           className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -238,6 +277,17 @@ export function GroupsStep({
         size="lg"
       >
         <div className="space-y-4">
+          {exercises.length === 0 && (
+            <div className="text-center py-4 space-y-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                You haven't created any exercises yet.
+              </p>
+              <Button onClick={() => setShowCreateExercise(true)}>
+                <Plus className="w-4 h-4 mr-1" />
+                Create Exercise
+              </Button>
+            </div>
+          )}
           {EXERCISE_TYPES.map(type => {
             const typeExercises = exercises
               .filter(ex => ex.type === type)
@@ -298,6 +348,25 @@ export function GroupsStep({
             Done
           </Button>
         </div>
+      </Modal>
+
+      {/* Inline exercise creation (same flow as the Exercises page) */}
+      <Modal
+        isOpen={showCreateExercise}
+        onClose={closeCreateExercise}
+        title="Add Exercise"
+        size="lg"
+      >
+        {createError && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm">
+            {createError}
+          </div>
+        )}
+        <ExerciseForm
+          onSubmit={handleCreateExercise}
+          onCancel={closeCreateExercise}
+          isLoading={isCreating}
+        />
       </Modal>
     </div>
   );

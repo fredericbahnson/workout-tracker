@@ -1,7 +1,7 @@
 import { Timer, Volume2, VolumeX } from 'lucide-react';
 import { timerAudio } from '@/plugins/timerAudio';
 import { useSyncedPreferences } from '@/contexts';
-import { Card, CardContent, TimeDurationInput } from '@/components/ui';
+import { Card, CardContent, TimeDurationInput, Toggle } from '@/components/ui';
 
 export function TimerSection() {
   const { preferences, setRestTimer, setMaxTestRestTimer, setTimerVolume } = useSyncedPreferences();
@@ -22,20 +22,11 @@ export function TimerSection() {
               Show timer prompt after completing each set
             </p>
           </div>
-          <button
-            onClick={() => setRestTimer({ enabled: !preferences.restTimer.enabled })}
-            className={`
-              relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-              ${preferences.restTimer.enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}
-            `}
-          >
-            <span
-              className={`
-                inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                ${preferences.restTimer.enabled ? 'translate-x-6' : 'translate-x-1'}
-              `}
-            />
-          </button>
+          <Toggle
+            checked={preferences.restTimer.enabled}
+            onChange={enabled => setRestTimer({ enabled })}
+            aria-label="Enable rest timer"
+          />
         </div>
 
         {preferences.restTimer.enabled && (
@@ -59,26 +50,11 @@ export function TimerSection() {
                 Show timer after each max test set
               </p>
             </div>
-            <button
-              onClick={() =>
-                setMaxTestRestTimer({ enabled: !preferences.maxTestRestTimer.enabled })
-              }
-              className={`
-                relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                ${
-                  preferences.maxTestRestTimer.enabled
-                    ? 'bg-primary-600'
-                    : 'bg-gray-200 dark:bg-gray-700'
-                }
-              `}
-            >
-              <span
-                className={`
-                  inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                  ${preferences.maxTestRestTimer.enabled ? 'translate-x-6' : 'translate-x-1'}
-                `}
-              />
-            </button>
+            <Toggle
+              checked={preferences.maxTestRestTimer.enabled}
+              onChange={enabled => setMaxTestRestTimer({ enabled })}
+              aria-label="Enable max testing rest timer"
+            />
           </div>
 
           {preferences.maxTestRestTimer.enabled && (
@@ -121,6 +97,7 @@ export function TimerSection() {
                 }
               `}
               title={preferences.timerVolume === 0 ? 'Unmute' : 'Mute'}
+              aria-label={preferences.timerVolume === 0 ? 'Unmute timer sound' : 'Mute timer sound'}
             >
               {preferences.timerVolume === 0 ? (
                 <VolumeX className="w-5 h-5" />

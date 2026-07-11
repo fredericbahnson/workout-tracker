@@ -24,12 +24,15 @@ export const SWIPE_MAX_TRANSLATE = 120;
 /** Duration (ms) for swipe animations */
 export const SWIPE_ANIMATION_DURATION = 200;
 
-/** Maximum movement (px) and duration (ms) to consider as a tap/click */
+/**
+ * Maximum movement (px) to consider a gesture a tap/click.
+ * Duration is deliberately NOT part of the check: a slow, deliberate press
+ * with no movement is still a tap (there is no long-press gesture to
+ * disambiguate against), and gym taps are often slower than 200ms.
+ */
 export const TAP_THRESHOLD = {
   /** Max horizontal movement (px) */
   movementX: 10,
   /** Max vertical movement (px) - prevents accidental taps while scrolling */
   movementY: 10,
-  /** Max duration (ms) */
-  duration: 200,
 };

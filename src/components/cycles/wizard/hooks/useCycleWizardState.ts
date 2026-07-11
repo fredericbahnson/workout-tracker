@@ -28,6 +28,80 @@ import { type WizardStep, type EditMode, type ValidationResult, getStepsForMode 
 
 const log = createScopedLogger('CycleWizard');
 
+/**
+ * Why the current step's Next button is disabled, or null if it isn't.
+ * Pure function so it can be unit-tested; canProceed derives from it.
+ */
+export function getProceedBlockReason(params: {
+  currentStep: WizardStep;
+  name: string;
+  schedulingMode: SchedulingMode;
+  selectedDays: DayOfWeek[];
+  numberOfWeeks: number;
+  workoutDaysPerWeek: number;
+  groups: Group[];
+  exerciseMap: Map<string, Exercise>;
+  progressionMode: ProgressionMode;
+  groupRotation: string[];
+  rfemRotation: number[];
+  validation: ValidationResult;
+}): string | null {
+  const {
+    currentStep,
+    name,
+    schedulingMode,
+    selectedDays,
+    numberOfWeeks,
+    workoutDaysPerWeek,
+    groups,
+    exerciseMap,
+    progressionMode,
+    groupRotation,
+    rfemRotation,
+    validation,
+  } = params;
+
+  switch (currentStep) {
+    case 'schedule':
+      if (!name.trim()) return 'Enter a cycle name to continue';
+      if (schedulingMode === 'date' && selectedDays.length === 0) {
+        return 'Select at least one workout day';
+      }
+      if (schedulingMode !== 'date' && (numberOfWeeks < 1 || workoutDaysPerWeek < 1)) {
+        return 'Set at least 1 week and 1 workout per week';
+      }
+      return null;
+    case 'groups':
+      if (groups.length === 0 || !groups.some(g => g.exerciseAssignments.length > 0)) {
+        return 'Add at least one exercise to a group';
+      }
+      return null;
+    case 'progression': {
+      const allHaveBase = groups.every(g =>
+        g.exerciseAssignments.every(a => {
+          const exercise = exerciseMap.get(a.exerciseId);
+          if (!exercise) return true;
+          const isTimeBased = exercise.measurementType === 'time';
+          return isTimeBased
+            ? a.simpleBaseTime !== undefined && a.simpleBaseTime > 0
+            : a.simpleBaseReps !== undefined && a.simpleBaseReps > 0;
+        })
+      );
+      return allHaveBase ? null : 'Set base reps or time for every exercise';
+    }
+    case 'goals':
+      if (groupRotation.length === 0) return 'Add at least one group to the rotation';
+      if (progressionMode !== 'simple' && rfemRotation.length === 0) {
+        return 'Add at least one RFEM value';
+      }
+      return null;
+    case 'review':
+      return validation.valid ? null : (validation.errors[0] ?? 'Fix the errors above');
+    default:
+      return 'Loading...';
+  }
+}
+
 interface UseCycleWizardStateProps {
   editCycle?: Cycle;
   initialProgressionMode?: ProgressionMode;
@@ -60,7 +134,7 @@ export function useCycleWizardState({
 
   // Skip 'start' step if editing an existing cycle or if mode was pre-selected
   const [currentStep, setCurrentStep] = useState<WizardStep>(
-    editCycle || initialProgressionMode ? 'schedule_mode' : 'start'
+    editCycle || initialProgressionMode ? 'schedule' : 'start'
   );
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +236,7 @@ export function useCycleWizardState({
       setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
       setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
       setName(getDefaultCycleName());
-      setCurrentStep('schedule_mode');
+      setCurrentStep('schedule');
     },
     [getDefaultCycleName]
   );
@@ -184,7 +258,7 @@ export function useCycleWizardState({
     setRfemRotation([4, 3, 2]);
     setWeeklySetGoals({ ...preferences.weeklySetGoals });
     setConditioningWeeklyRepIncrement(preferences.conditioningWeeklyIncrement);
-    setCurrentStep('schedule_mode');
+    setCurrentStep('schedule');
   }, [exercises, preferences, getDefaultCycleName]);
 
   // Initialize default groups when exercises load
@@ -249,7 +323,7 @@ export function useCycleWizardState({
       setWorkoutDaysPerWeek(sourceCycle.workoutDaysPerWeek);
       setConditioningWeeklyRepIncrement(sourceCycle.conditioningWeeklyRepIncrement);
       setName(`Workout Cycle ${completedCount + 1}`);
-      setCurrentStep('schedule_mode');
+      setCurrentStep('schedule');
     }
   }, [allCycles, editCycle, currentStep]);
 
@@ -294,55 +368,44 @@ export function useCycleWizardState({
     exerciseMap,
   ]);
 
+  // Why the current step's Next is disabled (null when it isn't)
+  const proceedBlockReason = useCallback(
+    (): string | null =>
+      getProceedBlockReason({
+        currentStep,
+        name,
+        schedulingMode,
+        selectedDays,
+        numberOfWeeks,
+        workoutDaysPerWeek,
+        groups,
+        exerciseMap,
+        progressionMode,
+        groupRotation,
+        rfemRotation,
+        validation,
+      }),
+    [
+      currentStep,
+      name,
+      numberOfWeeks,
+      workoutDaysPerWeek,
+      schedulingMode,
+      selectedDays,
+      groups,
+      exerciseMap,
+      progressionMode,
+      groupRotation,
+      rfemRotation,
+      validation,
+    ]
+  );
+
   // Can proceed to next step?
-  const canProceed = useCallback((): boolean => {
-    switch (currentStep) {
-      case 'schedule_mode':
-        // Always valid - user just needs to select a mode (default is already set)
-        return true;
-      case 'schedule':
-        // Name is required, and date mode requires at least 1 day selected
-        if (!name.trim()) return false;
-        if (schedulingMode === 'date') return selectedDays.length > 0;
-        // Flexible mode: requires valid weeks and days per week
-        return numberOfWeeks >= 1 && workoutDaysPerWeek >= 1;
-      case 'groups':
-        return groups.length > 0 && groups.some(g => g.exerciseAssignments.length > 0);
-      case 'progression':
-        return groups.every(g =>
-          g.exerciseAssignments.every(a => {
-            const exercise = exerciseMap.get(a.exerciseId);
-            if (!exercise) return true;
-            const isTimeBased = exercise.measurementType === 'time';
-            return isTimeBased
-              ? a.simpleBaseTime !== undefined && a.simpleBaseTime > 0
-              : a.simpleBaseReps !== undefined && a.simpleBaseReps > 0;
-          })
-        );
-      case 'goals':
-        if (progressionMode === 'simple') {
-          return groupRotation.length > 0;
-        }
-        return groupRotation.length > 0 && rfemRotation.length > 0;
-      case 'review':
-        return validation.valid;
-      default:
-        return false;
-    }
-  }, [
-    currentStep,
-    name,
-    numberOfWeeks,
-    workoutDaysPerWeek,
-    schedulingMode,
-    selectedDays,
-    groups,
-    exerciseMap,
-    progressionMode,
-    groupRotation,
-    rfemRotation,
-    validation,
-  ]);
+  const canProceed = useCallback(
+    (): boolean => proceedBlockReason() === null,
+    [proceedBlockReason]
+  );
 
   // Navigation
   const nextStep = useCallback(() => {
@@ -720,6 +783,7 @@ export function useCycleWizardState({
     // Validation & Navigation
     validation,
     canProceed,
+    proceedBlockReason,
     STEPS,
     displaySteps,
 

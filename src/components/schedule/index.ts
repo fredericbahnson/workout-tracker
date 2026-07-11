@@ -8,3 +8,4 @@ export { WorkoutPreviewModal } from './WorkoutPreviewModal';
 export { WorkoutHistoryModal } from './WorkoutHistoryModal';
 export { DeleteWorkoutModal } from './DeleteWorkoutModal';
 export { CalendarDateModal } from './CalendarDateModal';
+export { CycleModals } from './CycleModals';
