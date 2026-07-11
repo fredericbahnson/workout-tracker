@@ -213,7 +213,7 @@ export const entitlementService = {
   getLockMessage(reason: LockReason): string {
     switch (reason) {
       case 'trial_expired':
-        return 'Your free trial has ended. Subscribe or purchase to continue using this feature.';
+        return 'Your free trial has ended. Purchase to create new training cycles — workout logging, history, and sync stay free.';
       case 'standard_only':
         return 'This feature requires Advanced. Upgrade your subscription to unlock it.';
       case 'standard_can_use_trial':

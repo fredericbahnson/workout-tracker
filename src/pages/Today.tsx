@@ -7,6 +7,7 @@ import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/sch
 import { useAppStore } from '@/stores/appStore';
 import { useSyncedPreferences } from '@/contexts';
 import { useSyncItem } from '@/contexts';
+import { useGatedAction } from '@/contexts';
 import {
   useWorkoutDisplay,
   useCycleCompletion,
@@ -150,6 +151,16 @@ export function TodayPage() {
     showCycleWizard: modals.showCycleWizard,
     onShowCycleWizard: () => modals.openCycleTypeSelector(),
   });
+
+  // Creating a NEW cycle requires Standard access once the trial has ended.
+  // Gate here, before the handlers run, because handleCreateNewCycleFromCompletion
+  // marks the old cycle 'completed' before opening the wizard - nothing may
+  // mutate when the user lacks access.
+  const gatedStartMaxTesting = useGatedAction(handleStartMaxTesting, 'standard');
+  const gatedCreateNewCycleFromCompletion = useGatedAction(
+    handleCreateNewCycleFromCompletion,
+    'standard'
+  );
 
   // Ad-hoc workout management
   const adHocWorkout = useAdHocWorkout({
@@ -593,7 +604,7 @@ export function TodayPage() {
               </Button>
               <Button
                 variant="secondary"
-                onClick={handleCreateNewCycleFromCompletion}
+                onClick={gatedCreateNewCycleFromCompletion}
                 className="w-full"
                 size="sm"
               >
@@ -727,8 +738,8 @@ export function TodayPage() {
         <CycleCompletionModal
           isOpen={showCycleCompletionModal}
           cycle={completedCycleForModal}
-          onStartMaxTesting={handleStartMaxTesting}
-          onCreateNewCycle={handleCreateNewCycleFromCompletion}
+          onStartMaxTesting={gatedStartMaxTesting}
+          onCreateNewCycle={gatedCreateNewCycleFromCompletion}
           onDismiss={handleDismissCycleCompletion}
         />
       )}
