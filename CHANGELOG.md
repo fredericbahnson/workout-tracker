@@ -10,8 +10,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-07-11
 
-Two maintenance passes: a sync-correctness/cleanup pass (commit `e5c63b6`)
-and a UI/UX streamlining pass (commit `1db190f`).
+Three passes: a sync-correctness/cleanup pass (commit `e5c63b6`), a UI/UX
+streamlining pass (commit `1db190f`), and an onboarding/activation pass
+(branch `onboarding-upgrade`).
+
+### Onboarding & trial (activation pass)
+- **Standard gate on new-cycle creation**: after the 28-day trial expires
+  without a purchase, creating NEW cycles (RFEM training + max testing)
+  requires the Standard tier — the paywall's Standard tier was previously
+  never enforced anywhere. Nothing existing is taken away: active cycles,
+  set logging, history, and sync remain free. Simple/Mixed cycles remain
+  Advanced-gated.
+- **Getting-started checklist on Today**: dismissible card tracking
+  add exercises → record a max → create first cycle → complete first
+  workout, derived from live database counts so it works for onboarding
+  skippers too. Onboarding (complete or skip) now lands on Today instead
+  of Exercises.
+- **In-context education wired in** (previously dormant components):
+  `CycleIntroModal` / `MaxTestingIntroModal` show once before the first
+  wizard run; `WhyTheseRepsSheet` (max − RFEM = target derivation) opens
+  from a help icon next to the target in the set log form, with a link to
+  the RFEM guide.
+- **Honest trial messaging**: the onboarding value slide now states what
+  stays free after the trial; a compact countdown chip appears on Today
+  during the final 14 days (amber at ≤7); paywall/banner copy no longer
+  implies the whole app stops working at trial end.
+- **Stale guide copy fixed**: RFEM guide wave now shows the actual default
+  4 → 3 → 2 rotation (was 3 → 4 → 5 → 4); rest-timer lines describe the
+  bottom banner; Quick Start no longer references the removed
+  "Log Ad-Hoc Set" button.
 
 **Deployment note:** Supabase migration `017_max_records_completed_sets_updated_at.sql`
 must be run before shipping these changes (already applied to production).

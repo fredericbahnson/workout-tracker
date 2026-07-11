@@ -22,13 +22,16 @@ The Ascend onboarding system is designed to:
 | Health Disclaimer | 1 | ❌ No |
 | Authentication | 1 | N/A (optional if configured) |
 | Identity & Value | 2 | ✅ Yes |
-| Gesture Demos | 3 | ✅ Yes |
+| Gesture Demos | 4 | ✅ Yes |
 | Exercise Creation | 3 | ✅ Yes |
 | App Tour | 4 | ✅ Yes |
 | RFEM Deep Dive | 3 | ✅ Yes (optional) |
 
 **Minimum path:** Health Disclaimer (1) + Skip onboarding = 1 screen  
 **Full path:** 17 screens (including optional RFEM deep dive)
+
+**Landing:** Both completing and skipping onboarding navigate to **Today**, where the
+**getting-started checklist** (below) guides the remaining setup steps.
 
 ---
 
@@ -75,7 +78,7 @@ The Ascend onboarding system is designed to:
         │   ├── Slide 1: IdentitySlide
         │   └── Slide 2: ValuePropositionSlide
         │
-        ├── PHASE 2: Gesture Demonstrations (3 slides)
+        ├── PHASE 2: Gesture Demonstrations (4 slides)
         │   ├── Slide 3: DayInLifeSlide
         │   ├── Slide 4: SwipeCompleteSlide
         │   ├── Slide 5: SwipeSkipSlide
@@ -182,7 +185,8 @@ The Ascend onboarding system is designed to:
 | Feature 1 | ⚡ Intelligent Progression - Auto-calculated targets based on your performance |
 | Feature 2 | 📴 Works Offline - Train anywhere without internet connection |
 | Feature 3 | 🔄 Syncs Everywhere - Access your data on any device |
-| Trial badge | "4-week free trial to get started" |
+| Trial badge | "Everything free for your first 4 weeks" |
+| Trial subline | "After the trial, workout logging, history, and sync stay free. Creating new training cycles requires a purchase." |
 | Button | "See How It Works" → |
 
 ---
@@ -265,16 +269,17 @@ The Ascend onboarding system is designed to:
 | Icon | Dumbbell (orange/amber gradient) |
 | Headline | "Create Your First Exercise" |
 | Body | "Start with the exercise you're most excited to track" |
-| Suggestion Chips | Pull-ups, Push-ups, Squats, Dips, Rows, Lunges |
+| Suggestion Chips | Pull-ups, Push-ups, Squats, Dips, Rows, Plank |
 | Exercise Name Input | Text field with placeholder "Or type your own..." |
 | Type Selector | Push, Pull, Legs, Core, Other |
+| Measurement Toggle | Reps / Time (auto-set by chips, e.g. Plank → Time) |
 | Note | "You can add more exercises and customize details later" |
 | Button | "Continue" → (disabled until name entered) |
 
 **Suggestion Chips (ExerciseSuggestionChips.tsx):**
 ```
-Pull-ups (pull) | Push-ups (push) | Squats (legs)
-Dips (push) | Rows (pull) | Lunges (legs)
+Pull-ups (pull, reps) | Push-ups (push, reps) | Squats (legs, reps)
+Dips (push, reps) | Rows (pull, reps) | Plank (core, time)
 ```
 
 ---
@@ -287,8 +292,8 @@ Dips (push) | Rows (pull) | Lunges (legs)
 |---------|---------|
 | Icon | Trophy (amber/orange gradient) |
 | Headline | "What's Your Best?" |
-| Body | "How many **{exerciseName}** can you do in one set, **with good form**?" |
-| Input | NumberInput (default: 10, range: 1-100) |
+| Body | "How many **{exerciseName}** can you do in one set, **with good form**?" (or "How long can you hold..." for time-based) |
+| Input | NumberInput (reps: default 10, max 100; time: seconds, max 600) |
 | Help Toggle | "Not sure?" - reveals tip |
 | Tip Content | "It's okay to estimate! Think of a recent workout where you pushed hard but kept good form." |
 | Note | "Ascend uses this to calculate your training targets" |
@@ -310,7 +315,7 @@ Dips (push) | Rows (pull) | Lunges (legs)
 | Icon | CheckCircle (green, no gradient) |
 | Headline | "First Exercise Created!" |
 | Summary Card | Shows exercise name and max (or "Max not set yet") |
-| Body | "You can add more exercises from the Exercises tab after finishing the tour." |
+| Body | "Add more exercises from the Exercises tab, then create a training cycle—or start logging workouts right away in ad-hoc mode." |
 | Button | "Continue Tour" → |
 
 ---
@@ -329,7 +334,7 @@ Dips (push) | Rows (pull) | Lunges (legs)
 | Headline | "Everything Starts on Today" |
 | Body | "The Today page shows your scheduled workout and tracks your progress." |
 | Mock UI | Today's Workout (3/8 sets): Pushups ✓, Rows (with swipe indicator), Squats |
-| Feature List | ✋ Swipe right to complete at target, ⏱️ Rest timer starts automatically, 🏋️ Log ad-hoc sets anytime, ✕ Swipe left to skip a set, ✏️ Tap to edit details of the set |
+| Feature List | ✋ Swipe right to complete at target, ⏱️ Rest timer appears in a bar at the bottom — tap to expand, ➕ Tap + to add extra sets anytime, ✕ Swipe left to skip a set, ✏️ Tap to edit details of the set |
 | Button | "Next: Exercises" → |
 
 ---
@@ -409,9 +414,9 @@ Dips (push) | Rows (pull) | Lunges (legs)
 | Icon | Repeat (emerald/cyan gradient) |
 | Headline | "Automatic Intensity Waves" |
 | Body | "Ascend rotates your RFEM values from workout to workout:" |
-| Visualization | SVG wave chart showing RFEM pattern: 3 → 4 → 5 → 4 → 3 → 4 → 5 → 4 across 8 workouts |
-| Badge | "RFEM rotates: **3 → 4 → 5 → 4**" |
-| Labels | "← Harder sessions" / "Lighter sessions →" |
+| Visualization | SVG wave chart showing the default RFEM rotation 4 → 3 → 2 repeating across 8 workouts |
+| Badge | "RFEM rotates: **4 → 3 → 2**" |
+| Caption | "Lower RFEM = closer to your max. Each wave builds, then resets." |
 | Note | "This creates **natural periodization** without you having to think about it." |
 | Button | "Other Training Modes" → |
 
@@ -431,6 +436,56 @@ Dips (push) | Rows (pull) | Lunges (legs)
 | Button | "Get Started" |
 
 **Milestone tracked:** `rfemDeepDiveSeen: true`
+
+---
+
+## Post-Onboarding Activation
+
+Onboarding is only the first half of activation; these systems take over on Today.
+
+### Getting-Started Checklist
+
+**Components:** `GettingStartedCard` (`components/workouts/today/`), `useGettingStartedProgress` (`hooks/`), `deriveGettingStarted` (`utils/gettingStarted.ts`)
+
+A dismissible card at the top of Today tracking four steps:
+1. **Add your exercises** → navigates to Exercises
+2. **Record a max** → navigates to Exercises
+3. **Create your first cycle** → opens the cycle type selector
+4. **Complete your first workout** → completes on its own once sets are logged
+
+Progress derives from **live database counts** (not milestone flags, which are never
+written for onboarding skippers). The card hides when dismissed
+(`gettingStartedDismissed` in appStore), when all steps are done, or for established
+users (a cycle exists AND sets have been logged).
+
+### First-Run Intro Modals (education/)
+
+`CycleIntroModal` and `MaxTestingIntroModal` show **once** before the first run of the
+respective wizard, triggered from `CycleTypeSelector` (covers both Today and Schedule
+entry paths). Seen-state lives in the `cycleIntroSeen` / `maxTestingIntroSeen`
+milestones; closing the modal also counts as seen. Existing users never see them (the
+appStore v1 migration marks both true).
+
+### "Why These Reps?" Sheet (education/)
+
+`WhyTheseRepsSheet` opens from a help icon next to the target in the scheduled-set log
+form (`QuickLogForm` → `ScheduledSetModal` → Today). It shows the actual derivation for
+the tapped set — `max − RFEM = target`, `base + increment × week` for simple mode, or
+the fixed conditioning target — with a "Learn more about RFEM" link to the standalone
+`RFEMGuide`.
+
+### Trial Model & Standard Gate
+
+- The 28-day trial starts silently on first launch (`trialService`, localStorage
+  `ascend_trial_start`); during it, everything is unlocked (`appMode` defaults to advanced).
+- **After expiry without a purchase, creating NEW cycles requires the Standard tier**:
+  RFEM Training and Max Rep Testing lock in `CycleTypeSelector` (blue "Standard" badge),
+  and Today's cycle-completion actions are wrapped in `useGatedAction(…, 'standard')`.
+  Nothing existing is taken away — active cycles, set logging, history, and sync stay free.
+  Simple/Mixed cycles remain Advanced-gated as before.
+- A compact `TrialBanner` chip appears on Today during the **final 14 days** of the trial
+  (amber "ending soon" styling at ≤7 days); tapping opens the two-tier paywall. The full
+  banner in Settings is unchanged.
 
 ---
 
@@ -503,9 +558,10 @@ Interactive RFEM demonstration:
 **Component:** `ExerciseSuggestionChips.tsx`
 
 Quick selection chips:
-- 6 common exercises: Pull-ups, Push-ups, Squats, Dips, Rows, Lunges
+- 6 common exercises: Pull-ups, Push-ups, Squats, Dips, Rows, Plank
 - Selection state with checkmark
-- Auto-fills exercise name and type
+- Auto-fills exercise name, type, and measurement type (Plank → time)
+- Also reused by the main ExerciseForm in create mode
 
 ---
 
@@ -524,13 +580,14 @@ onboardingMilestones: {
   swipeDemoPracticed: boolean        // Completed gesture demos
   firstExerciseCreated: boolean      // Created first exercise
   firstMaxRecorded: boolean          // Set initial max
-  firstSetLogged: boolean            // Post-onboarding
-  firstCycleCreated: boolean         // Post-onboarding
+  firstSetLogged: boolean            // Declared; not currently written
+  firstCycleCreated: boolean         // Declared; not currently written
   rfemDeepDiveSeen: boolean          // Completed RFEM guide
-  cycleIntroSeen: boolean            // Help guide
-  maxTestingIntroSeen: boolean       // Help guide
-  adHocSessionCount: number          // Post-onboarding
+  cycleIntroSeen: boolean            // Written by CycleTypeSelector intro flow
+  maxTestingIntroSeen: boolean       // Written by CycleTypeSelector intro flow
+  adHocSessionCount: number          // Declared; not currently written
 }
+gettingStartedDismissed: boolean     // Getting-started checklist dismissal
 
 // AuthContext
 hasAcknowledgedHealthDisclaimer: boolean  // Stored with user
@@ -542,6 +599,8 @@ hasAcknowledgedHealthDisclaimer: boolean  // Stored with user
 - Skip button appears after first slide
 - Confirmation modal prevents accidental skip
 - Skipping sets `hasCompletedOnboarding: true`
+- Both skip and complete land on Today (the getting-started checklist covers
+  whatever setup the user skipped)
 
 **Resume Handling:**
 - If `hasStartedOnboarding && !hasCompletedOnboarding`, flow resumes

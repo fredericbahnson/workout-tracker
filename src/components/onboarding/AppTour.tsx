@@ -162,7 +162,7 @@ export function AppTour({
                   </div>
                   <div className="flex items-center gap-2">
                     <Timer className="w-4 h-4 text-primary-500" />
-                    <span>Rest timer starts automatically</span>
+                    <span>Rest timer appears in a bar at the bottom — tap to expand</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Plus className="w-4 h-4 text-primary-500" />

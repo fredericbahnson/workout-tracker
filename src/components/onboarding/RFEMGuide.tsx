@@ -128,8 +128,8 @@ export function RFEMGuide({
                     style={{ overflow: 'visible' }}
                   >
                     {/* Y-axis labels and grid lines */}
-                    {[3, 4, 5].map(rfem => {
-                      const y = 15 + ((5 - rfem) / 2) * 55;
+                    {[2, 3, 4].map(rfem => {
+                      const y = 15 + ((4 - rfem) / 2) * 55;
                       return (
                         <g key={rfem}>
                           <text
@@ -164,16 +164,17 @@ export function RFEMGuide({
                     >
                       RFEM
                     </text>
-                    {/* Wave line */}
+                    {/* Wave line: the default 4 -> 3 -> 2 rotation, ramping
+                        toward the max then resetting each wave */}
                     <path
-                      d="M 25 70
-                         C 25 70, 44 70, 62 42.5
-                         C 80 15, 80 15, 99 15
-                         C 118 15, 118 15, 136 42.5
-                         C 154 70, 154 70, 173 70
-                         C 192 70, 192 70, 211 42.5
-                         C 229 15, 229 15, 248 15
-                         C 267 15, 267 15, 285 42.5"
+                      d="M 25 15
+                         L 62 42.5
+                         L 99 70
+                         L 136 15
+                         L 173 42.5
+                         L 211 70
+                         L 248 15
+                         L 285 42.5"
                       fill="none"
                       stroke="#10b981"
                       strokeWidth="2.5"
@@ -182,16 +183,16 @@ export function RFEMGuide({
                     />
                     {/* Data points */}
                     {[
-                      { x: 25, y: 70, rfem: 3 },
-                      { x: 62, y: 42.5, rfem: 4 },
-                      { x: 99, y: 15, rfem: 5 },
-                      { x: 136, y: 42.5, rfem: 4 },
-                      { x: 173, y: 70, rfem: 3 },
-                      { x: 211, y: 42.5, rfem: 4 },
-                      { x: 248, y: 15, rfem: 5 },
-                      { x: 285, y: 42.5, rfem: 4 },
+                      { x: 25, y: 15, rfem: 4 },
+                      { x: 62, y: 42.5, rfem: 3 },
+                      { x: 99, y: 70, rfem: 2 },
+                      { x: 136, y: 15, rfem: 4 },
+                      { x: 173, y: 42.5, rfem: 3 },
+                      { x: 211, y: 70, rfem: 2 },
+                      { x: 248, y: 15, rfem: 4 },
+                      { x: 285, y: 42.5, rfem: 3 },
                     ].map((point, index) => {
-                      const isPeakOrNadir = point.rfem === 3 || point.rfem === 5;
+                      const isPeakOrNadir = point.rfem === 2 || point.rfem === 4;
                       return (
                         <g key={index}>
                           <circle
@@ -215,12 +216,11 @@ export function RFEMGuide({
                   <div className="mt-2 text-center">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
                       <span>RFEM rotates:</span>
-                      <span className="font-bold">3 → 4 → 5 → 4</span>
+                      <span className="font-bold">4 → 3 → 2</span>
                     </div>
                   </div>
-                  <div className="flex justify-between mt-2 text-[10px] text-gray-400 px-2">
-                    <span>← Harder sessions</span>
-                    <span>Lighter sessions →</span>
+                  <div className="mt-2 text-center text-[10px] text-gray-400">
+                    Lower RFEM = closer to your max. Each wave builds, then resets.
                   </div>
                 </div>
                 <p className="text-sm">

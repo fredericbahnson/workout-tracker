@@ -185,7 +185,7 @@ export function QuickStartGuide({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-500 font-bold">3.</span>
-                    <span>Rest timer starts automatically</span>
+                    <span>A rest timer appears in a bar at the bottom — tap it to expand</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-500 font-bold">4.</span>
@@ -237,7 +237,7 @@ export function QuickStartGuide({
                       If you just want to log a workout...
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Go to Today and tap "Log Ad-Hoc Set"
+                      Go to Today and tap "Log" in the top corner
                     </div>
                   </div>
                 </div>
