@@ -1,25 +1,29 @@
 /**
  * OnboardingFlow Component
  *
- * Orchestrates the complete onboarding experience with the new flow:
+ * Orchestrates the complete onboarding experience:
  *
  * Phase 1: Identity & Value (2 slides)
- *   - IdentitySlide: Calisthenics identity hook
- *   - ValuePropositionSlide: Key differentiators, trial mention
+ *   - IdentitySlide: Calisthenics identity hook (no skip on this slide)
+ *   - ValuePropositionSlide: Key differentiators + honest trial terms
  *
- * Phase 2: Experience Preview (2 slides)
- *   - DayInLifeSlide: What a typical day looks like
- *   - SwipeDemoSlide: Interactive swipe practice (must complete)
+ * Phase 2: Experience Preview (4 slides)
+ *   - DayInLifeSlide: What the Today view looks like
+ *   - SwipeCompleteSlide / SwipeSkipSlide: Gesture demos
+ *   - TapToEditSlide: Interactive tap practice (advances on tap)
  *
  * Phase 3: Quick Start (3 slides)
- *   - FirstExerciseSlide: Create first exercise with suggestion chips
- *   - RecordMaxSlide: Establish baseline (optional)
- *   - ReadySlide: Success with next-step options
+ *   - FirstExerciseSlide: Collect first exercise (name/type/measurement)
+ *   - RecordMaxSlide: Collect baseline max (optional; "I'll set this later")
+ *   - ExerciseSuccessSlide: DB write happens before this (exercise + optional max)
  *
- * Phase 4: RFEM Deep Dive (optional, accessible from Ready slide or Settings)
- *   - Condensed RFEMGuide (3 slides)
+ * Phase 4: App Tour (4 slides) - AppTour, also launchable from Settings > Help
  *
- * Total: 7 required slides + 3 optional RFEM slides
+ * Phase 5: RFEM Deep Dive (3 slides, optional - offered on AppTour's last slide)
+ *
+ * Total: 9 main slides + 4 tour slides; skip (X) exits the whole flow.
+ * Completion and skip both land on Today, where the getting-started
+ * checklist takes over.
  */
 
 import { useState } from 'react';

@@ -123,12 +123,13 @@ function AppContent() {
   };
 
   // Handler for when onboarding is complete
+  // Lands on Today, where the getting-started checklist guides the next steps
   const handleOnboardingComplete = () => {
     setHasCompletedOnboarding(true);
     setHasStartedOnboarding(false);
     setShowOnboarding(false);
     clearNewUserFlag();
-    navigate('/exercises');
+    navigate('/');
   };
 
   // Handler for skipping onboarding
@@ -137,7 +138,7 @@ function AppContent() {
     setHasStartedOnboarding(false);
     setShowOnboarding(false);
     clearNewUserFlag();
-    navigate('/exercises');
+    navigate('/');
   };
 
   // Handler for standalone health disclaimer (existing users)

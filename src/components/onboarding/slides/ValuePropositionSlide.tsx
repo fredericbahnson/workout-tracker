@@ -70,13 +70,19 @@ export function ValuePropositionSlide({ onNext }: ValuePropositionSlideProps) {
           </div>
 
           {/* Trial badge */}
-          <div className="flex items-center justify-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800">
-              <Sparkles className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-                4-week free trial to get started
-              </span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800">
+                <Sparkles className="w-4 h-4 text-primary-500" />
+                <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+                  Everything free for your first 4 weeks
+                </span>
+              </div>
             </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              After the trial, workout logging, history, and sync stay free. Creating new training
+              cycles requires a purchase.
+            </p>
           </div>
         </div>
       }
