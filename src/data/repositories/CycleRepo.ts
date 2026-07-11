@@ -1,6 +1,7 @@
 import { db, generateId } from '@/data/db';
 import type { Cycle, Group, ExerciseAssignment } from '@/types';
-import { now, normalizeDates, normalizeDatesArray, compareDates } from '@/utils/dateUtils';
+import { now, normalizeDates, normalizeDatesArray } from '@/utils/dateUtils';
+import { getNormalized, deleteIfExists } from './repoUtils';
 
 export type CycleFormData = Omit<Cycle, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -16,10 +17,9 @@ export const CycleRepo = {
    * @returns Promise resolving to array of all cycles (newest first)
    */
   async getAll(): Promise<Cycle[]> {
-    const records = await db.cycles.toArray();
-    const normalized = normalizeDatesArray(records, DATE_FIELDS);
-    // Sort descending by startDate
-    return normalized.sort((a, b) => compareDates(b.startDate, a.startDate));
+    // Sort descending by startDate via the index
+    const records = await db.cycles.orderBy('startDate').reverse().toArray();
+    return normalizeDatesArray(records, DATE_FIELDS);
   },
 
   /**
@@ -28,8 +28,7 @@ export const CycleRepo = {
    * @returns Promise resolving to the cycle, or undefined if not found
    */
   async getById(id: string): Promise<Cycle | undefined> {
-    const record = await db.cycles.get(id);
-    return record ? normalizeDates(record, DATE_FIELDS) : undefined;
+    return getNormalized<Cycle>(db.cycles, id, DATE_FIELDS);
   },
 
   /**
@@ -88,11 +87,7 @@ export const CycleRepo = {
   },
 
   async delete(id: string): Promise<boolean> {
-    const existing = await db.cycles.get(id);
-    if (!existing) return false;
-
-    await db.cycles.delete(id);
-    return true;
+    return deleteIfExists<Cycle>(db.cycles, id);
   },
 
   // Helper to create a group with generated ID

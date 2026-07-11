@@ -1,6 +1,7 @@
 import { db, generateId } from '@/data/db';
 import type { ScheduledWorkout } from '@/types';
 import { now, normalizeDates, compareDates } from '@/utils/dateUtils';
+import { deleteIfExists } from './repoUtils';
 
 // ScheduledWorkout has optional completedAt and scheduledDate
 const DATE_FIELDS: (keyof ScheduledWorkout)[] = ['completedAt', 'scheduledDate'];
@@ -150,11 +151,7 @@ export const ScheduledWorkoutRepo = {
   },
 
   async delete(id: string): Promise<boolean> {
-    const existing = await db.scheduledWorkouts.get(id);
-    if (!existing) return false;
-
-    await db.scheduledWorkouts.delete(id);
-    return true;
+    return deleteIfExists<ScheduledWorkout>(db.scheduledWorkouts, id);
   },
 
   async deleteByCycleId(cycleId: string): Promise<number> {
@@ -228,15 +225,19 @@ export const ScheduledWorkoutRepo = {
    * Updates a workout's skip reason and marks it as skipped.
    * @param id - The workout UUID
    * @param reason - The reason for skipping (optional)
+   * @returns Promise resolving to the updated workout, or undefined if not found
    */
-  async updateSkipReason(id: string, reason?: string): Promise<void> {
+  async updateSkipReason(id: string, reason?: string): Promise<ScheduledWorkout | undefined> {
     const existing = await this.getById(id);
-    if (existing) {
-      await db.scheduledWorkouts.put({
-        ...existing,
-        status: 'skipped',
-        skipReason: reason,
-      });
-    }
+    if (!existing) return undefined;
+
+    const updated: ScheduledWorkout = {
+      ...existing,
+      status: 'skipped',
+      skipReason: reason,
+      updatedAt: now(),
+    };
+    await db.scheduledWorkouts.put(updated);
+    return updated;
   },
 };

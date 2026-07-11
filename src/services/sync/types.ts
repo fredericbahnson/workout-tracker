@@ -70,6 +70,8 @@ export interface RemoteMaxRecord {
   weight: number | null;
   notes: string;
   recorded_at: string;
+  /** Nullable: rows from a DB where migration 017 hasn't run yet */
+  updated_at: string | null;
   deleted_at: string | null;
 }
 
@@ -89,6 +91,8 @@ export interface RemoteCompletedSet {
   completed_at: string;
   notes: string;
   parameters: unknown;
+  /** Nullable: rows from a DB where migration 017 hasn't run yet */
+  updated_at: string | null;
   deleted_at: string | null;
 }
 
@@ -158,10 +162,10 @@ export interface RemoteUserPreferences {
   default_conditioning_reps: number;
   conditioning_weekly_increment: number;
   weekly_set_goals: unknown;
-  rest_timer_enabled: boolean;
-  rest_timer_duration_seconds: number;
-  max_test_rest_timer_enabled: boolean;
-  max_test_rest_timer_duration_seconds: number;
+  rest_timer_enabled: boolean | null; // null for legacy rows predating these columns
+  rest_timer_duration_seconds: number | null;
+  max_test_rest_timer_enabled: boolean | null;
+  max_test_rest_timer_duration_seconds: number | null;
   timer_volume: number | null; // null for backwards compatibility
   last_scheduling_mode: string | null;
   health_disclaimer_acknowledged_at: string | null; // null means not acknowledged

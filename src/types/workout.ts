@@ -117,6 +117,8 @@ export interface CompletedSet {
   /** Weight in lbs (undefined = bodyweight) */
   weight?: number;
   completedAt: Date;
+  /** Last local modification time, used for last-write-wins sync (optional for pre-v8 records) */
+  updatedAt?: Date;
   notes: string;
   parameters: Record<string, string | number>;
 }

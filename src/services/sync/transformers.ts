@@ -19,6 +19,7 @@ import type {
   SchedulingMode,
   DayOfWeek,
 } from '@/types';
+import { DEFAULT_USER_PREFERENCES } from '@/types/preferences';
 import type {
   RemoteExercise,
   RemoteMaxRecord,
@@ -67,6 +68,7 @@ export function remoteToLocalMaxRecord(remote: RemoteMaxRecord): MaxRecord {
     weight: remote.weight ?? undefined,
     notes: remote.notes || '',
     recordedAt: toDateRequired(remote.recorded_at),
+    updatedAt: toDate(remote.updated_at) ?? toDateRequired(remote.recorded_at),
   };
 }
 
@@ -83,6 +85,7 @@ export function remoteToLocalCompletedSet(remote: RemoteCompletedSet): Completed
     actualReps: remote.actual_reps,
     weight: remote.weight ?? undefined,
     completedAt: toDateRequired(remote.completed_at),
+    updatedAt: toDate(remote.updated_at) ?? toDateRequired(remote.completed_at),
     notes: remote.notes || '',
     parameters: (remote.parameters as Record<string, string | number>) || {},
   };
@@ -157,10 +160,10 @@ export function localToRemoteExercise(local: Exercise, userId: string) {
     measurement_type: local.measurementType || 'reps',
     notes: local.notes,
     custom_parameters: local.customParameters,
-    default_conditioning_reps: local.defaultConditioningReps || null,
-    default_conditioning_time: local.defaultConditioningTime || null,
-    weight_enabled: local.weightEnabled || false,
-    default_weight: local.defaultWeight || null,
+    default_conditioning_reps: local.defaultConditioningReps ?? null,
+    default_conditioning_time: local.defaultConditioningTime ?? null,
+    weight_enabled: local.weightEnabled ?? false,
+    default_weight: local.defaultWeight ?? null,
     last_cycle_settings: local.lastCycleSettings || null,
     created_at: toISOString(local.createdAt),
     updated_at: toISOString(local.updatedAt),
@@ -175,11 +178,12 @@ export function localToRemoteMaxRecord(local: MaxRecord, userId: string) {
     id: local.id,
     user_id: userId,
     exercise_id: local.exerciseId,
-    max_reps: local.maxReps || null,
-    max_time: local.maxTime || null,
-    weight: local.weight || null,
+    max_reps: local.maxReps ?? null,
+    max_time: local.maxTime ?? null,
+    weight: local.weight ?? null,
     notes: local.notes,
     recorded_at: toISOString(local.recordedAt),
+    updated_at: toISOString(local.updatedAt ?? local.recordedAt),
   };
 }
 
@@ -195,8 +199,9 @@ export function localToRemoteCompletedSet(local: CompletedSet, userId: string) {
     exercise_id: local.exerciseId,
     target_reps: local.targetReps,
     actual_reps: local.actualReps,
-    weight: local.weight || null,
+    weight: local.weight ?? null,
     completed_at: toISOString(local.completedAt),
+    updated_at: toISOString(local.updatedAt ?? local.completedAt),
     notes: local.notes,
     parameters: local.parameters,
   };
@@ -221,7 +226,7 @@ export function localToRemoteCycle(local: Cycle, userId: string) {
     group_rotation: local.groupRotation,
     rfem_rotation: local.rfemRotation,
     conditioning_weekly_rep_increment: local.conditioningWeeklyRepIncrement,
-    conditioning_weekly_time_increment: local.conditioningWeeklyTimeIncrement || null,
+    conditioning_weekly_time_increment: local.conditioningWeeklyTimeIncrement ?? null,
     include_warmup_sets: local.includeWarmupSets ?? false,
     include_timed_warmups: local.includeTimedWarmups ?? false,
     scheduling_mode: local.schedulingMode || null,
@@ -272,12 +277,16 @@ export function remoteToLocalUserPreferences(remote: RemoteUserPreferences): Use
     conditioningWeeklyIncrement: remote.conditioning_weekly_increment,
     weeklySetGoals: remote.weekly_set_goals as WeeklySetGoals,
     restTimer: {
-      enabled: remote.rest_timer_enabled,
-      durationSeconds: remote.rest_timer_duration_seconds,
+      enabled: remote.rest_timer_enabled ?? DEFAULT_USER_PREFERENCES.restTimer.enabled,
+      durationSeconds:
+        remote.rest_timer_duration_seconds ?? DEFAULT_USER_PREFERENCES.restTimer.durationSeconds,
     },
     maxTestRestTimer: {
-      enabled: remote.max_test_rest_timer_enabled,
-      durationSeconds: remote.max_test_rest_timer_duration_seconds,
+      enabled:
+        remote.max_test_rest_timer_enabled ?? DEFAULT_USER_PREFERENCES.maxTestRestTimer.enabled,
+      durationSeconds:
+        remote.max_test_rest_timer_duration_seconds ??
+        DEFAULT_USER_PREFERENCES.maxTestRestTimer.durationSeconds,
     },
     timerVolume: remote.timer_volume ?? 40, // Default to 40 for existing records
     lastSchedulingMode: (remote.last_scheduling_mode as SchedulingMode) ?? undefined,

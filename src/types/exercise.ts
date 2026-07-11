@@ -105,5 +105,7 @@ export interface MaxRecord {
   /** Weight in lbs (undefined = bodyweight) */
   weight?: number;
   recordedAt: Date;
+  /** Last local modification time, used for last-write-wins sync (optional for pre-v8 records) */
+  updatedAt?: Date;
   notes: string;
 }

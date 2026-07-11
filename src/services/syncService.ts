@@ -19,6 +19,7 @@ import type {
   RemoteCycle,
   RemoteScheduledWorkout,
   RemoteUserPreferences,
+  SyncTableName,
 } from './sync/types';
 import {
   remoteToLocalExercise,
@@ -38,17 +39,7 @@ import {
 const log = createScopedLogger('SyncService');
 
 // Transform local item to remote format based on table type
-function transformLocalToRemote(
-  table:
-    | 'exercises'
-    | 'max_records'
-    | 'completed_sets'
-    | 'cycles'
-    | 'scheduled_workouts'
-    | 'user_preferences',
-  item: unknown,
-  userId: string
-) {
+function transformLocalToRemote(table: SyncTableName, item: unknown, userId: string) {
   switch (table) {
     case 'exercises':
       return localToRemoteExercise(item as Exercise, userId);
@@ -114,10 +105,15 @@ export const SyncService = {
 
     try {
       // Pull from cloud first
-      await this.pullFromCloud(userId);
+      const { failedTables } = await this.pullFromCloud(userId);
 
-      // Then push local changes
-      await this.pushToCloud(userId);
+      if (failedTables.length >= 6) {
+        throw new Error('Sync pull failed for all tables');
+      }
+
+      // Then push local changes, skipping tables whose pull failed so we
+      // don't overwrite the cloud with potentially stale local data
+      await this.pushToCloud(userId, failedTables);
 
       lastSyncTime = now();
       this.setStatus('idle');
@@ -130,7 +126,8 @@ export const SyncService = {
   },
 
   // Pull data from Supabase and merge with local
-  async pullFromCloud(userId: string) {
+  // Returns the tables whose pull failed so pushToCloud can skip them
+  async pullFromCloud(userId: string): Promise<{ failedTables: SyncTableName[] }> {
     // Fetch all user data from Supabase
     const [
       exercisesResult,
@@ -148,34 +145,23 @@ export const SyncService = {
       supabase.from('user_preferences').select('*').eq('user_id', userId),
     ]);
 
-    // Log errors so we can debug if pull fails
-    if (exercisesResult.error)
-      log.error(new Error(exercisesResult.error.message), {
-        table: 'exercises',
-        operation: 'pull',
-      });
-    if (maxRecordsResult.error)
-      log.error(new Error(maxRecordsResult.error.message), {
-        table: 'max_records',
-        operation: 'pull',
-      });
-    if (completedSetsResult.error)
-      log.error(new Error(completedSetsResult.error.message), {
-        table: 'completed_sets',
-        operation: 'pull',
-      });
-    if (cyclesResult.error)
-      log.error(new Error(cyclesResult.error.message), { table: 'cycles', operation: 'pull' });
-    if (scheduledWorkoutsResult.error)
-      log.error(new Error(scheduledWorkoutsResult.error.message), {
-        table: 'scheduled_workouts',
-        operation: 'pull',
-      });
-    if (userPreferencesResult.error)
-      log.error(new Error(userPreferencesResult.error.message), {
-        table: 'user_preferences',
-        operation: 'pull',
-      });
+    // Log errors so we can debug if pull fails, and track failed tables so
+    // the subsequent push doesn't overwrite the cloud with stale local data
+    const failedTables: SyncTableName[] = [];
+    const pullResults: Array<{ table: SyncTableName; error: { message: string } | null }> = [
+      { table: 'exercises', error: exercisesResult.error },
+      { table: 'max_records', error: maxRecordsResult.error },
+      { table: 'completed_sets', error: completedSetsResult.error },
+      { table: 'cycles', error: cyclesResult.error },
+      { table: 'scheduled_workouts', error: scheduledWorkoutsResult.error },
+      { table: 'user_preferences', error: userPreferencesResult.error },
+    ];
+    for (const { table, error } of pullResults) {
+      if (error) {
+        log.error(new Error(error.message), { table, operation: 'pull' });
+        failedTables.push(table);
+      }
+    }
 
     const exercises = exercisesResult.data;
     const maxRecords = maxRecordsResult.data;
@@ -184,44 +170,64 @@ export const SyncService = {
     const scheduledWorkouts = scheduledWorkoutsResult.data;
     const userPreferences = userPreferencesResult.data;
 
-    // Merge exercises
+    // Merge exercises (last-write-wins on updatedAt)
     if (exercises) {
-      for (const remote of exercises as RemoteExercise[]) {
-        const local = await db.exercises.get(remote.id);
-        if (!local || isAfter(remote.updated_at, local.updatedAt)) {
-          await db.exercises.put(remoteToLocalExercise(remote));
-        }
-      }
+      const remotes = exercises as RemoteExercise[];
+      const locals = await db.exercises.bulkGet(remotes.map(r => r.id));
+      const toWrite = remotes
+        .filter((remote, i) => {
+          const local = locals[i];
+          return !local || isAfter(remote.updated_at, local.updatedAt);
+        })
+        .map(remoteToLocalExercise);
+      if (toWrite.length > 0) await db.exercises.bulkPut(toWrite);
     }
 
-    // Merge max records
+    // Merge max records (last-write-wins on updatedAt)
+    // Null guards: remote updated_at is null until Supabase migration 017 runs;
+    // a null remote timestamp never overwrites an existing local record
     if (maxRecords) {
-      for (const remote of maxRecords as RemoteMaxRecord[]) {
-        const local = await db.maxRecords.get(remote.id);
-        if (!local) {
-          await db.maxRecords.put(remoteToLocalMaxRecord(remote));
-        }
-      }
+      const remotes = maxRecords as RemoteMaxRecord[];
+      const locals = await db.maxRecords.bulkGet(remotes.map(r => r.id));
+      const toWrite = remotes
+        .filter((remote, i) => {
+          const local = locals[i];
+          if (!local) return true;
+          return Boolean(
+            remote.updated_at && (!local.updatedAt || isAfter(remote.updated_at, local.updatedAt))
+          );
+        })
+        .map(remoteToLocalMaxRecord);
+      if (toWrite.length > 0) await db.maxRecords.bulkPut(toWrite);
     }
 
-    // Merge completed sets
+    // Merge completed sets (last-write-wins on updatedAt, same null guards)
     if (completedSets) {
-      for (const remote of completedSets as RemoteCompletedSet[]) {
-        const local = await db.completedSets.get(remote.id);
-        if (!local) {
-          await db.completedSets.put(remoteToLocalCompletedSet(remote));
-        }
-      }
+      const remotes = completedSets as RemoteCompletedSet[];
+      const locals = await db.completedSets.bulkGet(remotes.map(r => r.id));
+      const toWrite = remotes
+        .filter((remote, i) => {
+          const local = locals[i];
+          if (!local) return true;
+          return Boolean(
+            remote.updated_at && (!local.updatedAt || isAfter(remote.updated_at, local.updatedAt))
+          );
+        })
+        .map(remoteToLocalCompletedSet);
+      if (toWrite.length > 0) await db.completedSets.bulkPut(toWrite);
     }
 
-    // Merge cycles
+    // Merge cycles (last-write-wins on updatedAt)
     if (cycles) {
-      for (const remote of cycles as RemoteCycle[]) {
-        const local = await db.cycles.get(remote.id);
-        if (!local || isAfter(remote.updated_at, local.updatedAt)) {
-          await db.cycles.put(remoteToLocalCycle(remote));
-        }
-      }
+      const remotes = cycles as RemoteCycle[];
+      const locals = await db.cycles.bulkGet(remotes.map(r => r.id));
+      const toWrite = remotes
+        .filter((remote, i) => {
+          const local = locals[i];
+          return !local || isAfter(remote.updated_at, local.updatedAt);
+        })
+        .map(remoteToLocalCycle);
+      if (toWrite.length > 0) await db.cycles.bulkPut(toWrite);
     }
 
     // Merge scheduled workouts
@@ -229,6 +235,9 @@ export const SyncService = {
       // Build a map of existing cycleId:sequenceNumber combinations to prevent duplicates
       // Map stores the local workout ID for each key, so we can compare
       const localWorkouts = await db.scheduledWorkouts.toArray();
+      const localWorkoutsById = new Map<string, ScheduledWorkout>(
+        localWorkouts.map(w => [w.id, w])
+      );
       const existingWorkoutsByKey = new Map<string, ScheduledWorkout>();
 
       for (const w of localWorkouts) {
@@ -242,7 +251,7 @@ export const SyncService = {
       }
 
       for (const remote of scheduledWorkouts as RemoteScheduledWorkout[]) {
-        const local = await db.scheduledWorkouts.get(remote.id);
+        const local = localWorkoutsById.get(remote.id);
 
         // Skip if remote has no sequence number (shouldn't happen but be defensive)
         if (remote.sequence_number === undefined || remote.sequence_number === null) {
@@ -273,8 +282,11 @@ export const SyncService = {
               `Replacing local workout ${existingLocal.id} with remote ${remote.id} - remote has warmups`
             );
             await db.scheduledWorkouts.delete(existingLocal.id);
-            await db.scheduledWorkouts.put(remoteToLocalScheduledWorkout(remote));
-            existingWorkoutsByKey.set(remoteKey, remoteToLocalScheduledWorkout(remote));
+            const converted = remoteToLocalScheduledWorkout(remote);
+            await db.scheduledWorkouts.put(converted);
+            existingWorkoutsByKey.set(remoteKey, converted);
+            localWorkoutsById.delete(existingLocal.id);
+            localWorkoutsById.set(converted.id, converted);
             continue;
           } else {
             // Both have same warmup status - prefer local (don't overwrite with cloud version)
@@ -290,6 +302,7 @@ export const SyncService = {
           await db.scheduledWorkouts.put(converted);
           // Track this workout
           existingWorkoutsByKey.set(remoteKey, converted);
+          localWorkoutsById.set(converted.id, converted);
         }
       }
     }
@@ -333,34 +346,33 @@ export const SyncService = {
     ]);
 
     if (deletedExercises) {
-      for (const item of deletedExercises as { id: string }[]) {
-        await db.exercises.delete(item.id);
-      }
+      await db.exercises.bulkDelete((deletedExercises as { id: string }[]).map(item => item.id));
     }
     if (deletedMaxRecords) {
-      for (const item of deletedMaxRecords as { id: string }[]) {
-        await db.maxRecords.delete(item.id);
-      }
+      await db.maxRecords.bulkDelete((deletedMaxRecords as { id: string }[]).map(item => item.id));
     }
     if (deletedCompletedSets) {
-      for (const item of deletedCompletedSets as { id: string }[]) {
-        await db.completedSets.delete(item.id);
-      }
+      await db.completedSets.bulkDelete(
+        (deletedCompletedSets as { id: string }[]).map(item => item.id)
+      );
     }
     if (deletedCycles) {
-      for (const item of deletedCycles as { id: string }[]) {
-        await db.cycles.delete(item.id);
-      }
+      await db.cycles.bulkDelete((deletedCycles as { id: string }[]).map(item => item.id));
     }
     if (deletedWorkouts) {
-      for (const item of deletedWorkouts as { id: string }[]) {
-        await db.scheduledWorkouts.delete(item.id);
-      }
+      await db.scheduledWorkouts.bulkDelete(
+        (deletedWorkouts as { id: string }[]).map(item => item.id)
+      );
     }
+
+    return { failedTables };
   },
 
   // Push local data to Supabase
-  async pushToCloud(userId: string) {
+  // skipTables: tables whose pull failed this cycle - skipped so stale local
+  // data doesn't overwrite the cloud
+  async pushToCloud(userId: string, skipTables: SyncTableName[] = []) {
+    const skip = new Set<SyncTableName>(skipTables);
     const [exercises, maxRecords, completedSets, cycles, scheduledWorkouts, userPreferences] =
       await Promise.all([
         db.exercises.toArray(),
@@ -372,7 +384,7 @@ export const SyncService = {
       ]);
 
     // Upsert exercises
-    if (exercises.length > 0) {
+    if (exercises.length > 0 && !skip.has('exercises')) {
       const { error } = await supabase.from('exercises').upsert(
         exercises.map(e => localToRemoteExercise(e, userId)),
         { onConflict: 'id' }
@@ -386,7 +398,7 @@ export const SyncService = {
     }
 
     // Upsert max records
-    if (maxRecords.length > 0) {
+    if (maxRecords.length > 0 && !skip.has('max_records')) {
       const { error } = await supabase.from('max_records').upsert(
         maxRecords.map(m => localToRemoteMaxRecord(m, userId)),
         { onConflict: 'id' }
@@ -400,7 +412,7 @@ export const SyncService = {
     }
 
     // Upsert completed sets
-    if (completedSets.length > 0) {
+    if (completedSets.length > 0 && !skip.has('completed_sets')) {
       const { error } = await supabase.from('completed_sets').upsert(
         completedSets.map(c => localToRemoteCompletedSet(c, userId)),
         { onConflict: 'id' }
@@ -414,7 +426,7 @@ export const SyncService = {
     }
 
     // Upsert cycles
-    if (cycles.length > 0) {
+    if (cycles.length > 0 && !skip.has('cycles')) {
       const { error } = await supabase.from('cycles').upsert(
         cycles.map(c => localToRemoteCycle(c, userId)),
         { onConflict: 'id' }
@@ -428,7 +440,7 @@ export const SyncService = {
     }
 
     // Upsert scheduled workouts
-    if (scheduledWorkouts.length > 0) {
+    if (scheduledWorkouts.length > 0 && !skip.has('scheduled_workouts')) {
       const { error } = await supabase.from('scheduled_workouts').upsert(
         scheduledWorkouts.map(w => localToRemoteScheduledWorkout(w, userId)),
         { onConflict: 'id' }
@@ -442,7 +454,7 @@ export const SyncService = {
     }
 
     // Upsert user preferences (singleton record)
-    if (userPreferences.length > 0) {
+    if (userPreferences.length > 0 && !skip.has('user_preferences')) {
       const { error } = await supabase
         .from('user_preferences')
         .upsert(localToRemoteUserPreferences(userPreferences[0], userId), { onConflict: 'id' });
@@ -457,17 +469,7 @@ export const SyncService = {
 
   // Sync a single item immediately (called after local writes)
   // If offline, queues the operation for later
-  async syncItem(
-    table:
-      | 'exercises'
-      | 'max_records'
-      | 'completed_sets'
-      | 'cycles'
-      | 'scheduled_workouts'
-      | 'user_preferences',
-    item: unknown,
-    userId: string
-  ) {
+  async syncItem(table: SyncTableName, item: unknown, userId: string) {
     if (!isSupabaseConfigured()) return;
 
     // If offline, queue for later with userId for cross-logout preservation
@@ -488,10 +490,9 @@ export const SyncService = {
       }
     } catch (error) {
       log.error(error as Error, { operation: 'sync', table });
-      // Queue for retry on network errors with userId
-      if (this.isNetworkError(error)) {
-        await this.queueOperation(table, 'upsert', item, userId);
-      }
+      // Queue for retry on any error - the queue's retry cap and backoff bound
+      // the cost, and dropping the write here would silently lose the change
+      await this.queueOperation(table, 'upsert', item, userId);
     }
   },
 
@@ -548,8 +549,8 @@ export const SyncService = {
     if (!isSupabaseConfigured()) return false;
 
     if (!this.isOnline()) {
-      // Can't hard delete while offline - soft delete instead
-      await this.queueOperation(table, 'delete', { id });
+      // Queue the hard delete for when we're back online
+      await this.queueOperation(table, 'hardDelete', { id }, userId);
       return true;
     }
 
@@ -584,14 +585,8 @@ export const SyncService = {
   // Queue an operation for later sync
   // userId is stored to enable cross-logout data preservation
   async queueOperation(
-    table:
-      | 'exercises'
-      | 'max_records'
-      | 'completed_sets'
-      | 'cycles'
-      | 'scheduled_workouts'
-      | 'user_preferences',
-    operation: 'upsert' | 'delete',
+    table: SyncTableName,
+    operation: 'upsert' | 'delete' | 'hardDelete',
     item: unknown,
     userId?: string
   ) {
@@ -668,6 +663,15 @@ export const SyncService = {
           const { error } = await supabase
             .from(queueItem.table)
             .update({ deleted_at: toISOString(now()) })
+            .eq('id', queueItem.itemId)
+            .eq('user_id', userId);
+          if (error) {
+            throw new Error(error.message);
+          }
+        } else if (queueItem.operation === 'hardDelete') {
+          const { error } = await supabase
+            .from(queueItem.table)
+            .delete()
             .eq('id', queueItem.itemId)
             .eq('user_id', userId);
           if (error) {

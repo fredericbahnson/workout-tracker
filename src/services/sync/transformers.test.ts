@@ -128,6 +128,16 @@ describe('Sync Transformers', () => {
       expect(result.defaultConditioningReps).toBeUndefined();
       expect(result.weightEnabled).toBeUndefined();
     });
+
+    it('preserves zero defaults (default_weight 0, conditioning 0) instead of collapsing to null', () => {
+      const result = localToRemoteExercise(
+        { ...localExercise, defaultWeight: 0, defaultConditioningReps: 0 },
+        'user-1'
+      );
+
+      expect(result.default_weight).toBe(0);
+      expect(result.default_conditioning_reps).toBe(0);
+    });
   });
 
   describe('MaxRecord Transformers', () => {
@@ -140,6 +150,8 @@ describe('Sync Transformers', () => {
       weight: 50,
       notes: 'PR!',
       recorded_at: '2026-01-15T14:30:00.000Z',
+      updated_at: '2026-01-16T10:00:00.000Z',
+      deleted_at: null,
     };
 
     const localMaxRecord: MaxRecord = {
@@ -149,6 +161,7 @@ describe('Sync Transformers', () => {
       weight: 50,
       notes: 'PR!',
       recordedAt: new Date('2026-01-15T14:30:00.000Z'),
+      updatedAt: new Date('2026-01-16T10:00:00.000Z'),
     };
 
     it('converts remote max record to local format', () => {
@@ -161,6 +174,7 @@ describe('Sync Transformers', () => {
       expect(result.weight).toBe(50);
       expect(result.notes).toBe('PR!');
       expect(result.recordedAt).toBeInstanceOf(Date);
+      expect(result.updatedAt).toEqual(new Date('2026-01-16T10:00:00.000Z'));
     });
 
     it('converts local max record to remote format', () => {
@@ -174,6 +188,27 @@ describe('Sync Transformers', () => {
       expect(result.weight).toBe(50);
       expect(result.notes).toBe('PR!');
       expect(typeof result.recorded_at).toBe('string');
+      expect(result.updated_at).toBe('2026-01-16T10:00:00.000Z');
+    });
+
+    it('falls back to recorded_at when remote updated_at is null (pre-migration rows)', () => {
+      const result = remoteToLocalMaxRecord({ ...remoteMaxRecord, updated_at: null });
+
+      expect(result.updatedAt).toEqual(new Date('2026-01-15T14:30:00.000Z'));
+    });
+
+    it('falls back to recordedAt when local updatedAt is missing (pre-v8 records)', () => {
+      const { updatedAt: _updatedAt, ...withoutUpdatedAt } = localMaxRecord;
+      const result = localToRemoteMaxRecord(withoutUpdatedAt, 'user-1');
+
+      expect(result.updated_at).toBe('2026-01-15T14:30:00.000Z');
+    });
+
+    it('preserves zero values (weight 0, maxReps 0) instead of collapsing to null', () => {
+      const result = localToRemoteMaxRecord({ ...localMaxRecord, maxReps: 0, weight: 0 }, 'user-1');
+
+      expect(result.max_reps).toBe(0);
+      expect(result.weight).toBe(0);
     });
   });
 
@@ -188,6 +223,8 @@ describe('Sync Transformers', () => {
       actual_reps: 12,
       weight: 25,
       completed_at: '2026-01-20T09:15:00.000Z',
+      updated_at: '2026-01-21T08:00:00.000Z',
+      deleted_at: null,
       notes: 'Felt strong',
       parameters: { tempo: 'slow' },
     };
@@ -201,6 +238,7 @@ describe('Sync Transformers', () => {
       actualReps: 12,
       weight: 25,
       completedAt: new Date('2026-01-20T09:15:00.000Z'),
+      updatedAt: new Date('2026-01-21T08:00:00.000Z'),
       notes: 'Felt strong',
       parameters: { tempo: 'slow' },
     };
@@ -232,6 +270,24 @@ describe('Sync Transformers', () => {
       expect(result.actual_reps).toBe(12);
       expect(result.weight).toBe(25);
       expect(typeof result.completed_at).toBe('string');
+      expect(result.updated_at).toBe('2026-01-21T08:00:00.000Z');
+    });
+
+    it('preserves a bodyweight (0) weight through a round-trip', () => {
+      const remote = localToRemoteCompletedSet({ ...localCompletedSet, weight: 0 }, 'user-1');
+      expect(remote.weight).toBe(0);
+
+      const backToLocal = remoteToLocalCompletedSet({
+        ...remoteCompletedSet,
+        weight: remote.weight,
+      });
+      expect(backToLocal.weight).toBe(0);
+    });
+
+    it('falls back to completed_at when remote updated_at is null (pre-migration rows)', () => {
+      const result = remoteToLocalCompletedSet({ ...remoteCompletedSet, updated_at: null });
+
+      expect(result.updatedAt).toEqual(new Date('2026-01-20T09:15:00.000Z'));
     });
   });
 
@@ -319,6 +375,15 @@ describe('Sync Transformers', () => {
       expect(result.include_warmup_sets).toBe(true);
       expect(result.include_timed_warmups).toBe(false);
       expect(result.status).toBe('active');
+    });
+
+    it('preserves a conditioning time increment of 0 (no weekly increase)', () => {
+      const result = localToRemoteCycle(
+        { ...localCycle, conditioningWeeklyTimeIncrement: 0 },
+        'user-1'
+      );
+
+      expect(result.conditioning_weekly_time_increment).toBe(0);
     });
   });
 
@@ -474,6 +539,23 @@ describe('Sync Transformers', () => {
       const result = remoteToLocalUserPreferences(prefsWithoutAppMode);
 
       expect(result.appMode).toBe('standard'); // default
+    });
+
+    it('falls back to defaults when legacy timer columns are null', () => {
+      const legacyPrefs: RemoteUserPreferences = {
+        ...remotePrefs,
+        rest_timer_enabled: null,
+        rest_timer_duration_seconds: null,
+        max_test_rest_timer_enabled: null,
+        max_test_rest_timer_duration_seconds: null,
+      };
+
+      const result = remoteToLocalUserPreferences(legacyPrefs);
+
+      expect(typeof result.restTimer.enabled).toBe('boolean');
+      expect(typeof result.restTimer.durationSeconds).toBe('number');
+      expect(typeof result.maxTestRestTimer.enabled).toBe('boolean');
+      expect(typeof result.maxTestRestTimer.durationSeconds).toBe('number');
     });
   });
 

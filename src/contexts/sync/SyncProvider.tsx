@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { SyncService, type SyncStatus } from '@/services/syncService';
 import { useAuth } from '../auth';
 import { createScopedLogger } from '@/utils/logger';
@@ -50,83 +50,55 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Initial sync on sign in
-  useEffect(() => {
-    if (user && isConfigured) {
-      // Clean up orphaned queue items from other users first,
-      // then process queue for current user, then full sync
-      SyncService.cleanupOrphanedQueueItems(user.id)
-        .then(() => SyncService.processQueue(user.id))
-        .then(() => SyncService.fullSync(user.id))
-        .then(() => {
-          setLastSyncTime(SyncService.getLastSyncTime());
-          setLastError(null);
-          updateQueueCount();
-        })
-        .catch(err => {
-          log.error(err as Error);
-          setLastError(err.message || 'Sync failed');
-        });
-    }
-  }, [user, isConfigured, updateQueueCount]);
+  // Single guarded sync entrypoint used by every trigger (initial sign-in,
+  // back-online, periodic interval, manual). The ref guard ensures only one
+  // chain runs at a time, no matter how many triggers fire together.
+  // Keyed on user.id (not the user object) so token refreshes don't re-sync.
+  const userId = user?.id;
+  const runSyncChain = useCallback(
+    async (opts?: { cleanupOrphans?: boolean }) => {
+      if (!userId || !isConfigured || isSyncingRef.current) return;
 
-  // Listen for auth sign-in event
-  useEffect(() => {
-    const handleSignIn = () => {
-      if (user) {
-        // Clean up orphaned queue items, process queue for current user, then full sync
-        SyncService.cleanupOrphanedQueueItems(user.id)
-          .then(() => SyncService.processQueue(user.id))
-          .then(() => SyncService.fullSync(user.id))
-          .then(() => {
-            setLastSyncTime(SyncService.getLastSyncTime());
-            setLastError(null);
-            updateQueueCount();
-          })
-          .catch(err => {
-            log.error(err as Error);
-            setLastError(err.message || 'Sync failed');
-          });
+      isSyncingRef.current = true;
+      setIsSyncing(true);
+      setLastError(null);
+      try {
+        if (opts?.cleanupOrphans) {
+          // Clean up orphaned queue items from other users first
+          await SyncService.cleanupOrphanedQueueItems(userId);
+        }
+        // Process queued operations, then full sync
+        await SyncService.processQueue(userId);
+        await SyncService.fullSync(userId);
+        setLastSyncTime(SyncService.getLastSyncTime());
+      } catch (err: unknown) {
+        log.error(err as Error);
+        setLastError(err instanceof Error ? err.message : 'Sync failed');
+      } finally {
+        isSyncingRef.current = false;
+        setIsSyncing(false);
+        void updateQueueCount();
       }
-    };
+    },
+    [userId, isConfigured, updateQueueCount]
+  );
 
-    window.addEventListener('auth-signed-in', handleSignIn);
-    return () => window.removeEventListener('auth-signed-in', handleSignIn);
-  }, [user, updateQueueCount]);
+  // Initial sync on sign in (runSyncChain's identity changes when the user
+  // signs in or out, so this effect fires once per sign-in)
+  useEffect(() => {
+    void runSyncChain({ cleanupOrphans: true });
+  }, [runSyncChain]);
 
   // Process queue and sync when coming back online
   useEffect(() => {
-    if (!user || !isConfigured) return;
-
-    const handleOnline = async () => {
-      log.debug('Back online - processing sync queue...');
-
-      // Process queued operations first
-      const { processed, failed } = await SyncService.processQueue(user.id);
-      if (processed > 0) {
-        log.debug(`Processed ${processed} queued operations`);
-      }
-      if (failed > 0) {
-        log.warn(`${failed} queued operations failed`);
-      }
-
-      // Then do a full sync to pull any updates
-      await SyncService.fullSync(user.id)
-        .then(() => {
-          setLastSyncTime(SyncService.getLastSyncTime());
-          setLastError(null);
-        })
-        .catch(err => {
-          log.error(err as Error);
-          setLastError(err.message || 'Sync failed');
-        });
-
-      updateQueueCount();
+    const handleOnline = () => {
+      log.debug('Back online - running sync chain...');
+      void runSyncChain();
     };
 
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
-  }, [user, isConfigured, updateQueueCount]);
+  }, [runSyncChain]);
 
   // Sync when app goes to background or closes
   // This ensures data is saved before the user leaves the app
@@ -163,57 +135,28 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, [user, isConfigured]);
 
-  // Periodic sync every 5 minutes when online
+  // Periodic sync every 5 minutes when online. Depends only on runSyncChain
+  // (stable across status changes) so the interval isn't reset by each sync.
   useEffect(() => {
-    if (!user || !isConfigured) return;
-
     const interval = setInterval(
       () => {
-        if (navigator.onLine && status !== 'syncing') {
-          SyncService.fullSync(user.id)
-            .then(() => {
-              setLastSyncTime(SyncService.getLastSyncTime());
-              setLastError(null);
-              updateQueueCount();
-            })
-            .catch(err => {
-              log.error(err as Error);
-              setLastError(err.message || 'Sync failed');
-            });
+        if (navigator.onLine) {
+          void runSyncChain();
         }
       },
       5 * 60 * 1000
     ); // 5 minutes
 
     return () => clearInterval(interval);
-  }, [user, isConfigured, status, updateQueueCount]);
+  }, [runSyncChain]);
 
   // Manual sync function
-  const sync = useCallback(async () => {
-    if (!user || !isConfigured || isSyncingRef.current) return;
+  const sync = useCallback(() => runSyncChain(), [runSyncChain]);
 
-    isSyncingRef.current = true;
-    setIsSyncing(true);
-    setLastError(null);
-    try {
-      // Process queue first
-      await SyncService.processQueue(user.id);
-      // Then full sync
-      await SyncService.fullSync(user.id);
-      setLastSyncTime(SyncService.getLastSyncTime());
-      updateQueueCount();
-    } catch (err: unknown) {
-      log.error(err as Error);
-      setLastError(err instanceof Error ? err.message : 'Sync failed');
-    } finally {
-      isSyncingRef.current = false;
-      setIsSyncing(false);
-    }
-  }, [user, isConfigured, updateQueueCount]);
-
-  return (
-    <SyncContext.Provider value={{ status, lastSyncTime, lastError, sync, isSyncing, queueCount }}>
-      {children}
-    </SyncContext.Provider>
+  const value = useMemo(
+    () => ({ status, lastSyncTime, lastError, sync, isSyncing, queueCount }),
+    [status, lastSyncTime, lastError, sync, isSyncing, queueCount]
   );
+
+  return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 }

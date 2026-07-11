@@ -1,6 +1,7 @@
 import { db, generateId } from '@/data/db';
 import type { Exercise, ExerciseFormData, ExerciseType, ExerciseCycleDefaults } from '@/types';
-import { now, normalizeDates, normalizeDatesArray } from '@/utils/dateUtils';
+import { now, normalizeDatesArray } from '@/utils/dateUtils';
+import { getNormalized, deleteIfExists } from './repoUtils';
 
 const DATE_FIELDS: (keyof Exercise)[] = ['createdAt', 'updatedAt'];
 
@@ -24,8 +25,7 @@ export const ExerciseRepo = {
    * @returns Promise resolving to the exercise, or undefined if not found
    */
   async getById(id: string): Promise<Exercise | undefined> {
-    const record = await db.exercises.get(id);
-    return record ? normalizeDates(record, DATE_FIELDS) : undefined;
+    return getNormalized<Exercise>(db.exercises, id, DATE_FIELDS);
   },
 
   /**
@@ -80,11 +80,7 @@ export const ExerciseRepo = {
    * @returns Promise resolving to true if deleted, false if not found
    */
   async delete(id: string): Promise<boolean> {
-    const existing = await db.exercises.get(id);
-    if (!existing) return false;
-
-    await db.exercises.delete(id);
-    return true;
+    return deleteIfExists<Exercise>(db.exercises, id);
   },
 
   /**

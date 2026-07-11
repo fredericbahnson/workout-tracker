@@ -69,7 +69,7 @@ export function WorkoutPreviewModal({
       workout,
       maxRecord,
       activeCycle.conditioningWeeklyRepIncrement,
-      activeCycle.conditioningWeeklyTimeIncrement || 5,
+      activeCycle.conditioningWeeklyTimeIncrement ?? 5,
       defaultMaxReps,
       activeCycle
     );

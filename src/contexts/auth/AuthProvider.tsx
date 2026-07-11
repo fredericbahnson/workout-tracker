@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { supabase, isSupabaseConfigured } from '@/data/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { createScopedLogger } from '@/utils/logger';
@@ -10,42 +10,42 @@ import { entitlementCache } from '@/services/entitlementCache';
 
 const log = createScopedLogger('Auth');
 
+// Helper to clear all local database tables EXCEPT syncQueue
+// CRITICAL: Must include userPreferences to prevent health disclaimer bypass on user switch
+// NOTE: syncQueue is NOT cleared - it's preserved for cross-logout sync.
+// Queue items are tagged with userId and cleaned up on next login.
+async function clearLocalDatabase() {
+  await db.transaction(
+    'rw',
+    [
+      db.exercises,
+      db.maxRecords,
+      db.completedSets,
+      db.cycles,
+      db.scheduledWorkouts,
+      // syncQueue intentionally NOT included - preserved for cross-logout sync
+      db.userPreferences,
+    ],
+    async () => {
+      await db.exercises.clear();
+      await db.maxRecords.clear();
+      await db.completedSets.clear();
+      await db.cycles.clear();
+      await db.scheduledWorkouts.clear();
+      // syncQueue intentionally NOT cleared - items tagged with userId will sync on re-login
+      await db.userPreferences.clear();
+    }
+  );
+  // Clear the localStorage preferences ID to ensure new user gets fresh defaults
+  localStorage.removeItem('ascend-preferences-id');
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
   const isConfigured = isSupabaseConfigured();
-
-  // Helper to clear all local database tables EXCEPT syncQueue
-  // CRITICAL: Must include userPreferences to prevent health disclaimer bypass on user switch
-  // NOTE: syncQueue is NOT cleared - it's preserved for cross-logout sync.
-  // Queue items are tagged with userId and cleaned up on next login.
-  const clearLocalDatabase = async () => {
-    await db.transaction(
-      'rw',
-      [
-        db.exercises,
-        db.maxRecords,
-        db.completedSets,
-        db.cycles,
-        db.scheduledWorkouts,
-        // syncQueue intentionally NOT included - preserved for cross-logout sync
-        db.userPreferences,
-      ],
-      async () => {
-        await db.exercises.clear();
-        await db.maxRecords.clear();
-        await db.completedSets.clear();
-        await db.cycles.clear();
-        await db.scheduledWorkouts.clear();
-        // syncQueue intentionally NOT cleared - items tagged with userId will sync on re-login
-        await db.userPreferences.clear();
-      }
-    );
-    // Clear the localStorage preferences ID to ensure new user gets fresh defaults
-    localStorage.removeItem('ascend-preferences-id');
-  };
 
   useEffect(() => {
     if (!isConfigured) {
@@ -120,59 +120,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (createdAt > fiveMinutesAgo) {
           setIsNewUser(true);
         }
-
-        // Sync will be triggered by the sync service
-        window.dispatchEvent(new CustomEvent('auth-signed-in'));
+        // Sync is triggered by SyncProvider reacting to the user state change
       }
     });
 
     return () => subscription.unsubscribe();
   }, [isConfigured]);
 
-  const signUp = async (email: string, password: string) => {
-    if (!isConfigured) {
-      return { error: new Error('Supabase not configured') };
-    }
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo:
-          import.meta.env.VITE_EMAIL_REDIRECT_URL || 'https://fredericbahnson.com/ascend/confirm',
-      },
-    });
-
-    return { error: error as Error | null };
-  };
-
-  const signIn = async (email: string, password: string) => {
-    if (!isConfigured) {
-      return { error: new Error('Supabase not configured') };
-    }
-
-    // Authenticate FIRST - don't clear data until auth succeeds
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    // Only clear local database AFTER successful authentication
-    // This prevents data loss if the login fails
-    if (!error) {
-      try {
-        await clearLocalDatabase();
-      } catch (e) {
-        log.error(e as Error);
+  const signUp = useCallback(
+    async (email: string, password: string) => {
+      if (!isConfigured) {
+        return { error: new Error('Supabase not configured') };
       }
-      // Clear entitlement cache for clean slate with new user
-      entitlementCache.clear();
-    }
 
-    return { error: error as Error | null };
-  };
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo:
+            import.meta.env.VITE_EMAIL_REDIRECT_URL || 'https://fredericbahnson.com/ascend/confirm',
+        },
+      });
 
-  const signOut = async () => {
+      return { error: error as Error | null };
+    },
+    [isConfigured]
+  );
+
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      if (!isConfigured) {
+        return { error: new Error('Supabase not configured') };
+      }
+
+      // Authenticate FIRST - don't clear data until auth succeeds
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      // Only clear local database AFTER successful authentication
+      // This prevents data loss if the login fails
+      if (!error) {
+        try {
+          await clearLocalDatabase();
+        } catch (e) {
+          log.error(e as Error);
+        }
+        // Clear entitlement cache for clean slate with new user
+        entitlementCache.clear();
+      }
+
+      return { error: error as Error | null };
+    },
+    [isConfigured]
+  );
+
+  const signOut = useCallback(async () => {
     if (!isConfigured) return;
 
     // Signal that sign-out is starting so other contexts can reset state
@@ -208,9 +212,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setIsNewUser(false);
-  };
+  }, [isConfigured, user]);
 
-  const deleteAccount = async () => {
+  const deleteAccount = useCallback(async () => {
     if (!isConfigured || !user) {
       return { error: new Error('Not authenticated') };
     }
@@ -243,76 +247,98 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       return { error: e as Error };
     }
-  };
+  }, [isConfigured, user]);
 
-  const resetPassword = async (email: string) => {
-    if (!isConfigured) {
-      return { error: new Error('Supabase not configured') };
-    }
+  const resetPassword = useCallback(
+    async (email: string) => {
+      if (!isConfigured) {
+        return { error: new Error('Supabase not configured') };
+      }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
 
-    return { error: error as Error | null };
-  };
-
-  const updatePassword = async (newPassword: string) => {
-    if (!isConfigured) {
-      return { error: new Error('Supabase not configured') };
-    }
-
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    return { error: error as Error | null };
-  };
-
-  const resendVerificationEmail = async (email: string) => {
-    if (!isConfigured) {
-      return { error: new Error('Supabase not configured') };
-    }
-
-    log.debug('Resending verification email to:', email);
-
-    const { data, error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-      options: {
-        emailRedirectTo:
-          import.meta.env.VITE_EMAIL_REDIRECT_URL || 'https://fredericbahnson.com/ascend/confirm',
-      },
-    });
-
-    log.debug('Resend result:', { data, error: error?.message });
-
-    return { error: error as Error | null };
-  };
-
-  const clearNewUserFlag = () => {
-    setIsNewUser(false);
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        isLoading,
-        isConfigured,
-        isNewUser,
-        signUp,
-        signIn,
-        signOut,
-        deleteAccount,
-        resetPassword,
-        updatePassword,
-        resendVerificationEmail,
-        clearNewUserFlag,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+      return { error: error as Error | null };
+    },
+    [isConfigured]
   );
+
+  const updatePassword = useCallback(
+    async (newPassword: string) => {
+      if (!isConfigured) {
+        return { error: new Error('Supabase not configured') };
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      return { error: error as Error | null };
+    },
+    [isConfigured]
+  );
+
+  const resendVerificationEmail = useCallback(
+    async (email: string) => {
+      if (!isConfigured) {
+        return { error: new Error('Supabase not configured') };
+      }
+
+      log.debug('Resending verification email to:', email);
+
+      const { data, error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo:
+            import.meta.env.VITE_EMAIL_REDIRECT_URL || 'https://fredericbahnson.com/ascend/confirm',
+        },
+      });
+
+      log.debug('Resend result:', { data, error: error?.message });
+
+      return { error: error as Error | null };
+    },
+    [isConfigured]
+  );
+
+  const clearNewUserFlag = useCallback(() => {
+    setIsNewUser(false);
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      session,
+      isLoading,
+      isConfigured,
+      isNewUser,
+      signUp,
+      signIn,
+      signOut,
+      deleteAccount,
+      resetPassword,
+      updatePassword,
+      resendVerificationEmail,
+      clearNewUserFlag,
+    }),
+    [
+      user,
+      session,
+      isLoading,
+      isConfigured,
+      isNewUser,
+      signUp,
+      signIn,
+      signOut,
+      deleteAccount,
+      resetPassword,
+      updatePassword,
+      resendVerificationEmail,
+      clearNewUserFlag,
+    ]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

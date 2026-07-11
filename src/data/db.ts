@@ -18,7 +18,7 @@ export interface SyncQueueItem {
     | 'cycles'
     | 'scheduled_workouts'
     | 'user_preferences';
-  operation: 'upsert' | 'delete';
+  operation: 'upsert' | 'delete' | 'hardDelete';
   itemId: string;
   data?: unknown;
   createdAt: Date;
@@ -152,6 +152,40 @@ class AscendDatabase extends Dexie {
             }
           });
       });
+
+    // Version 8: Add updatedAt to maxRecords and completedSets for last-write-wins
+    // sync (previously insert-only, so edits never propagated across devices), and a
+    // [exerciseId+completedAt] compound index for date-range stats queries
+    this.version(8)
+      .stores({
+        exercises: 'id, type, mode, name, createdAt',
+        maxRecords: 'id, exerciseId, recordedAt',
+        completedSets: 'id, exerciseId, scheduledWorkoutId, completedAt, [exerciseId+completedAt]',
+        cycles: 'id, status, startDate',
+        scheduledWorkouts: 'id, cycleId, sequenceNumber, status, scheduledDate',
+        syncQueue: 'id, [table+itemId], createdAt, userId',
+        userPreferences: 'id',
+      })
+      .upgrade(async tx => {
+        // Migration: backfill updatedAt from recordedAt/completedAt (matches the
+        // server-side backfill in Supabase migration 017)
+        await tx
+          .table('maxRecords')
+          .toCollection()
+          .modify(record => {
+            if (record.updatedAt === undefined) {
+              record.updatedAt = record.recordedAt ?? new Date();
+            }
+          });
+        await tx
+          .table('completedSets')
+          .toCollection()
+          .modify(set => {
+            if (set.updatedAt === undefined) {
+              set.updatedAt = set.completedAt ?? new Date();
+            }
+          });
+      });
   }
 }
 
@@ -189,6 +223,25 @@ export async function exportData(): Promise<string> {
   return JSON.stringify(data, null, 2);
 }
 
+// Revive ISO-string dates from a JSON backup into Date objects.
+// IndexedDB sorts strings and Dates in separate type groups, so imported rows
+// must store real Dates or index-based sorting and range queries break.
+function reviveDates<T>(records: T[], dateFields: string[]): T[] {
+  return records.map(record => {
+    const result = { ...record } as Record<string, unknown>;
+    for (const field of dateFields) {
+      const value = result[field];
+      if (typeof value === 'string') {
+        const parsed = new Date(value);
+        if (!isNaN(parsed.getTime())) {
+          result[field] = parsed;
+        }
+      }
+    }
+    return result as T;
+  });
+}
+
 export async function importData(
   jsonString: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -219,16 +272,31 @@ export async function importData(
         await db.scheduledWorkouts.clear();
         await db.userPreferences.clear();
 
-        if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
-        if (data.maxRecords?.length) await db.maxRecords.bulkAdd(data.maxRecords);
-        if (data.completedSets?.length) await db.completedSets.bulkAdd(data.completedSets);
-        if (data.cycles?.length) await db.cycles.bulkAdd(data.cycles);
+        if (data.exercises?.length)
+          await db.exercises.bulkAdd(reviveDates(data.exercises, ['createdAt', 'updatedAt']));
+        if (data.maxRecords?.length)
+          await db.maxRecords.bulkAdd(reviveDates(data.maxRecords, ['recordedAt', 'updatedAt']));
+        if (data.completedSets?.length)
+          await db.completedSets.bulkAdd(
+            reviveDates(data.completedSets, ['completedAt', 'updatedAt'])
+          );
+        if (data.cycles?.length)
+          await db.cycles.bulkAdd(
+            reviveDates(data.cycles, ['startDate', 'createdAt', 'updatedAt'])
+          );
         if (data.scheduledWorkouts?.length)
-          await db.scheduledWorkouts.bulkAdd(data.scheduledWorkouts);
+          await db.scheduledWorkouts.bulkAdd(
+            reviveDates(data.scheduledWorkouts, ['completedAt', 'scheduledDate', 'updatedAt'])
+          );
 
         // Import user preferences if present (version 2+ backups)
         if (data.userPreferences) {
-          await db.userPreferences.put(data.userPreferences);
+          await db.userPreferences.put(
+            reviveDates(
+              [data.userPreferences],
+              ['createdAt', 'updatedAt', 'healthDisclaimerAcknowledgedAt']
+            )[0]
+          );
         }
       }
     );

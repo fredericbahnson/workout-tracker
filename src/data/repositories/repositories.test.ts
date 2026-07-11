@@ -51,6 +51,7 @@ vi.mock('../db', () => ({
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
+      orderBy: vi.fn(() => ({ reverse: vi.fn(() => ({ toArray: vi.fn() })) })),
       where: vi.fn(() => ({
         equals: vi.fn(() => ({
           first: vi.fn(),
@@ -64,6 +65,7 @@ vi.mock('../db', () => ({
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
+      bulkGet: vi.fn((ids: string[]) => Promise.resolve(ids.map(() => undefined))),
       where: vi.fn(() => ({
         equals: vi.fn(() => ({
           toArray: vi.fn(),
@@ -81,6 +83,7 @@ import { ExerciseRepo } from './ExerciseRepo';
 import { MaxRecordRepo } from './MaxRecordRepo';
 import { CycleRepo } from './CycleRepo';
 import { CompletedSetRepo } from './CompletedSetRepo';
+import { ScheduledWorkoutRepo } from './ScheduledWorkoutRepo';
 import type { Exercise, MaxRecord, Cycle, CompletedSet, ScheduledWorkout } from '@/types';
 
 // ============================================================================
@@ -439,6 +442,34 @@ describe('MaxRecordRepo', () => {
       );
       expect(result.maxTime).toBe(60);
     });
+
+    it('stamps updatedAt on create (used for last-write-wins sync)', async () => {
+      (generateId as Mock).mockReturnValue('new-max-id');
+      (db.maxRecords.add as Mock).mockResolvedValue(undefined);
+
+      const result = await MaxRecordRepo.create('ex-1', 35);
+
+      expect(result.updatedAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('update', () => {
+    it('bumps updatedAt on update', async () => {
+      const existing = createMockMaxRecord({
+        id: 'max-1',
+        updatedAt: new Date('2020-01-01T00:00:00.000Z'),
+      });
+      (db.maxRecords.get as Mock).mockResolvedValue(existing);
+      (db.maxRecords.put as Mock).mockResolvedValue(undefined);
+
+      const result = await MaxRecordRepo.update('max-1', { maxReps: 40 });
+
+      expect(result?.maxReps).toBe(40);
+      expect(result?.updatedAt).toBeInstanceOf(Date);
+      expect(result!.updatedAt!.getTime()).toBeGreaterThan(
+        new Date('2020-01-01T00:00:00.000Z').getTime()
+      );
+    });
   });
 
   describe('getLatestForAllExercises', () => {
@@ -541,10 +572,16 @@ describe('CycleRepo', () => {
         createMockCycle({ id: 'cycle-2', startDate: new Date('2024-02-01') }),
       ];
 
-      (db.cycles.toArray as Mock).mockResolvedValue(cycles);
+      // getAll sorts via the startDate index (orderBy().reverse())
+      (db.cycles.orderBy as Mock).mockReturnValue({
+        reverse: vi.fn(() => ({
+          toArray: vi.fn().mockResolvedValue([cycles[1], cycles[0]]),
+        })),
+      });
 
       const result = await CycleRepo.getAll();
 
+      expect(db.cycles.orderBy).toHaveBeenCalledWith('startDate');
       expect(result).toHaveLength(2);
       // Should be sorted descending (newest first)
       expect(result[0].id).toBe('cycle-2');
@@ -663,7 +700,9 @@ describe('CompletedSetRepo', () => {
         }),
       });
       (db.completedSets.where as Mock).mockImplementation(mockWhere);
-      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+      (db.scheduledWorkouts.bulkGet as Mock).mockImplementation((ids: string[]) =>
+        Promise.resolve(ids.map(id => [].find(w => w.id === id)))
+      );
 
       const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
 
@@ -713,7 +752,9 @@ describe('CompletedSetRepo', () => {
         }),
       });
       (db.completedSets.where as Mock).mockImplementation(mockWhere);
-      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([scheduledWorkout]);
+      (db.scheduledWorkouts.bulkGet as Mock).mockImplementation((ids: string[]) =>
+        Promise.resolve(ids.map(id => [scheduledWorkout].find(w => w.id === id)))
+      );
 
       const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
 
@@ -738,7 +779,9 @@ describe('CompletedSetRepo', () => {
         }),
       });
       (db.completedSets.where as Mock).mockImplementation(mockWhere);
-      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+      (db.scheduledWorkouts.bulkGet as Mock).mockImplementation((ids: string[]) =>
+        Promise.resolve(ids.map(id => [].find(w => w.id === id)))
+      );
 
       const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
 
@@ -775,7 +818,9 @@ describe('CompletedSetRepo', () => {
         }),
       });
       (db.completedSets.where as Mock).mockImplementation(mockWhere);
-      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+      (db.scheduledWorkouts.bulkGet as Mock).mockImplementation((ids: string[]) =>
+        Promise.resolve(ids.map(id => [].find(w => w.id === id)))
+      );
 
       const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
 
@@ -814,7 +859,9 @@ describe('CompletedSetRepo', () => {
         }),
       });
       (db.completedSets.where as Mock).mockImplementation(mockWhere);
-      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+      (db.scheduledWorkouts.bulkGet as Mock).mockImplementation((ids: string[]) =>
+        Promise.resolve(ids.map(id => [].find(w => w.id === id)))
+      );
 
       const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
 
@@ -842,7 +889,9 @@ describe('CompletedSetRepo', () => {
         }),
       });
       (db.completedSets.where as Mock).mockImplementation(mockWhere);
-      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+      (db.scheduledWorkouts.bulkGet as Mock).mockImplementation((ids: string[]) =>
+        Promise.resolve(ids.map(id => [].find(w => w.id === id)))
+      );
 
       const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
 
@@ -877,7 +926,9 @@ describe('CompletedSetRepo', () => {
         }),
       });
       (db.completedSets.where as Mock).mockImplementation(mockWhere);
-      (db.scheduledWorkouts.toArray as Mock).mockResolvedValue([]);
+      (db.scheduledWorkouts.bulkGet as Mock).mockImplementation((ids: string[]) =>
+        Promise.resolve(ids.map(id => [].find(w => w.id === id)))
+      );
 
       const result = await CompletedSetRepo.getWorkingSetHistory('ex-1');
 
@@ -885,5 +936,91 @@ describe('CompletedSetRepo', () => {
       expect(result[0].sets).toHaveLength(1);
       expect(result[0].sets[0].actualReps).toBe(15);
     });
+  });
+});
+
+// ============================================================================
+// ScheduledWorkoutRepo Tests
+// ============================================================================
+
+describe('ScheduledWorkoutRepo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('updateSkipReason', () => {
+    it('marks the workout skipped, stores the reason, and bumps updatedAt', async () => {
+      const existing = createMockScheduledWorkout({
+        id: 'sw-1',
+        status: 'pending',
+        updatedAt: new Date('2020-01-01T00:00:00.000Z'),
+      });
+      (db.scheduledWorkouts.get as Mock).mockResolvedValue(existing);
+      (db.scheduledWorkouts.put as Mock).mockResolvedValue(undefined);
+
+      const result = await ScheduledWorkoutRepo.updateSkipReason('sw-1', 'Traveling');
+
+      expect(result).toBeDefined();
+      expect(result?.status).toBe('skipped');
+      expect(result?.skipReason).toBe('Traveling');
+      // updatedAt must be bumped so the skip wins last-write-wins sync
+      expect(result?.updatedAt).toBeInstanceOf(Date);
+      expect(result!.updatedAt!.getTime()).toBeGreaterThan(
+        new Date('2020-01-01T00:00:00.000Z').getTime()
+      );
+      expect(db.scheduledWorkouts.put).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'skipped', skipReason: 'Traveling' })
+      );
+    });
+
+    it('returns undefined when the workout does not exist', async () => {
+      (db.scheduledWorkouts.get as Mock).mockResolvedValue(undefined);
+
+      const result = await ScheduledWorkoutRepo.updateSkipReason('missing', 'reason');
+
+      expect(result).toBeUndefined();
+      expect(db.scheduledWorkouts.put).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// ============================================================================
+// CompletedSetRepo updatedAt stamping
+// ============================================================================
+
+describe('CompletedSetRepo updatedAt stamping', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('stamps updatedAt on create', async () => {
+    (generateId as Mock).mockReturnValue('new-set-id');
+    (db.completedSets.add as Mock).mockResolvedValue(undefined);
+
+    const result = await CompletedSetRepo.create({
+      exerciseId: 'ex-1',
+      reps: 10,
+      notes: '',
+      parameters: {},
+    });
+
+    expect(result.updatedAt).toBeInstanceOf(Date);
+  });
+
+  it('bumps updatedAt on update', async () => {
+    const existing = createMockCompletedSet({
+      id: 'cs-1',
+      updatedAt: new Date('2020-01-01T00:00:00.000Z'),
+    });
+    (db.completedSets.get as Mock).mockResolvedValue(existing);
+    (db.completedSets.put as Mock).mockResolvedValue(undefined);
+
+    const result = await CompletedSetRepo.update('cs-1', { actualReps: 8 });
+
+    expect(result?.actualReps).toBe(8);
+    expect(result?.updatedAt).toBeInstanceOf(Date);
+    expect(result!.updatedAt!.getTime()).toBeGreaterThan(
+      new Date('2020-01-01T00:00:00.000Z').getTime()
+    );
   });
 });

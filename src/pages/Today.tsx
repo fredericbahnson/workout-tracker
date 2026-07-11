@@ -2,13 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Plus, Dumbbell, Trophy, Target, Calendar, AlertTriangle, Flame } from 'lucide-react';
-import {
-  CompletedSetRepo,
-  ExerciseRepo,
-  CycleRepo,
-  ScheduledWorkoutRepo,
-  MaxRecordRepo,
-} from '@/data/repositories';
+import { CompletedSetRepo } from '@/data/repositories';
 import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/scheduler';
 import { useAppStore } from '@/stores/appStore';
 import { useSyncedPreferences } from '@/contexts';
@@ -18,6 +12,8 @@ import {
   useCycleCompletion,
   useAdHocWorkout,
   useTodayModals,
+  useTodayLiveData,
+  useTodayWorkoutActions,
   useScheduledWorkoutStatus,
   useRatingPrompt,
 } from '@/hooks';
@@ -81,39 +77,17 @@ export function TodayPage() {
   const [showOverdueModal, setShowOverdueModal] = useState(false);
 
   // Live queries
-  const activeCycle = useLiveQuery(() => CycleRepo.getActive(), []);
-
-  // All workouts for scheduled workout status (overdue/rest day detection)
-  const allCycleWorkouts = useLiveQuery(async () => {
-    if (!activeCycle) return undefined;
-    return ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
-  }, [activeCycle?.id]);
-
-  const lastCompletedWorkout = useLiveQuery(async () => {
-    if (!activeCycle) return null;
-    const workouts = await ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
-    const completed = workouts
-      .filter(w => w.status === 'completed' && w.completedAt)
-      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
-    return completed[0] || null;
-  }, [activeCycle?.id]);
-
-  const nextPendingWorkout = useLiveQuery(async () => {
-    if (!activeCycle) return null;
-    const workouts = await ScheduledWorkoutRepo.getByCycleId(activeCycle.id);
-    const pending = workouts.find(
-      w =>
-        (w.status === 'pending' || w.status === 'partial') &&
-        !w.isAdHoc &&
-        w.id !== dismissedWorkoutId
-    );
-    return pending || null;
-  }, [activeCycle?.id, dismissedWorkoutId]);
-
-  const inProgressAdHocWorkout = useLiveQuery(async () => {
-    if (!activeCycle) return null;
-    return ScheduledWorkoutRepo.getInProgressAdHoc(activeCycle.id);
-  }, [activeCycle?.id]);
+  const {
+    activeCycle,
+    allCycleWorkouts,
+    lastCompletedWorkout,
+    nextPendingWorkout,
+    inProgressAdHocWorkout,
+    cycleProgress,
+    todaysSets,
+    exercises,
+    maxRecords,
+  } = useTodayLiveData({ dismissedWorkoutId });
 
   // Workout display logic
   const {
@@ -131,17 +105,18 @@ export function TodayPage() {
     inProgressAdHocWorkout,
   });
 
-  // App Store rating prompt
+  // App Store rating prompt - fires once per transition into the completed view
   const ratingPrompt = useRatingPrompt();
   const prevShowingCompleted = useRef(false);
   useEffect(() => {
-    if (isShowingCompletedWorkout && !prevShowingCompleted.current) {
+    const wasShowing = prevShowingCompleted.current;
+    prevShowingCompleted.current = isShowingCompletedWorkout;
+    if (isShowingCompletedWorkout && !wasShowing) {
       const timer = setTimeout(() => {
         ratingPrompt.checkRatingPrompt();
       }, 1500);
       return () => clearTimeout(timer);
     }
-    prevShowingCompleted.current = isShowingCompletedWorkout;
   }, [isShowingCompletedWorkout, ratingPrompt.checkRatingPrompt]);
 
   const handleProceedToNextWorkout = () => {
@@ -150,11 +125,6 @@ export function TodayPage() {
     }
     proceedToNextWorkout();
   };
-
-  const cycleProgress = useLiveQuery(async () => {
-    if (!activeCycle) return null;
-    return ScheduledWorkoutRepo.getCycleProgress(activeCycle.id);
-  }, [activeCycle?.id]);
 
   const isCycleComplete =
     cycleProgress && cycleProgress.completed === cycleProgress.total && cycleProgress.total > 0;
@@ -198,10 +168,6 @@ export function TodayPage() {
     cycle: activeCycle,
     workouts: allCycleWorkouts,
   });
-
-  const todaysSets = useLiveQuery(() => CompletedSetRepo.getForToday(), []);
-  const exercises = useLiveQuery(() => ExerciseRepo.getAll(), []);
-  const maxRecords = useLiveQuery(() => MaxRecordRepo.getLatestForAllExercises(), []);
 
   const workoutCompletedSets = useLiveQuery(async () => {
     if (!displayWorkout) return [];
@@ -259,7 +225,7 @@ export function TodayPage() {
         workout,
         maxRecord,
         activeCycle.conditioningWeeklyRepIncrement,
-        activeCycle.conditioningWeeklyTimeIncrement || 5,
+        activeCycle.conditioningWeeklyTimeIncrement ?? 5,
         preferences.defaultMaxReps,
         activeCycle
       );
@@ -342,310 +308,49 @@ export function TodayPage() {
     [displayWorkout?.scheduledSets, isWarmupVisible]
   );
 
-  // Event handlers - memoized to prevent unnecessary re-renders of child components
-  const handleSkipWorkout = useCallback(async () => {
-    if (!nextPendingWorkout) return;
-    const updated = await ScheduledWorkoutRepo.updateStatus(nextPendingWorkout.id, 'skipped');
-    if (updated) await syncItem('scheduled_workouts', updated);
-    modals.closeSkipWorkoutConfirm();
-  }, [nextPendingWorkout, modals, syncItem]);
-
-  const handleEndWorkout = useCallback(async () => {
-    if (!displayWorkout || isShowingCompletedWorkout) return;
-    const status = scheduledSetsCompleted.length > 0 ? 'partial' : 'skipped';
-    const updated = await ScheduledWorkoutRepo.updateStatus(
-      displayWorkout.id,
-      status === 'partial' ? 'completed' : 'skipped'
-    );
-    if (updated) await syncItem('scheduled_workouts', updated);
-    if (status === 'partial') markWorkoutCompleted(displayWorkout.id);
-    modals.closeEndWorkoutConfirm();
-  }, [
-    displayWorkout,
-    isShowingCompletedWorkout,
-    scheduledSetsCompleted.length,
-    markWorkoutCompleted,
-    modals,
-    syncItem,
-  ]);
-
-  const handleSelectScheduledSet = useCallback(
-    (set: ScheduledSet) => {
-      if (!displayWorkout || isShowingCompletedWorkout) return;
-      const exercise = exerciseMap.get(set.exerciseId);
-      if (exercise) {
-        const targetReps = set.isMaxTest
-          ? set.previousMaxReps || 0
-          : getTargetReps(set, displayWorkout);
-        const targetWeight = getTargetWeight(set, displayWorkout);
-        modals.openScheduledSetModal({ set, workout: displayWorkout, targetReps, targetWeight });
-      }
-    },
-    [displayWorkout, isShowingCompletedWorkout, exerciseMap, getTargetReps, getTargetWeight, modals]
-  );
-
-  const handleQuickComplete = useCallback(
-    async (set: ScheduledSet) => {
-      if (!displayWorkout || isShowingCompletedWorkout) return;
-      if (set.isMaxTest) {
-        handleSelectScheduledSet(set);
-        return;
-      }
-
-      const targetReps = getTargetReps(set, displayWorkout);
-      const completedSet = await CompletedSetRepo.createFromScheduled(
-        set.id,
-        displayWorkout.id,
-        set.exerciseId,
-        targetReps,
-        targetReps,
-        '',
-        {}
-      );
-      await syncItem('completed_sets', completedSet);
-
-      // Query actual count from DB to avoid race conditions with React state
-      const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
-        displayWorkout.id
-      );
-      if (actualCompletedCount >= visibleSetsCount) {
-        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-        if (updated) await syncItem('scheduled_workouts', updated);
-        markWorkoutCompleted(displayWorkout.id);
-      } else {
-        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-        if (updated) await syncItem('scheduled_workouts', updated);
-        if (preferences.restTimer.enabled) {
-          const duration = set.isWarmup
-            ? Math.round(preferences.restTimer.durationSeconds * 0.5)
-            : preferences.restTimer.durationSeconds;
-          modals.openRestTimer(duration);
-        }
-      }
-    },
-    [
-      displayWorkout,
-      isShowingCompletedWorkout,
-      getTargetReps,
-      handleSelectScheduledSet,
-      markWorkoutCompleted,
-      preferences.restTimer,
-      modals,
-      syncItem,
-      visibleSetsCount,
-    ]
-  );
-
-  const handleInitiateSkipSet = useCallback(
-    (set: ScheduledSet) => {
-      if (!displayWorkout || isShowingCompletedWorkout) return;
-      const targetReps = getTargetReps(set, displayWorkout);
-      modals.openSkipSetConfirm({ set, workout: displayWorkout, targetReps });
-    },
-    [displayWorkout, isShowingCompletedWorkout, getTargetReps, modals]
-  );
-
-  const handleConfirmSkipSet = useCallback(async () => {
-    if (!modals.setToSkip || !displayWorkout) return;
-
-    const completedSet = await CompletedSetRepo.createFromScheduled(
-      modals.setToSkip.set.id,
-      displayWorkout.id,
-      modals.setToSkip.set.exerciseId,
-      modals.setToSkip.targetReps,
-      0,
-      'Skipped',
-      {}
-    );
-    await syncItem('completed_sets', completedSet);
-
-    // Query actual count from DB to avoid race conditions with React state
-    const actualCompletedCount = await CompletedSetRepo.countCompletedScheduledSets(
-      displayWorkout.id
-    );
-    if (actualCompletedCount >= visibleSetsCount) {
-      const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-      if (updated) await syncItem('scheduled_workouts', updated);
-      markWorkoutCompleted(displayWorkout.id);
-    } else if (actualCompletedCount > 0) {
-      const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-      if (updated) await syncItem('scheduled_workouts', updated);
-    }
-    modals.closeSkipSetConfirm();
-  }, [modals, displayWorkout, markWorkoutCompleted, syncItem, visibleSetsCount]);
-
-  const handleEditCompletedSet = useCallback(
-    (completedSet: NonNullable<typeof workoutCompletedSets>[number]) => {
-      const exercise = exerciseMap.get(completedSet.exerciseId);
-      if (exercise) modals.openEditCompletedSet({ completedSet, exercise });
-    },
-    [exerciseMap, modals]
-  );
-
-  const handleSaveEditedSet = useCallback(
-    async (reps: number, weight: number | undefined, notes: string) => {
-      if (!modals.editingCompletedSet) return;
-      const updated = await CompletedSetRepo.update(modals.editingCompletedSet.completedSet.id, {
-        actualReps: reps,
-        weight,
-        notes,
-      });
-      if (updated) await syncItem('completed_sets', updated);
-    },
-    [modals.editingCompletedSet, syncItem]
-  );
-
-  const handleDeleteCompletedSet = useCallback(async () => {
-    if (!modals.editingCompletedSet) return;
-    const wasCompleted = displayWorkout?.status === 'completed';
-
-    await CompletedSetRepo.delete(modals.editingCompletedSet.completedSet.id);
-    await deleteItem('completed_sets', modals.editingCompletedSet.completedSet.id);
-
-    if (displayWorkout) {
-      const remainingCompleted = (workoutCompletedSets?.length || 1) - 1;
-      if (remainingCompleted === 0) {
-        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'pending');
-        if (updated) await syncItem('scheduled_workouts', updated);
-      } else if (wasCompleted) {
-        const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-        if (updated) await syncItem('scheduled_workouts', updated);
-      }
-
-      // Only tear down the completion view when this undo actually transitioned
-      // the workout away from 'completed'. For already-partial/pending workouts
-      // the user is mid-logging via nextPendingWorkout; clearing these flags
-      // would un-dismiss a prior completion view and bounce the display back
-      // to whatever lastCompletedWorkout currently points to.
-      if (wasCompleted) {
-        resetCompletionState();
-        setDismissedWorkoutId(null);
-        clearDismissedWorkout();
-      }
-    }
-  }, [
-    modals.editingCompletedSet,
-    displayWorkout,
-    workoutCompletedSets?.length,
-    deleteItem,
-    syncItem,
-    resetCompletionState,
-    clearDismissedWorkout,
-  ]);
-
-  const handleLogSet = useCallback(
-    async (
-      reps: number,
-      notes: string,
-      parameters: Record<string, string | number>,
-      weight?: number
-    ) => {
-      modals.setIsLogging(true);
-      let shouldShowTimer = false;
-      let timerDuration = preferences.restTimer.durationSeconds;
-
-      try {
-        if (modals.selectedScheduledSet) {
-          const { set, workout, targetReps } = modals.selectedScheduledSet;
-
-          const completedSet = await CompletedSetRepo.createFromScheduled(
-            set.id,
-            workout.id,
-            set.exerciseId,
-            targetReps,
-            reps,
-            notes,
-            parameters,
-            weight
-          );
-          await syncItem('completed_sets', completedSet);
-
-          if (set.isMaxTest && reps > 0) {
-            const exercise = exerciseMap.get(set.exerciseId);
-            const isTimeBased = exercise?.measurementType === 'time';
-            const newMaxRecord = await MaxRecordRepo.create(
-              set.exerciseId,
-              isTimeBased ? undefined : reps,
-              isTimeBased ? reps : undefined,
-              'Max test result',
-              weight
-            );
-            await syncItem('max_records', newMaxRecord);
-          }
-
-          // Query actual count from DB to avoid race conditions with React state
-          const actualCompletedCount = displayWorkout
-            ? await CompletedSetRepo.countCompletedScheduledSets(displayWorkout.id)
-            : 0;
-
-          if (actualCompletedCount >= visibleSetsCount && displayWorkout) {
-            const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'completed');
-            if (updated) await syncItem('scheduled_workouts', updated);
-            markWorkoutCompleted(displayWorkout.id);
-          } else if (actualCompletedCount > 0 && displayWorkout) {
-            const updated = await ScheduledWorkoutRepo.updateStatus(displayWorkout.id, 'partial');
-            if (updated) await syncItem('scheduled_workouts', updated);
-            if (set.isMaxTest && preferences.maxTestRestTimer.enabled) {
-              shouldShowTimer = true;
-              timerDuration = preferences.maxTestRestTimer.durationSeconds;
-            } else if (!set.isMaxTest && preferences.restTimer.enabled) {
-              shouldShowTimer = true;
-              timerDuration = set.isWarmup
-                ? Math.round(preferences.restTimer.durationSeconds * 0.5)
-                : preferences.restTimer.durationSeconds;
-            }
-          }
-          modals.closeScheduledSetModal();
-        } else if (modals.selectedExercise) {
-          const completedSet = await CompletedSetRepo.create(
-            { exerciseId: modals.selectedExercise.id, reps, weight, notes, parameters },
-            displayWorkout?.id
-          );
-          await syncItem('completed_sets', completedSet);
-          modals.clearSelectedExercise();
-          if (preferences.restTimer.enabled) {
-            shouldShowTimer = true;
-            timerDuration = preferences.restTimer.durationSeconds;
-          }
-        }
-      } finally {
-        modals.setIsLogging(false);
-        if (shouldShowTimer) modals.openRestTimer(timerDuration);
-      }
-    },
-    [
-      modals,
-      preferences.restTimer,
-      preferences.maxTestRestTimer,
-      exerciseMap,
-      syncItem,
-      displayWorkout,
-      markWorkoutCompleted,
-      visibleSetsCount,
-    ]
-  );
-
   const currentGroup = activeCycle?.groups.find(g => g.id === displayWorkout?.groupId);
 
-  // Overdue workout handlers
+  // Overdue workout (date-based scheduling)
   const overdueWorkout = scheduledStatus.overdueWorkouts[0] || null;
   const overdueGroupName = overdueWorkout
     ? activeCycle?.groups.find(g => g.id === overdueWorkout.groupId)?.name
     : undefined;
 
-  const handleDoOverdueWorkout = useCallback(() => {
-    // Close modal - the overdue workout will become the next pending workout
-    setShowOverdueModal(false);
-  }, []);
-
-  const handleSkipOverdueWorkout = useCallback(
-    async (reason?: string) => {
-      if (!overdueWorkout) return;
-      await ScheduledWorkoutRepo.updateSkipReason(overdueWorkout.id, reason);
-      setShowOverdueModal(false);
-    },
-    [overdueWorkout]
-  );
+  // Event handlers - extracted to a hook, memoized to prevent unnecessary re-renders
+  const {
+    handleSkipWorkout,
+    handleEndWorkout,
+    handleSelectScheduledSet,
+    handleQuickComplete,
+    handleInitiateSkipSet,
+    handleConfirmSkipSet,
+    handleEditCompletedSet,
+    handleSaveEditedSet,
+    handleDeleteCompletedSet,
+    handleLogSet,
+    handleDoOverdueWorkout,
+    handleSkipOverdueWorkout,
+  } = useTodayWorkoutActions({
+    displayWorkout,
+    isShowingCompletedWorkout,
+    nextPendingWorkout,
+    overdueWorkout,
+    modals,
+    syncItem,
+    deleteItem,
+    markWorkoutCompleted,
+    resetCompletionState,
+    clearDismissedWorkout,
+    setDismissedWorkoutId,
+    setShowOverdueModal,
+    preferences,
+    exerciseMap,
+    getTargetReps,
+    getTargetWeight,
+    visibleSetsCount,
+    scheduledSetsCompletedCount: scheduledSetsCompleted.length,
+    workoutCompletedSetsCount: workoutCompletedSets?.length,
+  });
 
   // Get group name for next scheduled workout (for rest day card)
   const nextScheduledGroupName = scheduledStatus.nextScheduledWorkout

@@ -54,7 +54,7 @@ React → Repositories → Dexie (IndexedDB) ↔ SyncService ↔ Supabase
 
 **`data/repositories/`** - Data access layer. All CRUD operations go through repository classes (ExerciseRepo, CycleRepo, CompletedSetRepo, etc.).
 
-**`data/db.ts`** - Dexie database schema with versioned migrations (currently v3). Schema changes require incrementing the version number and adding a new version block.
+**`data/db.ts`** - Dexie database schema with versioned migrations (currently v8). Schema changes require incrementing the version number and adding a new version block.
 
 ### State Management
 - **Zustand** (`stores/appStore.ts`): Theme, font size, onboarding status

@@ -1,8 +1,12 @@
 /**
  * Audio Utilities
  *
- * Centralized audio functions for timer beeps and sounds.
- * Uses Web Audio API for reliable cross-browser/mobile support.
+ * Web Audio sounds for the exercise stopwatch (stop confirmation and
+ * new-record fanfare).
+ *
+ * Note: countdown timer sounds do NOT live here - they are scheduled by the
+ * native TimerAudioPlugin (src/plugins/timerAudio.ts) so they keep precise
+ * timing when iOS backgrounds the app.
  */
 
 import { createScopedLogger } from './logger';
@@ -11,10 +15,6 @@ const log = createScopedLogger('Audio');
 
 // Singleton audio context
 let audioContext: AudioContext | null = null;
-
-// Keep-alive oscillator to prevent iOS from suspending AudioContext
-let keepAliveOscillator: OscillatorNode | null = null;
-let keepAliveGain: GainNode | null = null;
 
 /**
  * Get or create the audio context.
@@ -34,89 +34,9 @@ export function getAudioContext(): AudioContext {
 }
 
 /**
- * Resume audio context if suspended.
- * Required by browser autoplay policies.
- */
-export async function resumeAudioContext(): Promise<void> {
-  const ctx = getAudioContext();
-  await ctx.resume();
-}
-
-/**
- * Initialize audio on user interaction.
- * Call this from touch/click handlers to ensure audio works on iOS.
- */
-export function initAudioOnInteraction(): void {
-  try {
-    const ctx = getAudioContext();
-    ctx.resume();
-  } catch (_e) {
-    log.debug('Audio context initialization failed');
-  }
-}
-
-/**
- * Start a near-silent oscillator to keep the AudioContext alive on iOS.
- * Must be called from a user gesture (e.g., timer start button).
- * Prevents iOS from suspending the AudioContext when the app is backgrounded.
- */
-export async function startAudioKeepAlive(): Promise<void> {
-  try {
-    const ctx = await ensureContextRunning();
-
-    // Already running
-    if (keepAliveOscillator) return;
-
-    keepAliveOscillator = ctx.createOscillator();
-    keepAliveGain = ctx.createGain();
-
-    keepAliveOscillator.connect(keepAliveGain);
-    keepAliveGain.connect(ctx.destination);
-
-    // 1Hz at near-zero gain - inaudible but keeps context active
-    keepAliveOscillator.frequency.value = 1;
-    keepAliveGain.gain.value = 0.001;
-
-    keepAliveOscillator.start();
-    log.debug('Audio keep-alive started');
-  } catch (_e) {
-    log.debug('Audio keep-alive start failed');
-  }
-}
-
-/**
- * Stop the keep-alive oscillator.
- * Call when timer completes or component unmounts.
- */
-export function stopAudioKeepAlive(): void {
-  if (keepAliveOscillator) {
-    try {
-      keepAliveOscillator.stop();
-    } catch {
-      /* already stopped */
-    }
-    try {
-      keepAliveOscillator.disconnect();
-    } catch {
-      /* already disconnected */
-    }
-    keepAliveOscillator = null;
-  }
-  if (keepAliveGain) {
-    try {
-      keepAliveGain.disconnect();
-    } catch {
-      /* already disconnected */
-    }
-    keepAliveGain = null;
-  }
-  log.debug('Audio keep-alive stopped');
-}
-
-/**
  * Ensure the AudioContext is running, with a single retry.
  */
-export async function ensureContextRunning(): Promise<AudioContext> {
+async function ensureContextRunning(): Promise<AudioContext> {
   const ctx = getAudioContext();
   if (ctx.state !== 'running') {
     try {
@@ -135,7 +55,7 @@ export async function ensureContextRunning(): Promise<AudioContext> {
  * @param duration - Duration in seconds
  * @param volume - Volume 0-100 (will be converted to gain 0-1)
  */
-export async function playBeep(frequency: number, duration: number, volume: number): Promise<void> {
+async function playBeep(frequency: number, duration: number, volume: number): Promise<void> {
   if (volume === 0) return; // Muted
 
   try {
@@ -160,55 +80,6 @@ export async function playBeep(frequency: number, duration: number, volume: numb
     oscillator.stop(ctx.currentTime + duration);
   } catch (_e) {
     log.debug('Beep playback failed');
-  }
-}
-
-/**
- * Play countdown beep (3, 2, 1).
- * Short beep at 880Hz (A5).
- *
- * @param volume - Volume 0-100
- */
-export function playCountdownBeep(volume: number): void {
-  playBeep(880, 0.15, volume);
-}
-
-/**
- * Play completion sound - ascending three-tone chord.
- *
- * @param volume - Volume 0-100
- */
-export async function playCompletionSound(volume: number): Promise<void> {
-  if (volume === 0) return; // Muted
-
-  try {
-    const ctx = await ensureContextRunning();
-
-    // Convert 0-100 volume to 0-1 gain
-    const gain = Math.min(1, Math.max(0, volume / 100));
-
-    // Three ascending tones: C5, E5, G5 (major chord)
-    const frequencies = [523.25, 659.25, 783.99];
-
-    frequencies.forEach((freq, i) => {
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      oscillator.frequency.value = freq;
-      oscillator.type = 'sine';
-
-      const startTime = ctx.currentTime + i * 0.15;
-      gainNode.gain.setValueAtTime(gain, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
-
-      oscillator.start(startTime);
-      oscillator.stop(startTime + 0.3);
-    });
-  } catch (_e) {
-    log.debug('Completion sound playback failed');
   }
 }
 
@@ -250,101 +121,5 @@ export async function playNewRecordSound(volume: number): Promise<void> {
     });
   } catch (_e) {
     log.debug('New record sound playback failed');
-  }
-}
-
-/**
- * Play a test beep for volume preview.
- * Plays countdown beep followed by completion sound.
- *
- * @param volume - Volume 0-100
- */
-export function playTestSound(volume: number): void {
-  playCountdownBeep(volume);
-  // Play completion sound after a short delay
-  setTimeout(() => {
-    playCompletionSound(volume);
-  }, 300);
-}
-
-/**
- * Pre-schedule countdown sounds using Web Audio API's internal clock.
- * This ensures precise timing even if setInterval is delayed by iOS.
- *
- * @param secondsRemaining - Current seconds remaining (should be ~5 or less)
- * @param volume - Volume 0-100
- * @returns Cancel function to stop scheduled sounds
- */
-export async function scheduleCountdownSounds(
-  secondsRemaining: number,
-  volume: number
-): Promise<{ cancel: () => void; success: boolean }> {
-  const noop = { cancel: () => {}, success: false };
-  if (volume === 0) return noop;
-
-  const oscillators: OscillatorNode[] = [];
-
-  try {
-    const ctx = await ensureContextRunning();
-
-    // Verify context is actually running after resume attempt
-    if (ctx.state !== 'running') {
-      log.debug('AudioContext not running after resume, scheduling failed');
-      return noop;
-    }
-
-    const gain = Math.min(1, Math.max(0, volume / 100));
-
-    // Schedule countdown beeps at 3, 2, 1
-    for (let s = Math.min(secondsRemaining, 3); s >= 1; s--) {
-      const delay = secondsRemaining - s;
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      const startAt = ctx.currentTime + delay;
-      gainNode.gain.setValueAtTime(gain, startAt);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, startAt + 0.15);
-      osc.start(startAt);
-      osc.stop(startAt + 0.15);
-      oscillators.push(osc);
-    }
-
-    // Schedule completion chord at 0
-    const completionDelay = secondsRemaining;
-    const frequencies = [523.25, 659.25, 783.99];
-    frequencies.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      const startAt = ctx.currentTime + completionDelay + i * 0.15;
-      gainNode.gain.setValueAtTime(gain, startAt);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, startAt + 0.3);
-      osc.start(startAt);
-      osc.stop(startAt + 0.3);
-      oscillators.push(osc);
-    });
-
-    return {
-      cancel: () => {
-        oscillators.forEach(osc => {
-          try {
-            osc.stop();
-            osc.disconnect();
-          } catch {
-            // Already stopped
-          }
-        });
-      },
-      success: true,
-    };
-  } catch (_e) {
-    log.debug('Failed to schedule countdown sounds');
-    return noop;
   }
 }

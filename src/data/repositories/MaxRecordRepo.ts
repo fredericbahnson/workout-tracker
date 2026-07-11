@@ -1,8 +1,9 @@
 import { db, generateId } from '@/data/db';
 import type { MaxRecord } from '@/types';
-import { now, normalizeDates, normalizeDatesArray, compareDates } from '@/utils/dateUtils';
+import { now, normalizeDatesArray, compareDates } from '@/utils/dateUtils';
+import { getNormalized, deleteIfExists } from './repoUtils';
 
-const DATE_FIELDS: (keyof MaxRecord)[] = ['recordedAt'];
+const DATE_FIELDS: (keyof MaxRecord)[] = ['recordedAt', 'updatedAt'];
 
 /**
  * Repository for MaxRecord (personal record) CRUD operations.
@@ -77,6 +78,7 @@ export const MaxRecordRepo = {
       weight,
       notes,
       recordedAt: now(),
+      updatedAt: now(),
     };
     await db.maxRecords.add(record);
     return record;
@@ -92,12 +94,13 @@ export const MaxRecordRepo = {
     id: string,
     data: Partial<Omit<MaxRecord, 'id' | 'exerciseId' | 'recordedAt'>>
   ): Promise<MaxRecord | undefined> {
-    const existing = await db.maxRecords.get(id);
+    const existing = await getNormalized<MaxRecord>(db.maxRecords, id, DATE_FIELDS);
     if (!existing) return undefined;
 
     const updated: MaxRecord = {
-      ...normalizeDates(existing, DATE_FIELDS),
+      ...existing,
       ...data,
+      updatedAt: now(),
     };
     await db.maxRecords.put(updated);
     return updated;
@@ -109,11 +112,7 @@ export const MaxRecordRepo = {
    * @returns Promise resolving to true if deleted, false if not found
    */
   async delete(id: string): Promise<boolean> {
-    const existing = await db.maxRecords.get(id);
-    if (!existing) return false;
-
-    await db.maxRecords.delete(id);
-    return true;
+    return deleteIfExists<MaxRecord>(db.maxRecords, id);
   },
 
   /**

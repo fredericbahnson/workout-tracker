@@ -2,7 +2,6 @@ import { db, generateId } from '@/data/db';
 import type { CompletedSet, QuickLogData } from '@/types';
 import {
   now,
-  normalizeDates,
   normalizeDatesArray,
   startOfDay,
   addDays,
@@ -10,8 +9,9 @@ import {
   compareDates,
   type DateLike,
 } from '@/utils/dateUtils';
+import { getNormalized, deleteIfExists } from './repoUtils';
 
-const DATE_FIELDS: (keyof CompletedSet)[] = ['completedAt'];
+const DATE_FIELDS: (keyof CompletedSet)[] = ['completedAt', 'updatedAt'];
 
 /**
  * Repository for CompletedSet CRUD operations.
@@ -91,6 +91,7 @@ export const CompletedSetRepo = {
       actualReps: data.reps,
       weight: data.weight,
       completedAt: now(),
+      updatedAt: now(),
       notes: data.notes,
       parameters: data.parameters,
     };
@@ -129,6 +130,7 @@ export const CompletedSetRepo = {
       actualReps,
       weight,
       completedAt: now(),
+      updatedAt: now(),
       notes,
       parameters,
     };
@@ -170,12 +172,13 @@ export const CompletedSetRepo = {
     id: string,
     data: Partial<Omit<CompletedSet, 'id' | 'completedAt'>>
   ): Promise<CompletedSet | undefined> {
-    const existing = await db.completedSets.get(id);
+    const existing = await getNormalized<CompletedSet>(db.completedSets, id, DATE_FIELDS);
     if (!existing) return undefined;
 
     const updated: CompletedSet = {
-      ...normalizeDates(existing, DATE_FIELDS),
+      ...existing,
       ...data,
+      updatedAt: now(),
     };
     await db.completedSets.put(updated);
     return updated;
@@ -187,11 +190,7 @@ export const CompletedSetRepo = {
    * @returns Promise resolving to true if deleted, false if not found
    */
   async delete(id: string): Promise<boolean> {
-    const existing = await db.completedSets.get(id);
-    if (!existing) return false;
-
-    await db.completedSets.delete(id);
-    return true;
+    return deleteIfExists<CompletedSet>(db.completedSets, id);
   },
 
   /**
@@ -238,11 +237,12 @@ export const CompletedSetRepo = {
   ): Promise<{ totalSets: number; totalReps: number }> {
     const startDate = toDateRequired(start);
     const endDate = toDateRequired(end);
-    const allSets = await this.getForExercise(exerciseId);
-    const filteredSets = allSets.filter(s => {
-      // Sets are already normalized, so completedAt is a Date
-      return s.completedAt >= startDate && s.completedAt < endDate;
-    });
+    // Range query on the [exerciseId+completedAt] compound index
+    // (start inclusive, end exclusive - Dexie's between() default)
+    const filteredSets = await db.completedSets
+      .where('[exerciseId+completedAt]')
+      .between([exerciseId, startDate], [exerciseId, endDate])
+      .toArray();
     const totalSets = filteredSets.length;
     const totalReps = filteredSets.reduce((sum, s) => sum + s.actualReps, 0);
 
@@ -260,11 +260,11 @@ export const CompletedSetRepo = {
     cycleStartDate: DateLike
   ): Promise<{ totalSets: number; totalReps: number }> {
     const startDate = toDateRequired(cycleStartDate);
-    const allSets = await this.getForExercise(exerciseId);
-    const filteredSets = allSets.filter(s => {
-      // Sets are already normalized, so completedAt is a Date
-      return s.completedAt >= startDate;
-    });
+    // Open-ended range query on the [exerciseId+completedAt] compound index
+    const filteredSets = await db.completedSets
+      .where('[exerciseId+completedAt]')
+      .between([exerciseId, startDate], [exerciseId, new Date(8640000000000000)], true, true)
+      .toArray();
     const totalSets = filteredSets.length;
     const totalReps = filteredSets.reduce((sum, s) => sum + s.actualReps, 0);
 
@@ -317,11 +317,16 @@ export const CompletedSetRepo = {
       return [];
     }
 
-    // Build a set of warmup scheduledSetIds by checking all scheduled workouts
+    // Build a set of warmup scheduledSetIds from just the workouts these sets
+    // reference (a set's scheduledSetId can only belong to its own workout)
     const warmupSetIds = new Set<string>();
-    const allWorkouts = await db.scheduledWorkouts.toArray();
+    const workoutIds = [
+      ...new Set(allSets.map(s => s.scheduledWorkoutId).filter((id): id is string => id !== null)),
+    ];
+    const referencedWorkouts = await db.scheduledWorkouts.bulkGet(workoutIds);
 
-    for (const workout of allWorkouts) {
+    for (const workout of referencedWorkouts) {
+      if (!workout) continue;
       for (const scheduledSet of workout.scheduledSets) {
         if (scheduledSet.isWarmup) {
           warmupSetIds.add(scheduledSet.id);

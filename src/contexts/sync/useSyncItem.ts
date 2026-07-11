@@ -1,21 +1,13 @@
 import { useCallback } from 'react';
 import { SyncService } from '@/services/syncService';
+import type { SyncTableName } from '@/services/sync/types';
 import { useAuth } from '../auth';
 
 export function useSyncItem() {
   const { user, isConfigured } = useAuth();
 
   const syncItem = useCallback(
-    async (
-      table:
-        | 'exercises'
-        | 'max_records'
-        | 'completed_sets'
-        | 'cycles'
-        | 'scheduled_workouts'
-        | 'user_preferences',
-      item: unknown
-    ) => {
+    async (table: SyncTableName, item: unknown) => {
       if (user && isConfigured) {
         await SyncService.syncItem(table, item, user.id);
       }

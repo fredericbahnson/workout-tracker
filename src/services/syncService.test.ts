@@ -32,36 +32,54 @@ vi.mock('../data/db', () => ({
       delete: vi.fn(),
       toArray: vi.fn(),
       clear: vi.fn(),
+      bulkGet: vi.fn((ids: string[]) => Promise.resolve(ids.map(() => undefined))),
+      bulkPut: vi.fn(),
+      bulkDelete: vi.fn(),
     },
     maxRecords: {
       get: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
+      bulkGet: vi.fn((ids: string[]) => Promise.resolve(ids.map(() => undefined))),
+      bulkPut: vi.fn(),
+      bulkDelete: vi.fn(),
     },
     completedSets: {
       get: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
+      bulkGet: vi.fn((ids: string[]) => Promise.resolve(ids.map(() => undefined))),
+      bulkPut: vi.fn(),
+      bulkDelete: vi.fn(),
     },
     cycles: {
       get: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
+      bulkGet: vi.fn((ids: string[]) => Promise.resolve(ids.map(() => undefined))),
+      bulkPut: vi.fn(),
+      bulkDelete: vi.fn(),
     },
     scheduledWorkouts: {
       get: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
+      bulkGet: vi.fn((ids: string[]) => Promise.resolve(ids.map(() => undefined))),
+      bulkPut: vi.fn(),
+      bulkDelete: vi.fn(),
     },
     userPreferences: {
       get: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
       toArray: vi.fn(),
+      bulkGet: vi.fn((ids: string[]) => Promise.resolve(ids.map(() => undefined))),
+      bulkPut: vi.fn(),
+      bulkDelete: vi.fn(),
     },
     syncQueue: {
       orderBy: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])) })),
@@ -622,6 +640,197 @@ describe('SyncService', () => {
       expect(addCall.table).toBe('exercises');
       expect(addCall.operation).toBe('delete');
       expect(addCall.itemId).toBe('ex-1');
+    });
+  });
+
+  describe('hardDeleteItem', () => {
+    it('queues a hardDelete operation with userId when offline', async () => {
+      mockOnLineValue = false;
+      mockDbSyncQueue.where.mockReturnValue({
+        equals: vi.fn(() => ({ first: vi.fn(() => Promise.resolve(undefined)) })),
+      });
+
+      const result = await SyncService.hardDeleteItem('exercises', 'ex-1', 'user-1');
+
+      expect(result).toBe(true);
+      expect(mockDbSyncQueue.add).toHaveBeenCalled();
+      const addCall = mockDbSyncQueue.add.mock.calls[0][0];
+      expect(addCall.table).toBe('exercises');
+      expect(addCall.operation).toBe('hardDelete');
+      expect(addCall.itemId).toBe('ex-1');
+      expect(addCall.userId).toBe('user-1');
+    });
+
+    it('processes queued hardDelete operations as permanent deletes', async () => {
+      const queueItem = {
+        id: 'queue-1',
+        table: 'exercises',
+        operation: 'hardDelete',
+        itemId: 'ex-1',
+        data: { id: 'ex-1' },
+        createdAt: new Date(),
+        retryCount: 0,
+        userId: 'user-1',
+      };
+      mockDbSyncQueue.orderBy.mockReturnValue({
+        toArray: vi.fn(() => Promise.resolve([queueItem])),
+      });
+
+      const mockDelete = vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ error: null })),
+        })),
+      }));
+      mockSupabaseFrom.mockReturnValue({ delete: mockDelete });
+
+      const result = await SyncService.processQueue('user-1');
+
+      expect(result.processed).toBe(1);
+      expect(mockSupabaseFrom).toHaveBeenCalledWith('exercises');
+      expect(mockDelete).toHaveBeenCalled();
+      expect(mockDbSyncQueue.delete).toHaveBeenCalledWith('queue-1');
+    });
+  });
+
+  describe('syncItem error handling', () => {
+    it('queues the item when a non-network error is thrown', async () => {
+      mockDbSyncQueue.where.mockReturnValue({
+        equals: vi.fn(() => ({ first: vi.fn(() => Promise.resolve(undefined)) })),
+      });
+      mockSupabaseFrom.mockReturnValue({
+        upsert: vi.fn(() => Promise.reject(new Error('unexpected serialization failure'))),
+      });
+
+      const exercise = createMockExercise();
+      await SyncService.syncItem('exercises', exercise, 'user-1');
+
+      expect(mockDbSyncQueue.add).toHaveBeenCalled();
+      const addCall = mockDbSyncQueue.add.mock.calls[0][0];
+      expect(addCall.operation).toBe('upsert');
+      expect(addCall.userId).toBe('user-1');
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Last-Write-Wins Merge (max records / completed sets)
+  // --------------------------------------------------------------------------
+
+  describe('pullFromCloud last-write-wins merge', () => {
+    const remoteRecord = {
+      id: 'max-1',
+      user_id: 'user-1',
+      exercise_id: 'ex-1',
+      max_reps: 30,
+      max_time: null,
+      weight: null,
+      notes: 'edited on device B',
+      recorded_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-06-01T00:00:00.000Z',
+      deleted_at: null,
+    };
+
+    async function pullWithMaxRecord(
+      remote: Record<string, unknown>,
+      local: MaxRecord | undefined
+    ) {
+      setupSupabaseMock({
+        exercises: { data: [] },
+        max_records: { data: [remote] },
+        completed_sets: { data: [] },
+        cycles: { data: [] },
+        scheduled_workouts: { data: [] },
+        user_preferences: { data: [] },
+      });
+      mockDbScheduledWorkouts.toArray.mockResolvedValue([]);
+      (db.maxRecords.bulkGet as unknown as Mock).mockResolvedValueOnce([local]);
+      await SyncService.pullFromCloud('user-1');
+      return db.maxRecords.bulkPut as unknown as Mock;
+    }
+
+    it('inserts a remote max record when none exists locally', async () => {
+      const bulkPut = await pullWithMaxRecord(remoteRecord, undefined);
+
+      expect(bulkPut).toHaveBeenCalledTimes(1);
+      expect(bulkPut.mock.calls[0][0]).toHaveLength(1);
+      expect(bulkPut.mock.calls[0][0][0].id).toBe('max-1');
+    });
+
+    it('overwrites the local max record when the remote edit is newer', async () => {
+      const local = createMockMaxRecord({
+        id: 'max-1',
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      const bulkPut = await pullWithMaxRecord(remoteRecord, local);
+
+      expect(bulkPut).toHaveBeenCalledTimes(1);
+      expect(bulkPut.mock.calls[0][0][0].maxReps).toBe(30);
+    });
+
+    it('keeps the local max record when it is newer than the remote', async () => {
+      const local = createMockMaxRecord({
+        id: 'max-1',
+        updatedAt: new Date('2027-01-01T00:00:00.000Z'),
+      });
+      const bulkPut = await pullWithMaxRecord(remoteRecord, local);
+
+      expect(bulkPut).not.toHaveBeenCalled();
+    });
+
+    it('keeps the local max record when the remote has no updated_at (pre-migration DB)', async () => {
+      const local = createMockMaxRecord({
+        id: 'max-1',
+        updatedAt: new Date('2020-01-01T00:00:00.000Z'),
+      });
+      const bulkPut = await pullWithMaxRecord({ ...remoteRecord, updated_at: null }, local);
+
+      expect(bulkPut).not.toHaveBeenCalled();
+    });
+
+    it('applies last-write-wins to completed sets as well', async () => {
+      const remoteSet = {
+        id: 'set-1',
+        user_id: 'user-1',
+        scheduled_set_id: null,
+        scheduled_workout_id: null,
+        exercise_id: 'ex-1',
+        target_reps: 10,
+        actual_reps: 15,
+        weight: null,
+        completed_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-06-01T00:00:00.000Z',
+        notes: 'corrected reps on device B',
+        parameters: {},
+        deleted_at: null,
+      };
+      const staleLocalSet = {
+        id: 'set-1',
+        scheduledSetId: null,
+        scheduledWorkoutId: null,
+        exerciseId: 'ex-1',
+        targetReps: 10,
+        actualReps: 12,
+        completedAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        notes: '',
+        parameters: {},
+      };
+
+      setupSupabaseMock({
+        exercises: { data: [] },
+        max_records: { data: [] },
+        completed_sets: { data: [remoteSet] },
+        cycles: { data: [] },
+        scheduled_workouts: { data: [] },
+        user_preferences: { data: [] },
+      });
+      mockDbScheduledWorkouts.toArray.mockResolvedValue([]);
+      (db.completedSets.bulkGet as unknown as Mock).mockResolvedValueOnce([staleLocalSet]);
+
+      await SyncService.pullFromCloud('user-1');
+
+      const bulkPut = db.completedSets.bulkPut as unknown as Mock;
+      expect(bulkPut).toHaveBeenCalledTimes(1);
+      expect(bulkPut.mock.calls[0][0][0].actualReps).toBe(15);
     });
   });
 

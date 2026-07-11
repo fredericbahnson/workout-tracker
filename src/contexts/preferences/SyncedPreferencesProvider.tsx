@@ -178,25 +178,40 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     await saveAndSync(updated);
   }, [saveAndSync]);
 
+  const value = useMemo(
+    () => ({
+      preferences,
+      isLoading,
+      hasAcknowledgedHealthDisclaimer,
+      acknowledgeHealthDisclaimer,
+      setAppMode,
+      setDefaultMaxReps,
+      setDefaultConditioningReps,
+      setConditioningWeeklyIncrement,
+      setWeeklySetGoal,
+      setRestTimer,
+      setMaxTestRestTimer,
+      setTimerVolume,
+      setLastSchedulingMode,
+    }),
+    [
+      preferences,
+      isLoading,
+      hasAcknowledgedHealthDisclaimer,
+      acknowledgeHealthDisclaimer,
+      setAppMode,
+      setDefaultMaxReps,
+      setDefaultConditioningReps,
+      setConditioningWeeklyIncrement,
+      setWeeklySetGoal,
+      setRestTimer,
+      setMaxTestRestTimer,
+      setTimerVolume,
+      setLastSchedulingMode,
+    ]
+  );
+
   return (
-    <SyncedPreferencesContext.Provider
-      value={{
-        preferences,
-        isLoading,
-        hasAcknowledgedHealthDisclaimer,
-        acknowledgeHealthDisclaimer,
-        setAppMode,
-        setDefaultMaxReps,
-        setDefaultConditioningReps,
-        setConditioningWeeklyIncrement,
-        setWeeklySetGoal,
-        setRestTimer,
-        setMaxTestRestTimer,
-        setTimerVolume,
-        setLastSchedulingMode,
-      }}
-    >
-      {children}
-    </SyncedPreferencesContext.Provider>
+    <SyncedPreferencesContext.Provider value={value}>{children}</SyncedPreferencesContext.Provider>
   );
 }

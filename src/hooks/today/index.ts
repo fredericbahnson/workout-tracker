@@ -3,6 +3,8 @@
  */
 
 export { useTodayModals } from './useTodayModals';
+export { useTodayLiveData } from './useTodayLiveData';
+export { useTodayWorkoutActions } from './useTodayWorkoutActions';
 export type {
   TodayModalType,
   ScheduledSetModalData,
