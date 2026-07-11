@@ -5,6 +5,107 @@ All notable changes to Ascend are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> Note: entries for v2.19.x–v2.25.x were tracked in git commit messages
+> rather than this file. See `git log` for that range.
+
+## [Unreleased] - 2026-07-11
+
+Two maintenance passes: a sync-correctness/cleanup pass (commit `e5c63b6`)
+and a UI/UX streamlining pass (commit `1db190f`).
+
+**Deployment note:** Supabase migration `017_max_records_completed_sets_updated_at.sql`
+must be run before shipping these changes (already applied to production).
+
+### Fixed
+- **Cross-device sync for max records and completed sets**: edits to these
+  tables never propagated between devices (the pull merge was insert-only and
+  the tables had no `updated_at`). Added `updatedAt` locally (Dexie v8) and
+  remotely (migration 017) and switched the merge to last-write-wins.
+- **Skipped workouts not syncing**: `updateSkipReason` never bumped
+  `updatedAt`, so skips could lose last-write-wins on other devices; it now
+  bumps the timestamp and syncs immediately.
+- **Zero values silently dropped by sync**: `|| null` in local→remote
+  transformers collapsed legitimate zeros (bodyweight 0, conditioning time
+  increment 0 — which then became 5 on other devices). All numeric fields now
+  use `?? null`.
+- **Offline hard-deletes downgraded to soft-deletes** with no user
+  attribution; the queue now carries a real `hardDelete` operation with userId.
+- **Non-network sync errors dropped writes**: single-item sync now queues on
+  any failure (bounded by the existing 5-retry backoff).
+- **Double sync on sign-in / sync on every token refresh / self-resetting
+  5-minute sync interval**: all sync triggers now flow through one guarded
+  entrypoint keyed on the user id.
+- **Partial pull followed by full push** could overwrite newer cloud data
+  with stale local data; push now skips tables whose pull failed.
+- **Legacy user_preferences rows with null timer columns** produced invalid
+  local state; the transformer now falls back to defaults.
+- **Imported backups stored dates as ISO strings** in IndexedDB, breaking
+  index-based sorting and range queries; imports now revive Date objects.
+- **App blanked entirely when Supabase env vars were missing** despite the
+  local-first design (`createClient('')` throws at module load); the client
+  is now constructed with inert placeholders and all real usage remains
+  gated behind `isSupabaseConfigured()`.
+- **Max Testing wizard date mode never scheduled dates**: days were
+  hardcoded to Mon/Wed/Fri with no picker, and workouts were created without
+  `scheduledDate` (date mode silently behaved like sequence mode). Added the
+  day-of-week picker and proper date assignment.
+- **Slow taps on set cards were silently dropped**: the tap detector required
+  <200ms press duration; a press with <10px movement is now a tap regardless
+  of duration.
+- **Rating-prompt ref guard was inert** (never armed); fixed so the prompt
+  re-check fires once per transition into the completed-workout view.
+
+### Changed
+- **Rest timer is now a non-blocking banner** pinned above the tab bar
+  instead of a full-screen modal: the set list stays visible and tappable
+  while resting; tap to expand to the full dial, backdrop-tap collapses,
+  auto-dismisses ~2s after completion. Intended behavioral deltas: Escape no
+  longer dismisses it and navigating off Today cancels it (same as the old
+  modal's unmount). The native timing/sound engine is untouched.
+- **Exercise form uses progressive disclosure**: Name + Type + Measurement up
+  front with tap-to-fill suggestion chips; mode, weight tracking, initial
+  max, notes, and custom parameters live behind "More options" (auto-expands
+  when editing an exercise that uses them). Empty-name submits now show an
+  inline error.
+- **Cycle wizard is one screen shorter**: the Fixed Days / Flexible choice is
+  a segmented toggle at the top of the Schedule step. Disabled Next buttons
+  now explain why. The Goals step shows set goals only for exercise types in
+  the cycle (with "Show all types") and collapses RFEM rotation + the
+  conditioning increment behind an Advanced disclosure. The Groups step
+  offers inline exercise creation when no exercises exist.
+- **Swipe affordance**: set-card chevrons are color-coded (amber left =
+  skip, green right = complete). The misleading "Undo & Redo" button is now
+  "Delete Set". Time-based ad-hoc logging uses the shared MM:SS input
+  instead of a free-text field.
+- **Progress page** has a single timeframe control (removed the redundant
+  header dropdown); Schedule and Progress show loading skeletons instead of
+  flashing empty states.
+- **Today page split** into `useTodayLiveData` + `useTodayWorkoutActions`
+  hooks (1092 → ~800 lines) with the triplicated recount/status-update logic
+  deduplicated. Schedule's copy-pasted cycle-modal block extracted into
+  `CycleModals`. Context values memoized (Auth/Sync/SyncedPreferences) and
+  the cloud pull batched (bulkGet/bulkPut instead of per-row reads).
+
+### Added
+- **Accessible UI primitives** in `src/components/ui/`: `Toggle`
+  (role=switch, 44px hit area), `SegmentedControl`, `SelectionCard`,
+  `StatTile` — replacing five hand-rolled switches, three rebuilt segmented
+  pickers, the Appearance selection cards, and the Progress stat tiles.
+- **`useCreateExercise` hook** shared by the Exercises page and the cycle
+  wizard's inline create shortcut.
+- **`[exerciseId+completedAt]` compound index** (Dexie v8) for date-range
+  stats queries; repositories use indexes instead of in-memory scans where
+  possible; shared `repoUtils` helpers replace duplicated CRUD boilerplate.
+- **Test coverage**: 469 tests (from 444), including last-write-wins merge,
+  zero-value round-trips, rest-timer single-instance/remount invariants,
+  wizard blocked-Next reasons, and UI primitive accessibility.
+
+### Removed
+- ~650 lines of dead code: the superseded Web Audio countdown path in
+  `utils/audio.ts` (the native TimerAudioPlugin replaced it), deprecated
+  `useTheme`, and three unused hooks (`useSettingsState`,
+  `useProgressiveOnboarding`, `useHaptics`).
+
 ## [2.18.11] - 2026-01-24
 
 ### Fixed

@@ -18,6 +18,11 @@ Data flows: Local IndexedDB ↔ Sync Service ↔ Supabase PostgreSQL
 | 1 | Initial schema: exercises, maxRecords, completedSets, cycles, scheduledWorkouts |
 | 2 | Added syncQueue for offline operation support |
 | 3 | Added userPreferences table, compound index on syncQueue |
+| 4 | Added `scheduledDate` index on scheduledWorkouts (date-based scheduling) |
+| 5 | Added `healthDisclaimerAcknowledgedAt` to userPreferences |
+| 6 | Added `updatedAt` to scheduledWorkouts (sync conflict resolution) |
+| 7 | Added `userId` to syncQueue (cross-logout queue preservation) |
+| 8 | Added `updatedAt` to maxRecords/completedSets (last-write-wins sync) and `[exerciseId+completedAt]` compound index on completedSets |
 
 ### Tables
 
@@ -53,6 +58,7 @@ Stores personal records (PRs) for exercises.
 | `weight` | number? | | Weight in lbs (undefined = bodyweight) |
 | `notes` | string | | Notes about the record |
 | `recordedAt` | Date | ✓ | When the record was set |
+| `updatedAt` | Date? | | Last modification (LWW sync; optional for pre-v8 records) |
 
 #### completedSets
 Stores logged workout sets.
@@ -67,8 +73,11 @@ Stores logged workout sets.
 | `actualReps` | number | | Achieved reps or time |
 | `weight` | number? | | Weight used in lbs |
 | `completedAt` | Date | ✓ | Completion timestamp |
+| `updatedAt` | Date? | | Last modification (LWW sync; optional for pre-v8 records) |
 | `notes` | string | | Set notes |
 | `parameters` | Record<string, string\|number> | | Custom parameter values |
+
+**Compound Index:** `[exerciseId+completedAt]` - For date-range stats queries
 
 #### cycles
 Stores training cycle configurations.
@@ -110,6 +119,9 @@ Stores generated workout plans.
 | `scheduledSets` | ScheduledSet[] | | Sets to complete |
 | `status` | WorkoutStatus | ✓ | pending, completed, partial, skipped |
 | `completedAt` | Date? | | When completed |
+| `scheduledDate` | Date? | ✓ | Target date (date-based scheduling only) |
+| `skipReason` | string? | | Why the workout was skipped |
+| `updatedAt` | Date? | | Last modification (LWW sync) |
 | `isAdHoc` | boolean? | | True for user-created workouts |
 | `customName` | string? | | User-defined name (ad-hoc only) |
 
@@ -137,11 +149,12 @@ Stores pending sync operations for offline support.
 | `id` | string | ✓ (PK) | UUID |
 | `table` | SyncTable | ✓ | Target table name |
 | `itemId` | string | ✓ | ID of item to sync |
-| `operation` | 'upsert' \| 'delete' | | Operation type |
+| `operation` | 'upsert' \| 'delete' \| 'hardDelete' | | Operation type ('delete' = soft delete, 'hardDelete' = permanent) |
 | `data` | unknown? | | Item data (for upsert) |
 | `createdAt` | Date | ✓ | When queued |
 | `retryCount` | number | | Failed attempt count |
 | `nextRetryAt` | Date? | | Next retry time (exponential backoff) |
+| `userId` | string? | ✓ | Owning user (queue survives logout; orphans cleaned on next login) |
 
 **Compound Index:** `[table+itemId]` - For efficient lookup/deduplication
 
@@ -344,9 +357,22 @@ Data is transformed between local (camelCase, Date objects) and remote (snake_ca
 5. Retry with exponential backoff on failure
 
 ### Conflict Resolution
-- **Strategy**: Last-write-wins (remote takes precedence)
-- **Timestamps**: `updated_at` determines recency
-- **Deletions**: Propagate via sync service delete operations
+- **Strategy**: Last-write-wins on `updated_at` for ALL syncable tables
+  (exercises, cycles, scheduled_workouts, max_records, completed_sets) — a
+  remote row overwrites local only when its `updated_at` is newer
+- **Timestamps are client-authoritative**: the client writes `updated_at` on
+  every mutation; there is deliberately NO server-side `BEFORE UPDATE`
+  trigger for max_records/completed_sets (a trigger would resolve conflicts
+  by push-arrival order and cause echo write-amplification). Migration 013's
+  trigger on scheduled_workouts predates this decision.
+- **Every repository mutator must bump `updatedAt`** or the change can lose
+  LWW on other devices
+- **Legacy rows**: remote rows with null `updated_at` (pre-migration-017
+  databases) never overwrite an existing local record
+- **Partial pull safety**: `pushToCloud` skips any table whose pull failed
+  that cycle, so stale local data can't overwrite newer cloud data
+- **Deletions**: soft-delete via `deleted_at` marker, propagated on pull;
+  hard deletes (data wipe) use a dedicated `hardDelete` queue operation
 
 ---
 
@@ -369,12 +395,9 @@ CREATE POLICY "Users can insert own exercises"
 
 ## Migrations
 
-Located in `supabase/migrations/`:
-
-| File | Description |
-|------|-------------|
-| `001_user_preferences.sql` | Creates user_preferences table |
-| `002_app_mode.sql` | Adds app_mode column to user_preferences |
+Located in `supabase/migrations/` — see `supabase/migrations/README.md` for
+the full numbered list (001–017) and deployment ordering rules. Migrations
+must run BEFORE deploying the app version that depends on them.
 
 Run migrations via Supabase CLI:
 ```bash

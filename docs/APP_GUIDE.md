@@ -142,14 +142,22 @@ The Exercises tab shows your complete exercise library.
 
 ### 3.2 Creating an Exercise
 
-The exercise creation form has the following fields:
+The exercise creation form shows the essentials up front; everything else lives behind a collapsed **More options** section, so a basic exercise takes seconds to create.
+
+**Primary fields** (always visible):
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| Exercise Name | Text | Yes | e.g. "Ring Rows", "Planche Push Ups" |
+| Exercise Name | Text | Yes | e.g. "Ring Rows", "Planche Push Ups". Submitting without a name shows an inline error. |
+| Quick-select chips | Tap-to-fill | No | (New exercises only) Common exercises — Pull-ups, Push-ups, Squats, Dips, Rows, Plank — that fill Name, Type, and Measurement in one tap. |
 | Type | Dropdown | Yes | Push, Pull, Legs, Core, Balance, Mobility, or Other. Determines which weekly set goal the exercise counts toward. |
 | Measurement | Dropdown | Yes | **Reps** (counted repetitions) or **Time** (duration in seconds, entered as MM:SS). |
-| Mode | Dropdown | Yes | See "Exercise Modes" below. |
+
+**More options** (collapsed by default; auto-expands when editing an exercise that uses any of them):
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| Mode | Dropdown | Yes | See "Exercise Modes" below. Defaults to Standard. |
 | Track Added Weight | Toggle | No | Enable to track weight added via vest, barbell, dip belt, etc. Reveals a "Default Weight" field. |
 | Default Weight | Number | No | Pre-filled weight value (in your preferred unit) when logging sets. |
 | Initial Max Reps | Number | No | Only shown when creating a new standard/reps exercise. Sets the initial max record. Can be left blank. |
@@ -263,7 +271,7 @@ Each exercise is individually configured as either RFEM or Simple. RFEM exercise
 
 ### 4.4 Creating a Training Cycle (RFEM, Simple, or Mixed)
 
-The training cycle wizard walks through 7 steps. Navigation buttons at the bottom move between steps, and a progress indicator at the top shows your position.
+The training cycle wizard walks through up to 6 steps (5 for RFEM/Mixed, 6 for Simple; the Start step is skipped when you enter from the cycle-type selector). Navigation buttons at the bottom move between steps, and a progress indicator at the top shows your position. When the **Next** button is disabled, a short message above it explains what's missing (e.g. "Add at least one exercise to a group").
 
 #### Step 1: Start
 
@@ -274,29 +282,26 @@ Choose how to begin:
 
 Each cloneable cycle card shows the cycle name, number of weeks, days per week, number of groups, and creation date.
 
-#### Step 2: Schedule Mode
+#### Step 2: Schedule
 
-Choose how workouts are scheduled:
+Configure the cycle timing. A **Scheduling** toggle at the top of this step chooses between the two modes (no separate step):
 
 - **Fixed Days** — Select specific days of the week (e.g. Mon/Wed/Fri). Workouts appear on those calendar dates. If you miss a day, it shows as overdue.
 - **Flexible** — Complete workouts in whatever order and pace you choose. No calendar dates; just a sequence of workouts to get through.
 
-#### Step 3: Schedule
-
-Configure the cycle timing:
-
 | Field | Description |
 |-------|-------------|
-| **Cycle Name** | A label for this cycle (e.g. "Winter 2026 Block 1"). |
+| **Cycle Name** | A label for this cycle (e.g. "Winter 2026 Block 1"). Pre-filled with a default like "RFEM Cycle 2". |
+| **Scheduling** | Fixed Days / Flexible toggle. |
 | **Selected Days** | (Fixed Days mode only) Tap day-of-week buttons (S M T W T F S) to select training days. |
 | **Workouts Per Week** | (Flexible mode only) Select 1-7 via a wheel picker. |
 | **Number of Weeks** | Select 1-12 via a wheel picker. |
 
 A summary line shows the total: "X total workouts - Y per week for Z weeks". In Fixed Days mode, a preview of the first 6 scheduled workout dates is shown.
 
-#### Step 4: Groups
+#### Step 3: Groups
 
-Define exercise groups. Each group is a collection of exercises that are performed together in a single workout.
+Define exercise groups. Each group is a collection of exercises that are performed together in a single workout. If you have no exercises yet, this step shows a **Create Exercise** shortcut that opens the exercise form without leaving the wizard.
 
 For each group:
 - **Group Name** — Editable text field (e.g. "Push Day", "Upper Body A").
@@ -311,7 +316,7 @@ Tap **+ Add Group** to create additional groups. Groups can be deleted if more t
 - If Simple: base reps/time, progression type, increment, and optional weight settings.
 - A warmup toggle per exercise.
 
-#### Step 5: Progression (Simple Mode Only)
+#### Step 4: Progression (Simple Mode Only)
 
 This step appears only for Simple Progression cycles. For each exercise in each group:
 
@@ -326,25 +331,26 @@ This step appears only for Simple Progression cycles. For each exercise in each 
 
 A preview shows the projected targets for Weeks 1 through 4.
 
-#### Step 6: Goals
+#### Step 5: Goals
 
 Configure rotation patterns and training targets.
 
 **Weekly Set Goals** — Set the number of sets you want to complete per exercise type per week:
-- Grid of number inputs for Push, Pull, Legs, Core, Balance, and Mobility.
+- Number inputs are shown only for the exercise types actually present in your groups; a **Show all types** button reveals the rest.
 - These goals are used for progress tracking, not strict enforcement.
 
 **Group Rotation** — Define the order in which groups rotate across workout days. If you have 2 groups (A and B) and train 3 days per week, a rotation of [A, B] repeats as A, B, A, B, A, B...
 - Add or remove rotation entries.
 - Minimum one entry required.
 
-**RFEM Rotation** (RFEM and Mixed modes) — The sequence of RFEM values that cycle through workouts:
-- Default: [3, 4, 5, 4].
-- Each value can be 0-20.
-- Add or remove values. Minimum one required.
-- The sequence repeats when exhausted.
+**Advanced** (collapsed by default; the current values are summarized inline):
 
-**Conditioning Weekly Increment** (RFEM mode only) — How many reps to add each week for conditioning exercises. In Mixed mode, this is configured per-exercise in the Groups step.
+- **RFEM Rotation** (RFEM and Mixed modes) — The sequence of RFEM values that cycle through workouts:
+  - Default: [4, 3, 2].
+  - Each value can be 0-20.
+  - Add or remove values. Minimum one required.
+  - The sequence repeats when exhausted.
+- **Conditioning Weekly Increment** (RFEM mode only) — How many reps to add each week for conditioning exercises. In Mixed mode, this is configured per-exercise in the Groups step.
 
 **Warmup Sets** (RFEM and Simple modes) — Two checkboxes:
 - **Include warmup sets** — Generates 2 warmup sets at 20% and 40% of max intensity before working sets.
@@ -352,7 +358,7 @@ Configure rotation patterns and training targets.
 
 In Mixed mode, warmup toggles appear per-exercise in the Groups step instead.
 
-#### Step 7: Review
+#### Step 6: Review
 
 A read-only summary of the entire cycle configuration:
 - Cycle name, duration, workouts per week, total workouts.
@@ -388,6 +394,8 @@ At least one standard exercise must be selected to proceed.
 
 Same schedule mode choice as training cycles (Fixed Days or Flexible).
 
+- **Fixed Days** reveals a day-of-week picker (S M T W T F S; default Mon/Wed/Fri). Max test days are assigned concrete calendar dates on those days, so overdue and rest-day logic applies. At least one day must be selected to proceed.
+
 Below the schedule selector:
 - **Include warmup sets** checkbox — When enabled, adds 3 warmup sets at 20%, 30%, and 40% of your previous max before the max attempt for each exercise.
 
@@ -411,7 +419,7 @@ Tap **Start Max Testing** to create the cycle.
 
 ### 4.6 Editing and Managing Cycles
 
-- Training cycles can be edited by tapping **Edit Cycle** on the Schedule page. This re-opens the wizard with current values pre-filled, starting at the Schedule Mode step.
+- Training cycles can be edited by tapping **Edit Cycle** on the Schedule page. This re-opens the wizard with current values pre-filled, starting at the Schedule step.
 - Max testing cycles cannot be edited after creation.
 - Only one cycle can be active at a time. Creating a new cycle automatically completes the previous active cycle.
 
@@ -496,13 +504,11 @@ A reminder banner appears at the top of max testing workouts: "Warm up first! Be
 
 ### 5.5 Rest Timer
 
-After completing a set (if enabled in Settings), a rest timer modal appears automatically.
+After completing a set (if enabled in Settings), a compact rest timer banner appears above the bottom tab bar. The set list stays visible and fully interactive while the timer runs — you can review, tap, or swipe remaining sets without dismissing anything.
 
-**Display**: A large circular progress ring with the remaining time in MM:SS format. The ring is blue when running, orange when under 10 seconds, and green when complete.
+**Compact banner**: timer icon, remaining time in MM:SS (blue when running, orange under 10 seconds, green when complete), pause/resume, +15s, and a skip (X) button. Tap the time to expand.
 
-**Status text**: "Rest" when running, "Paused" when paused, "Done!" when finished.
-
-**Controls**:
+**Expanded view**: a bottom sheet with the large circular progress ring and full controls. Tapping the dimmed background collapses back to the banner without stopping the timer.
 
 | Button | Action |
 |--------|--------|
@@ -512,6 +518,11 @@ After completing a set (if enabled in Settings), a rest timer modal appears auto
 | +15s | Add 15 seconds. |
 | +30s | Add 30 seconds. |
 | Done / Skip | Close the timer. |
+
+**Behavior**:
+- Logging another set while a timer is running restarts it with the new set's duration.
+- The timer auto-dismisses about 2 seconds after reaching zero ("Done!").
+- Navigating away from the Today tab cancels the timer.
 
 **Audio**: Countdown beeps play during the last 3 seconds. A completion sound plays when the timer reaches zero. Volume is configurable in Settings (0-100%).
 
@@ -635,7 +646,7 @@ Opens when you tap a completed workout card. Shows every logged set with:
 
 ### 8.1 Time Period Selector
 
-A dropdown at the top-right of the Progress page controls the timeframe for all statistics:
+A segmented **Progress Totals Timeframe** control on the Progress page sets the timeframe for all statistics:
 
 | Period | Scope |
 |--------|-------|

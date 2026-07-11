@@ -114,11 +114,17 @@ generateSchedule(cycle, exercises, maxRecords) → ScheduledWorkout[]
 
 Handles bidirectional sync between local IndexedDB and Supabase:
 
-- **Pull**: Fetches remote changes since last sync
-- **Push**: Uploads local changes
-- **Conflict Resolution**: Remote wins (last-write-wins)
-- **Offline Support**: Queues changes when offline
+- **Pull**: Fetches remote changes and merges with last-write-wins on
+  `updated_at` for ALL syncable tables; a remote row overwrites local only
+  when newer. Timestamps are client-authoritative (no server triggers).
+- **Push**: Uploads local changes; tables whose pull failed that cycle are
+  skipped so stale local data never overwrites newer cloud data
+- **Offline Support**: Queues changes when offline (`upsert` / soft `delete`
+  / `hardDelete`, tagged with userId, deduped by `[table+itemId]`)
 - **Retry Logic**: Exponential backoff for failed operations (configured in `constants/sync.ts`)
+- **Triggers**: sign-in, back-online, 5-minute interval, and manual sync all
+  route through one guarded entrypoint (`runSyncChain` in
+  `contexts/sync/SyncProvider.tsx`, keyed on user id)
 
 ```typescript
 // Sync flow
@@ -223,6 +229,11 @@ Reusable primitives:
 | `ConfirmModal` | Confirmation dialogs |
 | `EmptyState` | Empty list placeholders |
 | `Skeleton` | Loading placeholders |
+| `Toggle` | Accessible switch (role="switch", 44px hit area) |
+| `SegmentedControl` | Pill-style radio group |
+| `SelectionCard` | Bordered pick-one option card |
+| `StatTile` | Centered value + label stat block |
+| `WheelPicker` | iOS-style scroll picker |
 
 ## PWA Features
 

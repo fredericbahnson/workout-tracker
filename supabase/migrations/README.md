@@ -24,6 +24,9 @@ Migrations are numbered sequentially: `NNN_description.sql`
 | 012 | `012_health_disclaimer.sql` | Add health disclaimer acknowledgment tracking | v2.24.0 |
 | 013 | `013_scheduled_workouts_updated_at.sql` | Add updated_at for conflict resolution | v2.24.0 |
 | 014 | `014_schema_sync.sql` | Comprehensive schema sync (idempotent) | v2.24.29 |
+| 015 | `015_user_entitlements.sql` | User entitlements table for offline purchase verification | v2.25.0 |
+| 016 | `016_analytics_views.sql` | Admin analytics views for usage metrics | v2.25.x |
+| 017 | `017_max_records_completed_sets_updated_at.sql` | Add updated_at to max_records/completed_sets for last-write-wins sync | unreleased (post-2.25.30) |
 
 ## Running Migrations
 
@@ -42,3 +45,9 @@ supabase db push
 - Always backup your database before running migrations
 - Run migrations BEFORE deploying the corresponding app version
 - Test migrations in a development environment first
+- **Client-authoritative timestamps**: sync conflict resolution is
+  last-write-wins on client-written `updated_at`. Do NOT add server-side
+  `BEFORE UPDATE` triggers that overwrite `updated_at` (they make conflicts
+  resolve by push-arrival order and cause every pull to rewrite local rows).
+  Migration 013's trigger on scheduled_workouts predates this decision;
+  017 deliberately omits one.
