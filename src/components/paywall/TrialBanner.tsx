@@ -152,7 +152,7 @@ export function TrialBanner({ variant = 'compact', className = '' }: TrialBanner
     if (variant === 'compact') {
       return (
         <button
-          onClick={() => showPaywall('advanced', 'not_purchased')}
+          onClick={() => showPaywall('standard', 'not_purchased')}
           className={`
             flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
             transition-colors
@@ -207,7 +207,7 @@ export function TrialBanner({ variant = 'compact', className = '' }: TrialBanner
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               {trial.daysRemaining} day{trial.daysRemaining !== 1 ? 's' : ''} remaining.{' '}
               {isEnding
-                ? 'Subscribe now to keep all features.'
+                ? 'Purchase to keep creating new training cycles after the trial.'
                 : 'Enjoy full access to all features.'}
             </p>
             <button
@@ -263,7 +263,8 @@ export function TrialBanner({ variant = 'compact', className = '' }: TrialBanner
           <div className="flex-1">
             <h3 className="font-medium text-red-800 dark:text-red-200">Trial Ended</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Your free trial has ended. Subscribe to continue using Ascend.
+              Your free trial has ended. Purchase to create new training cycles — workout logging,
+              history, and sync stay free.
             </p>
             <button
               onClick={() => showPaywall('advanced', 'trial_expired')}

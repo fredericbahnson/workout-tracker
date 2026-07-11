@@ -7,7 +7,7 @@ import { calculateTargetReps, calculateSimpleTargetWeight } from '@/services/sch
 import { useAppStore } from '@/stores/appStore';
 import { useSyncedPreferences } from '@/contexts';
 import { useSyncItem } from '@/contexts';
-import { useGatedAction } from '@/contexts';
+import { useGatedAction, useEntitlement } from '@/contexts';
 import {
   useWorkoutDisplay,
   useCycleCompletion,
@@ -45,6 +45,7 @@ import {
   GettingStartedCard,
 } from '@/components/workouts/today';
 import { AppStoreRatingModal } from '@/components/engagement/AppStoreRatingModal';
+import { TrialBanner } from '@/components/paywall';
 import { WhyTheseRepsSheet } from '@/components/education/WhyTheseRepsSheet';
 import { RFEMGuide } from '@/components/onboarding';
 import {
@@ -65,6 +66,7 @@ export function TodayPage() {
   const navigate = useNavigate();
   const { preferences } = useSyncedPreferences();
   const { syncItem, deleteItem } = useSyncItem();
+  const { trial, purchase } = useEntitlement();
   const showWarmupSets = useAppStore(s => s.showWarmupSets);
   const setShowWarmupSets = useAppStore(s => s.setShowWarmupSets);
   const showTimedWarmups = useAppStore(s => s.showTimedWarmups);
@@ -423,6 +425,14 @@ export function TodayPage() {
       />
 
       <div className={`px-4 py-4 space-y-4 ${modals.showRestTimer ? 'pb-24' : ''}`}>
+        {/* Low-key trial reminder for the final two weeks - catches users who
+            train infrequently and would miss a shorter window */}
+        {trial.isActive && !purchase && trial.daysRemaining <= 14 && (
+          <div className="flex justify-end">
+            <TrialBanner variant="compact" />
+          </div>
+        )}
+
         <CycleProgressHeader
           activeCycle={activeCycle}
           cycleProgress={cycleProgress}
