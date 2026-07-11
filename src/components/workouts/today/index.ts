@@ -19,3 +19,4 @@ export { RenameWorkoutModal } from './RenameWorkoutModal';
 export { OverdueBanner } from './OverdueBanner';
 export { OverdueWorkoutModal } from './OverdueWorkoutModal';
 export { RestDayCard } from './RestDayCard';
+export { GettingStartedCard } from './GettingStartedCard';

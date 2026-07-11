@@ -86,6 +86,10 @@ interface AppState {
   ) => void;
   resetOnboardingMilestones: () => void;
 
+  // Getting-started checklist dismissal (progress itself derives from the DB)
+  gettingStartedDismissed: boolean;
+  setGettingStartedDismissed: (dismissed: boolean) => void;
+
   // Warmup visibility toggles (persisted)
   showWarmupSets: boolean;
   setShowWarmupSets: (show: boolean) => void;
@@ -133,6 +137,10 @@ export const useAppStore = create<AppState>()(
         })),
       resetOnboardingMilestones: () => set({ onboardingMilestones: DEFAULT_MILESTONES }),
 
+      // Getting-started checklist
+      gettingStartedDismissed: false,
+      setGettingStartedDismissed: dismissed => set({ gettingStartedDismissed: dismissed }),
+
       // Rating prompt
       ratingPrompt: DEFAULT_RATING_PROMPT,
       setRatingPrompt: updates =>
@@ -159,6 +167,7 @@ export const useAppStore = create<AppState>()(
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         hasStartedOnboarding: state.hasStartedOnboarding,
         onboardingMilestones: state.onboardingMilestones,
+        gettingStartedDismissed: state.gettingStartedDismissed,
         showWarmupSets: state.showWarmupSets,
         showTimedWarmups: state.showTimedWarmups,
         ratingPrompt: state.ratingPrompt,

@@ -4,6 +4,7 @@ export { useCycleCompletion } from './useCycleCompletion';
 export { useAdHocWorkout } from './useAdHocWorkout';
 export { useScheduledWorkoutStatus } from './useScheduledWorkoutStatus';
 export { useCreateExercise } from './useCreateExercise';
+export { useGettingStartedProgress } from './useGettingStartedProgress';
 
 // iOS preparation hooks (with web fallbacks)
 export { useKeyboardHeight } from './useKeyboardHeight';

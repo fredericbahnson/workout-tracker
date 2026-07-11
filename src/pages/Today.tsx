@@ -17,6 +17,7 @@ import {
   useTodayWorkoutActions,
   useScheduledWorkoutStatus,
   useRatingPrompt,
+  useGettingStartedProgress,
 } from '@/hooks';
 import { PageHeader } from '@/components/layout';
 import { Button, Modal, EmptyState, Card, Toggle } from '@/components/ui';
@@ -41,6 +42,7 @@ import {
   OverdueBanner,
   OverdueWorkoutModal,
   RestDayCard,
+  GettingStartedCard,
 } from '@/components/workouts/today';
 import { AppStoreRatingModal } from '@/components/engagement/AppStoreRatingModal';
 import {
@@ -173,6 +175,9 @@ export function TodayPage() {
     dismissCompletionView,
     resetCompletionState,
   });
+
+  // Getting-started checklist (new users until first cycle + first logged sets)
+  const gettingStarted = useGettingStartedProgress();
 
   // Date-based scheduling status
   const scheduledStatus = useScheduledWorkoutStatus({
@@ -392,6 +397,20 @@ export function TodayPage() {
           hasActiveWorkout={!!displayWorkout && !isShowingCompletedWorkout}
           onCreateCycle={modals.openCycleTypeSelector}
         />
+
+        {gettingStarted.shouldShow && (
+          <GettingStartedCard
+            steps={gettingStarted.steps}
+            onDismiss={gettingStarted.dismiss}
+            onStepClick={id => {
+              if (id === 'create-cycle') {
+                modals.openCycleTypeSelector();
+              } else {
+                navigate('/exercises');
+              }
+            }}
+          />
+        )}
 
         {/* Overdue workouts banner for date-based scheduling */}
         {scheduledStatus.overdueWorkouts.length > 0 && (
