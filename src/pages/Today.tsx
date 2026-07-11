@@ -45,6 +45,8 @@ import {
   GettingStartedCard,
 } from '@/components/workouts/today';
 import { AppStoreRatingModal } from '@/components/engagement/AppStoreRatingModal';
+import { WhyTheseRepsSheet } from '@/components/education/WhyTheseRepsSheet';
+import { RFEMGuide } from '@/components/onboarding';
 import {
   CycleWizard,
   MaxTestingWizard,
@@ -78,6 +80,10 @@ export function TodayPage() {
 
   // Overdue workout modal state
   const [showOverdueModal, setShowOverdueModal] = useState(false);
+
+  // "Why these reps?" education sheet (opened from the scheduled-set modal)
+  const [showWhyReps, setShowWhyReps] = useState(false);
+  const [showRFEMGuideFromWhy, setShowRFEMGuideFromWhy] = useState(false);
 
   // Live queries
   const {
@@ -202,6 +208,32 @@ export function TodayPage() {
     () => new Set(workoutCompletedSets?.map(s => s.scheduledSetId) || []),
     [workoutCompletedSets]
   );
+
+  // Data for the "Why these reps?" sheet, derived from the selected scheduled set
+  const whyRepsData = useMemo(() => {
+    const selected = modals.selectedScheduledSet;
+    if (!selected) return null;
+    const exercise = exerciseMap.get(selected.set.exerciseId);
+    const maxRecord = maxRecords?.get(selected.set.exerciseId);
+    const cycleMode = activeCycle ? getProgressionMode(activeCycle) : 'rfem';
+    const effectiveMode = selected.set.progressionMode ?? cycleMode;
+    const progressionMode: 'rfem' | 'simple' | 'conditioning' = selected.set.isConditioning
+      ? 'conditioning'
+      : effectiveMode === 'simple'
+        ? 'simple'
+        : 'rfem';
+    const isTimeBased = exercise?.measurementType === 'time';
+    return {
+      exerciseName: exercise?.name ?? 'Exercise',
+      targetReps: selected.targetReps,
+      maxReps: isTimeBased ? maxRecord?.maxTime : maxRecord?.maxReps,
+      rfemValue: selected.workout.rfem,
+      progressionMode,
+      simpleBase: isTimeBased ? selected.set.simpleBaseTime : selected.set.simpleBaseReps,
+      simpleIncrement: selected.set.simpleRepIncrement,
+      weekNumber: selected.workout.weekNumber,
+    };
+  }, [modals.selectedScheduledSet, exerciseMap, maxRecords, activeCycle]);
 
   // Filter warmup sets based on toggle state
   const isWarmupVisible = useCallback(
@@ -696,8 +728,34 @@ export function TodayPage() {
         isLogging={modals.isLogging}
         timerVolume={preferences.timerVolume}
         onLogSet={handleLogSet}
-        onClose={modals.closeScheduledSetModal}
+        onClose={() => {
+          setShowWhyReps(false);
+          modals.closeScheduledSetModal();
+        }}
+        onWhyTarget={() => setShowWhyReps(true)}
       />
+
+      {whyRepsData && (
+        <WhyTheseRepsSheet
+          isOpen={showWhyReps}
+          onClose={() => setShowWhyReps(false)}
+          {...whyRepsData}
+          onLearnMore={() => {
+            setShowWhyReps(false);
+            setShowRFEMGuideFromWhy(true);
+          }}
+        />
+      )}
+
+      {showRFEMGuideFromWhy && (
+        <RFEMGuide
+          standalone={true}
+          showProgress={true}
+          showSkip={true}
+          onComplete={() => setShowRFEMGuideFromWhy(false)}
+          onSkip={() => setShowRFEMGuideFromWhy(false)}
+        />
+      )}
 
       <Modal
         isOpen={modals.showCycleWizard}

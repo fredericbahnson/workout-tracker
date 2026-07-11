@@ -29,6 +29,8 @@ interface ScheduledSetModalProps {
   ) => Promise<void>;
   /** Called when modal is closed */
   onClose: () => void;
+  /** When provided, the log form shows a help icon explaining the target calculation */
+  onWhyTarget?: () => void;
 }
 
 /**
@@ -44,6 +46,7 @@ export function ScheduledSetModal({
   timerVolume = 40,
   onLogSet,
   onClose,
+  onWhyTarget,
 }: ScheduledSetModalProps) {
   const [showTimerMode, setShowTimerMode] = useState(false);
   const [showStopwatchMode, setShowStopwatchMode] = useState(false);
@@ -133,6 +136,7 @@ export function ScheduledSetModal({
               onSubmit={onLogSet}
               onCancel={handleClose}
               isLoading={isLogging}
+              onWhyTarget={onWhyTarget}
             />
           );
         })()}

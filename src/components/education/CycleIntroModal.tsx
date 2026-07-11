@@ -1,14 +1,13 @@
 /**
  * CycleIntroModal Component
  *
- * Shows a condensed version of the CycleGuide when user
- * first opens the CycleWizard. Can be dismissed permanently.
+ * Condensed cycle primer shown once before the user's first run of the
+ * cycle wizard. The caller (CycleTypeSelector) tracks the cycleIntroSeen
+ * milestone, so this modal is purely presentational.
  */
 
-import { useState } from 'react';
 import { X, Calendar, Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { useAppStore } from '@/stores/appStore';
 
 interface CycleIntroModalProps {
   isOpen: boolean;
@@ -17,24 +16,10 @@ interface CycleIntroModalProps {
 }
 
 export function CycleIntroModal({ isOpen, onClose, onContinue }: CycleIntroModalProps) {
-  const [dontShowAgain, setDontShowAgain] = useState(false);
-  const setOnboardingMilestone = useAppStore(state => state.setOnboardingMilestone);
-
   if (!isOpen) return null;
 
-  const handleContinue = () => {
-    if (dontShowAgain) {
-      setOnboardingMilestone('cycleIntroSeen', true);
-    }
-    onContinue();
-  };
-
-  const handleClose = () => {
-    if (dontShowAgain) {
-      setOnboardingMilestone('cycleIntroSeen', true);
-    }
-    onClose();
-  };
+  const handleContinue = onContinue;
+  const handleClose = onClose;
 
   return (
     <>
@@ -118,19 +103,6 @@ export function CycleIntroModal({ isOpen, onClose, onContinue }: CycleIntroModal
                 </li>
               </ul>
             </div>
-
-            {/* Don't show again */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={dontShowAgain}
-                onChange={e => setDontShowAgain(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-              />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Don't show this again
-              </span>
-            </label>
           </div>
 
           {/* Footer */}

@@ -56,6 +56,19 @@ vi.mock('@/contexts', () => ({
   useSyncedPreferences: () => ({ preferences: { appMode: mockAppMode } }),
 }));
 
+// Intro-modal milestones: default to "already seen" so gating tests exercise
+// selections directly; the intro-modal tests flip these to false.
+let mockMilestones: { cycleIntroSeen: boolean; maxTestingIntroSeen: boolean };
+const mockSetOnboardingMilestone = vi.fn();
+
+vi.mock('@/stores/appStore', () => ({
+  useAppStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      onboardingMilestones: mockMilestones,
+      setOnboardingMilestone: mockSetOnboardingMilestone,
+    }),
+}));
+
 describe('CycleTypeSelector', () => {
   const onSelectTraining = vi.fn();
   const onSelectMaxTesting = vi.fn();
@@ -73,6 +86,7 @@ describe('CycleTypeSelector', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAppMode = 'advanced';
+    mockMilestones = { cycleIntroSeen: true, maxTestingIntroSeen: true };
     mockEntitlementValue = {
       canAccessStandard: true,
       canAccessAdvanced: true,
@@ -169,5 +183,58 @@ describe('CycleTypeSelector', () => {
     renderSelector();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalled();
+  });
+
+  describe('first-run intro modals', () => {
+    it('shows the cycle intro before the first training selection, then continues', () => {
+      mockMilestones.cycleIntroSeen = false;
+      renderSelector();
+
+      fireEvent.click(screen.getByText('RFEM Training Cycle'));
+      expect(onSelectTraining).not.toHaveBeenCalled();
+      expect(screen.queryByText('Creating a Training Cycle')).not.toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: /Create My Cycle/i }));
+      expect(mockSetOnboardingMilestone).toHaveBeenCalledWith('cycleIntroSeen', true);
+      expect(onSelectTraining).toHaveBeenCalledWith('rfem');
+    });
+
+    it('marks the cycle intro seen even when dismissed without continuing', () => {
+      mockMilestones.cycleIntroSeen = false;
+      renderSelector();
+
+      fireEvent.click(screen.getByText('RFEM Training Cycle'));
+      const dialog = screen.getByText('Creating a Training Cycle');
+      expect(dialog).not.toBeNull();
+
+      // Close via the X button (first button inside the modal header)
+      const closeButtons = screen.getAllByRole('button');
+      const closeButton = closeButtons.find(b => b.querySelector('svg.lucide-x'));
+      expect(closeButton).toBeTruthy();
+      fireEvent.click(closeButton!);
+
+      expect(mockSetOnboardingMilestone).toHaveBeenCalledWith('cycleIntroSeen', true);
+      expect(onSelectTraining).not.toHaveBeenCalled();
+    });
+
+    it('shows the max testing intro before the first max testing selection', () => {
+      mockMilestones.maxTestingIntroSeen = false;
+      renderSelector();
+
+      fireEvent.click(screen.getByText('Max Rep Testing'));
+      expect(onSelectMaxTesting).not.toHaveBeenCalled();
+      expect(screen.queryByText('Max Testing Week')).not.toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: /Set Up Max Testing/i }));
+      expect(mockSetOnboardingMilestone).toHaveBeenCalledWith('maxTestingIntroSeen', true);
+      expect(onSelectMaxTesting).toHaveBeenCalled();
+    });
+
+    it('skips the intro when already seen', () => {
+      renderSelector();
+      fireEvent.click(screen.getByText('RFEM Training Cycle'));
+      expect(screen.queryByText('Creating a Training Cycle')).toBeNull();
+      expect(onSelectTraining).toHaveBeenCalledWith('rfem');
+    });
   });
 });

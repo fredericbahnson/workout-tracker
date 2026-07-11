@@ -1,14 +1,13 @@
 /**
  * MaxTestingIntroModal Component
  *
- * Shows an introduction to max testing when user first
- * creates a max testing cycle. Can be dismissed permanently.
+ * Max testing primer shown once before the user's first run of the max
+ * testing wizard. The caller (CycleTypeSelector) tracks the
+ * maxTestingIntroSeen milestone, so this modal is purely presentational.
  */
 
-import { useState } from 'react';
 import { X, Trophy, Target, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { useAppStore } from '@/stores/appStore';
 
 interface MaxTestingIntroModalProps {
   isOpen: boolean;
@@ -17,24 +16,10 @@ interface MaxTestingIntroModalProps {
 }
 
 export function MaxTestingIntroModal({ isOpen, onClose, onContinue }: MaxTestingIntroModalProps) {
-  const [dontShowAgain, setDontShowAgain] = useState(false);
-  const setOnboardingMilestone = useAppStore(state => state.setOnboardingMilestone);
-
   if (!isOpen) return null;
 
-  const handleContinue = () => {
-    if (dontShowAgain) {
-      setOnboardingMilestone('maxTestingIntroSeen', true);
-    }
-    onContinue();
-  };
-
-  const handleClose = () => {
-    if (dontShowAgain) {
-      setOnboardingMilestone('maxTestingIntroSeen', true);
-    }
-    onClose();
-  };
+  const handleContinue = onContinue;
+  const handleClose = onClose;
 
   return (
     <>
@@ -141,19 +126,6 @@ export function MaxTestingIntroModal({ isOpen, onClose, onContinue }: MaxTesting
                 results.
               </p>
             </div>
-
-            {/* Don't show again */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={dontShowAgain}
-                onChange={e => setDontShowAgain(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-              />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Don't show this again
-              </span>
-            </label>
           </div>
 
           {/* Footer */}

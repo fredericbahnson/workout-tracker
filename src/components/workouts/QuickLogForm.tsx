@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { HelpCircle } from 'lucide-react';
 import { Button, Input, NumberInput, Select, TimeDurationInput } from '@/components/ui';
 import { formatWeightLabel, formatWeightAt } from '@/constants';
 import { formatTime, type Exercise, type CustomParameter } from '@/types';
@@ -16,6 +17,8 @@ interface QuickLogFormProps {
   ) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  /** When provided, shows a help icon next to the target explaining how it was calculated */
+  onWhyTarget?: () => void;
 }
 
 export function QuickLogForm({
@@ -26,6 +29,7 @@ export function QuickLogForm({
   onSubmit,
   onCancel,
   isLoading,
+  onWhyTarget,
 }: QuickLogFormProps) {
   const isTimeBased = exercise.measurementType === 'time';
 
@@ -106,7 +110,19 @@ export function QuickLogForm({
             Max Test{suggestedReps ? ` • Previous: ${formatSuggested()}` : ''}
           </p>
         ) : suggestedReps ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Target: {formatSuggested()}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 inline-flex items-center gap-1">
+            Target: {formatSuggested()}
+            {onWhyTarget && (
+              <button
+                type="button"
+                onClick={onWhyTarget}
+                aria-label="Why this target?"
+                className="p-1.5 -m-1 text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            )}
+          </p>
         ) : null}
       </div>
 

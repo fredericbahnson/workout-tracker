@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Calendar,
   Target,
@@ -9,6 +10,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useSyncedPreferences, useEntitlement } from '@/contexts';
+import { useAppStore } from '@/stores/appStore';
+import { CycleIntroModal } from '@/components/education/CycleIntroModal';
+import { MaxTestingIntroModal } from '@/components/education/MaxTestingIntroModal';
 import type { ProgressionMode } from '@/types';
 
 interface CycleTypeSelectorProps {
@@ -144,6 +148,54 @@ export function CycleTypeSelector({
     showPaywall('standard', trial.hasExpired ? 'trial_expired' : 'not_purchased');
   };
 
+  // First-time education: show the intro modal once before the first wizard
+  // run, then continue with the selection the user made.
+  const [pendingIntro, setPendingIntro] = useState<
+    { kind: 'training'; mode: ProgressionMode } | { kind: 'maxTesting' } | null
+  >(null);
+  const cycleIntroSeen = useAppStore(state => state.onboardingMilestones.cycleIntroSeen);
+  const maxTestingIntroSeen = useAppStore(state => state.onboardingMilestones.maxTestingIntroSeen);
+  const setOnboardingMilestone = useAppStore(state => state.setOnboardingMilestone);
+
+  const selectTraining = (mode: ProgressionMode) => {
+    if (!cycleIntroSeen) {
+      setPendingIntro({ kind: 'training', mode });
+      return;
+    }
+    onSelectTraining(mode);
+  };
+
+  const selectMaxTesting = () => {
+    if (!maxTestingIntroSeen) {
+      setPendingIntro({ kind: 'maxTesting' });
+      return;
+    }
+    onSelectMaxTesting();
+  };
+
+  const handleIntroContinue = () => {
+    if (!pendingIntro) return;
+    if (pendingIntro.kind === 'training') {
+      setOnboardingMilestone('cycleIntroSeen', true);
+      setPendingIntro(null);
+      onSelectTraining(pendingIntro.mode);
+    } else {
+      setOnboardingMilestone('maxTestingIntroSeen', true);
+      setPendingIntro(null);
+      onSelectMaxTesting();
+    }
+  };
+
+  const handleIntroClose = () => {
+    // Closing still counts as seen - the intro shows once, not naggingly
+    if (pendingIntro?.kind === 'training') {
+      setOnboardingMilestone('cycleIntroSeen', true);
+    } else if (pendingIntro?.kind === 'maxTesting') {
+      setOnboardingMilestone('maxTestingIntroSeen', true);
+    }
+    setPendingIntro(null);
+  };
+
   return (
     <div className="p-4 space-y-6">
       <div className="text-center mb-6">
@@ -163,7 +215,7 @@ export function CycleTypeSelector({
           arrowHover="group-hover:text-primary-500"
           locked={!canAccessStandard}
           lockedBadge="Standard"
-          onClick={canAccessStandard ? () => onSelectTraining('rfem') : handleStandardLockedClick}
+          onClick={canAccessStandard ? () => selectTraining('rfem') : handleStandardLockedClick}
         />
 
         <CycleOptionCard
@@ -175,7 +227,7 @@ export function CycleTypeSelector({
           arrowHover="group-hover:text-purple-500"
           locked={!canAccessStandard}
           lockedBadge="Standard"
-          onClick={canAccessStandard ? onSelectMaxTesting : handleStandardLockedClick}
+          onClick={canAccessStandard ? selectMaxTesting : handleStandardLockedClick}
         />
 
         <CycleOptionCard
@@ -187,7 +239,7 @@ export function CycleTypeSelector({
           arrowHover="group-hover:text-emerald-500"
           locked={!canUseAdvancedCycles}
           lockedBadge="Advanced"
-          onClick={canUseAdvancedCycles ? () => onSelectTraining('simple') : handleLockedClick}
+          onClick={canUseAdvancedCycles ? () => selectTraining('simple') : handleLockedClick}
         />
 
         <CycleOptionCard
@@ -199,7 +251,7 @@ export function CycleTypeSelector({
           arrowHover="group-hover:text-indigo-500"
           locked={!canUseAdvancedCycles}
           lockedBadge="Advanced"
-          onClick={canUseAdvancedCycles ? () => onSelectTraining('mixed') : handleLockedClick}
+          onClick={canUseAdvancedCycles ? () => selectTraining('mixed') : handleLockedClick}
         />
       </div>
 
@@ -208,6 +260,17 @@ export function CycleTypeSelector({
           Cancel
         </Button>
       </div>
+
+      <CycleIntroModal
+        isOpen={pendingIntro?.kind === 'training'}
+        onClose={handleIntroClose}
+        onContinue={handleIntroContinue}
+      />
+      <MaxTestingIntroModal
+        isOpen={pendingIntro?.kind === 'maxTesting'}
+        onClose={handleIntroClose}
+        onContinue={handleIntroContinue}
+      />
     </div>
   );
 }
