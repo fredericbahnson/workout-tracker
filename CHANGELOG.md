@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Note: entries for v2.19.x–v2.25.x were tracked in git commit messages
 > rather than this file. See `git log` for that range.
 
+## [Unreleased]
+
+### Fixed
+
+- **Health disclaimer gating** (legal): the disclaimer could flash for a
+  fraction of a second and be bypassed during sign-up/sign-in transitions.
+  Three defects fixed in `SyncedPreferencesProvider` / `AuthProvider`:
+  - The preferences live query returns `undefined` while re-running (e.g.
+    when the initial sync completes); the provider fell back to defaults for
+    that frame, momentarily reading as "not acknowledged" (flash) — it now
+    holds the last resolved preferences across re-queries.
+  - The loading gate was set in a `useEffect`, leaving a one-render stale
+    window after auth state changed — it is now derived synchronously, so
+    the gate holds until the first preferences read resolves and (for online
+    authenticated users) the initial sync completes.
+  - The device-level acknowledgment flag survived sign-out, so a different
+    person signing in on the same device would never see the disclaimer —
+    sign-out now removes it (a returning user's own acknowledgment is
+    restored from cloud preferences before the gate opens).
+  Regression tests in `SyncedPreferencesProvider.test.tsx`.
+
 ## [2.26.0] - 2026-07-12
 
 Three passes: a sync-correctness/cleanup pass (commit `e5c63b6`), a UI/UX

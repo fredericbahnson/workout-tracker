@@ -8,12 +8,13 @@
  * UI preferences (theme, font size, etc.) remain in the local appStore.
  */
 
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { UserPreferencesRepo } from '@/data/repositories';
 import { useSyncItem, useSync } from '../sync';
 import { useAuth } from '../auth';
 import { createScopedLogger } from '@/utils/logger';
+import { HEALTH_DISCLAIMER_STORAGE_KEY } from '@/constants';
 import type {
   UserPreferences,
   TimerSettings,
@@ -25,13 +26,12 @@ import { SyncedPreferencesContext } from './SyncedPreferencesContext';
 import { defaultPrefs } from './types';
 
 const log = createScopedLogger('SyncedPrefs');
-const HEALTH_DISCLAIMER_KEY = 'ascend-health-disclaimer-acknowledged';
+const HEALTH_DISCLAIMER_KEY = HEALTH_DISCLAIMER_STORAGE_KEY;
 
 export function SyncedPreferencesProvider({ children }: { children: ReactNode }) {
   const { syncItem } = useSyncItem();
   const { lastSyncTime } = useSync();
   const { user, isConfigured } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
 
   // Use live query to reactively get preferences from IndexedDB
   const dbPreferences = useLiveQuery(
@@ -46,28 +46,29 @@ export function SyncedPreferencesProvider({ children }: { children: ReactNode })
     [lastSyncTime] // Re-query when sync completes
   );
 
-  // Set loading state based on sync status (not query completion)
-  // For authenticated users, wait for initial sync to complete before showing content
-  // This prevents the health disclaimer from flashing for returning users
-  useEffect(() => {
-    if (user && isConfigured) {
-      // For authenticated users, wait for sync to complete
-      const syncCompleted = lastSyncTime !== null;
-      const isOffline = !navigator.onLine;
-      if (syncCompleted || isOffline) {
-        setIsLoading(false);
-      } else {
-        // Sync not yet complete - keep loading
-        setIsLoading(true);
-      }
-    } else {
-      // No auth or not configured - use local data immediately
-      setIsLoading(false);
-    }
-  }, [lastSyncTime, user, isConfigured]);
+  // Hold the last resolved preferences across live-query re-runs.
+  // useLiveQuery returns undefined while (re-)querying — including when the
+  // lastSyncTime dep changes after a sync completes. Falling back to defaults
+  // during that window made hasAcknowledgedHealthDisclaimer flip false for a
+  // frame, flashing the health disclaimer past users who already acknowledged
+  // it (and past the hard stop for those who hadn't).
+  const lastResolvedRef = useRef<UserPreferences | null>(null);
+  if (dbPreferences !== undefined && dbPreferences !== null) {
+    lastResolvedRef.current = dbPreferences;
+  }
+  const hasResolvedOnce = dbPreferences !== undefined || lastResolvedRef.current !== null;
 
-  // Current preferences with fallback to defaults
-  const preferences = dbPreferences ?? defaultPrefs;
+  // Loading is DERIVED (not effect-driven) so there is never a stale frame
+  // after `user` flips during sign-in/sign-up. The gate holds until:
+  // - the first IndexedDB read resolves, and
+  // - for online authenticated users, the initial sync of this session
+  //   completes (so a returning user's cloud acknowledgment is present
+  //   before the health disclaimer decision is made).
+  const awaitingInitialSync = !!user && isConfigured && navigator.onLine && lastSyncTime === null;
+  const isLoading = !hasResolvedOnce || awaitingInitialSync;
+
+  // Current preferences: live value, else last known, else defaults
+  const preferences = dbPreferences ?? lastResolvedRef.current ?? defaultPrefs;
 
   // Computed: whether user has acknowledged health disclaimer
   // Checks both localStorage (survives clearLocalDatabase on sign-in) and IndexedDB/cloud

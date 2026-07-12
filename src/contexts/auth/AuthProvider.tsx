@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/appStore';
 import { AuthContext } from './AuthContext';
 import { iapService } from '@/services/iapService';
 import { entitlementCache } from '@/services/entitlementCache';
+import { HEALTH_DISCLAIMER_STORAGE_KEY } from '@/constants';
 
 const log = createScopedLogger('Auth');
 
@@ -204,6 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Clear entitlement cache to prevent stale data for next user
     entitlementCache.clear();
+
+    // LEGAL: remove the device-level health acknowledgment so a different
+    // person signing in on this device gets their own hard-stop disclaimer.
+    // A returning user's own acknowledgment is restored from their cloud
+    // preferences after the initial sync (the preferences gate waits for it).
+    localStorage.removeItem(HEALTH_DISCLAIMER_STORAGE_KEY);
 
     // Reset onboarding flag so next user sees onboarding
     useAppStore.getState().setHasCompletedOnboarding(false);

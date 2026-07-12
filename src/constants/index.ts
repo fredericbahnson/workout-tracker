@@ -4,3 +4,4 @@ export * from './units';
 export * from './version';
 export * from './sync';
 export * from './links';
+export * from './storage';
