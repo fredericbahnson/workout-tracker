@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Note: entries for v2.19.x–v2.25.x were tracked in git commit messages
 > rather than this file. See `git log` for that range.
 
-## [Unreleased] - 2026-07-11
+## [2.26.0] - 2026-07-12
 
 Three passes: a sync-correctness/cleanup pass (commit `e5c63b6`), a UI/UX
 streamlining pass (commit `1db190f`), and an onboarding/activation pass
