@@ -44,20 +44,7 @@ The Ascend onboarding system is designed to:
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  PHASE 0: HEALTH DISCLAIMER (Mandatory - Cannot Skip)            │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │ HealthDisclaimer.tsx                                        │  │
-│  │ - Medical consultation warning                              │  │
-│  │ - Listen to your body guidance                             │  │
-│  │ - User responsibility acknowledgment                        │  │
-│  │ - Links to Terms of Service                                │  │
-│  │ Button: "I Understand & Agree"                             │  │
-│  └────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  PHASE 0.5: AUTHENTICATION (Conditional)                         │
+│  PHASE 0: AUTHENTICATION (Conditional)                           │
 │  Shows only if Supabase is configured                            │
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │ AuthGate.tsx                                                │  │
@@ -65,6 +52,21 @@ The Ascend onboarding system is designed to:
 │  │ - Email + Password form                                    │  │
 │  │ - Forgot password flow                                     │  │
 │  │ - Email verification flow                                  │  │
+│  └────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  PHASE 0.5: HEALTH DISCLAIMER (Mandatory - Cannot Skip)          │
+│  One-time hard stop PER ACCOUNT, shown after login; stored in    │
+│  synced preferences so it never re-prompts on any device.        │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ HealthDisclaimer.tsx                                        │  │
+│  │ - Medical consultation warning                              │  │
+│  │ - Listen to your body guidance                             │  │
+│  │ - User responsibility acknowledgment                        │  │
+│  │ - Links to Terms of Service                                │  │
+│  │ Button: "I Understand & Agree"                             │  │
 │  └────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
                               │
@@ -106,26 +108,7 @@ The Ascend onboarding system is designed to:
 
 ## Detailed Slide Specifications
 
-### Phase 0: Health Disclaimer (Mandatory)
-
-**Component:** `HealthDisclaimer.tsx`  
-**Cannot be skipped or bypassed**
-
-| Element | Content |
-|---------|---------|
-| Icon | Heart (rose/amber gradient) |
-| Headline | "Your Health Comes First" |
-| Warning 1 | ⚠️ Consult your doctor before starting any new exercise program |
-| Warning 2 | ❤️ Listen to your body - stop if experiencing pain, dizziness, etc. |
-| Warning 3 | ✓ You are responsible for exercising safely |
-| Legal text | Acknowledgment of inherent risks, link to Terms of Service |
-| Button | "I Understand & Agree" |
-
-**Persistence:** `hasAcknowledgedHealthDisclaimer` stored via `useAuth()` context
-
----
-
-### Phase 0.5: Authentication (Conditional)
+### Phase 0: Authentication (Conditional)
 
 **Component:** `AuthGate.tsx`  
 **Shows only if Supabase is configured**
@@ -151,6 +134,34 @@ The Ascend onboarding system is designed to:
 - Email input
 - "Send Reset Link" button
 - Success confirmation with return to Sign In
+
+---
+
+### Phase 0.5: Health Disclaimer (Mandatory, once per account)
+
+**Component:** `HealthDisclaimer.tsx`  
+**Cannot be skipped or bypassed**
+
+Shown AFTER login so the acknowledgment binds to the signed-in account.
+It is a one-time hard stop per account: the acknowledgment is stored in
+synced preferences (`healthDisclaimerAcknowledgedAt`, cloud, per-user)
+with a device-level localStorage cache for the current user (cleared on
+sign-out). The app waits for the initial sync before making the
+disclaimer decision, so a returning user is never re-prompted — on any
+device. In local-only mode (no Supabase), it is the first screen,
+acknowledged once per device.
+
+| Element | Content |
+|---------|---------|
+| Icon | Heart (rose/amber gradient) |
+| Headline | "Your Health Comes First" |
+| Warning 1 | ⚠️ Consult your doctor before starting any new exercise program |
+| Warning 2 | ❤️ Listen to your body - stop if experiencing pain, dizziness, etc. |
+| Warning 3 | ✓ You are responsible for exercising safely |
+| Legal text | Acknowledgment of inherent risks, link to Terms of Service |
+| Button | "I Understand & Agree" |
+
+**Persistence:** `hasAcknowledgedHealthDisclaimer` derived in `SyncedPreferencesContext`
 
 ---
 

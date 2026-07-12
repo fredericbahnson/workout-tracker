@@ -187,8 +187,23 @@ function AppContent() {
     );
   }
 
-  // PHASE 0: Health disclaimer — first thing ANY visitor sees
-  // Backed by both localStorage and IndexedDB so it survives clearLocalDatabase() on sign-in
+  // PHASE 0: Auth gate — sign in / create account first
+  if (isConfigured && !user) {
+    return (
+      <ErrorBoundary level="page">
+        <AuthGate onAuthComplete={handleAuthComplete} />
+      </ErrorBoundary>
+    );
+  }
+
+  // PHASE 0.5: Health disclaimer — a one-time, per-account hard stop.
+  // Shown AFTER login so it binds to the signed-in account: the
+  // acknowledgment is stored in synced preferences (cloud, per-user) with a
+  // device-level localStorage cache for the current user. The preferences
+  // gate above holds until the initial sync completes, so a returning
+  // user's acknowledgment is present before this decision is made and they
+  // are never re-prompted. In local-only mode (no auth), this is simply the
+  // first screen, acknowledged once per device.
   if (!hasAcknowledgedHealthDisclaimer) {
     return (
       <ErrorBoundary level="page">
@@ -196,15 +211,6 @@ function AppContent() {
           onAcknowledge={handleStandaloneHealthAcknowledge}
           isLoading={isAcknowledgingHealth}
         />
-      </ErrorBoundary>
-    );
-  }
-
-  // PHASE 0.5: Auth gate — only after disclaimer is acknowledged
-  if (isConfigured && !user) {
-    return (
-      <ErrorBoundary level="page">
-        <AuthGate onAuthComplete={handleAuthComplete} />
       </ErrorBoundary>
     );
   }

@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Note: entries for v2.19.x–v2.25.x were tracked in git commit messages
 > rather than this file. See `git log` for that range.
 
+## [2.26.2] - 2026-07-12
+
+### Changed
+
+- **Health disclaimer moved after login** and made a one-time, per-account
+  hard stop. It was previously shown before the auth gate, which — once the
+  device flag was correctly cleared on sign-out — made it re-appear on every
+  app open while signed out. It now binds to the signed-in account: stored
+  in synced preferences (cloud, per-user) with a device-level cache for the
+  current user, and the app waits for the initial sync before deciding, so
+  a returning user is never re-prompted on any device. In local-only mode
+  it remains the first screen, acknowledged once per device.
+
 ## [2.26.1] - 2026-07-12
 
 ### Fixed
