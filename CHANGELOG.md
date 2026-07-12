@@ -8,9 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Note: entries for v2.19.x–v2.25.x were tracked in git commit messages
 > rather than this file. See `git log` for that range.
 
-## [Unreleased]
+## [2.26.1] - 2026-07-12
 
 ### Fixed
+
+- **Trial anchored to the account, not the device**: the 28-day trial was a
+  device-level localStorage timestamp set on first-ever app launch, so a new
+  account created on a device with old app state inherited an expired trial
+  (immediately hitting "Trial Ended" on first cycle creation). The trial is
+  now anchored to the Supabase account creation date (`user.created_at`) for
+  signed-in users — a new account gets a fresh trial on any device, and
+  reinstalling/adding a device no longer resets the trial (closing the
+  documented infinite-retrial hole). Local-only mode keeps the device-level
+  fallback. DEV builds accept an `ascend_trial_override_start` localStorage
+  override for simulating trial states. Regression tests in
+  `trialService.test.ts`.
 
 - **Health disclaimer gating** (legal): the disclaimer could flash for a
   fraction of a second and be bypassed during sign-up/sign-in transitions.

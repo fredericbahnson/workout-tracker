@@ -33,12 +33,13 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
   useEffect(() => {
     const init = async () => {
       try {
-        const status = await entitlementService.initialize(user?.id);
+        // Trial is anchored to the account creation date for signed-in users
+        const status = await entitlementService.initialize(user?.id, user?.created_at);
         setEntitlement(status);
       } catch (error) {
         console.error('[Entitlement] Failed to initialize:', error);
         // On error, give trial status at minimum
-        const trial = trialService.getTrialStatus();
+        const trial = trialService.getTrialStatus(user?.created_at);
         setEntitlement({
           ...defaultEntitlementStatus,
           trial,
@@ -59,7 +60,11 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
       try {
         // Small delay to allow RevenueCat to sync with new user ID
         await new Promise(resolve => setTimeout(resolve, 500));
-        const status = await entitlementService.getEntitlementStatus(preferences.appMode, user?.id);
+        const status = await entitlementService.getEntitlementStatus(
+          preferences.appMode,
+          user?.id,
+          user?.created_at
+        );
         setEntitlement(status);
       } catch (error) {
         console.error('[Entitlement] Failed to refresh on user change:', error);
@@ -75,12 +80,16 @@ export function EntitlementProvider({ children }: EntitlementProviderProps) {
   // Refresh entitlement status
   const refreshEntitlement = useCallback(async () => {
     try {
-      const status = await entitlementService.getEntitlementStatus(preferences.appMode, user?.id);
+      const status = await entitlementService.getEntitlementStatus(
+        preferences.appMode,
+        user?.id,
+        user?.created_at
+      );
       setEntitlement(status);
     } catch (error) {
       console.error('[Entitlement] Failed to refresh:', error);
     }
-  }, [preferences.appMode, user?.id]);
+  }, [preferences.appMode, user?.id, user?.created_at]);
 
   // Show paywall modal
   const showPaywall = useCallback((tier: PurchaseTier, reason?: LockReason) => {

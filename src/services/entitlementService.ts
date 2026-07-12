@@ -67,10 +67,19 @@ export const entitlementService = {
    * Initialize entitlement tracking.
    * Call once at app startup.
    * @param userId - Optional user ID for web platform entitlement lookup
+   * @param trialAnchor - Account creation date (Supabase user.created_at);
+   *   anchors the trial per-user. Without it (local-only mode), a
+   *   device-level trial is started on first launch.
    */
-  async initialize(userId?: string): Promise<EntitlementStatus> {
-    // ALWAYS start trial first - this must happen regardless of IAP status
-    trialService.startTrialIfNeeded();
+  async initialize(
+    userId?: string,
+    trialAnchor?: Date | string | null
+  ): Promise<EntitlementStatus> {
+    // Signed-in users are anchored to their account creation date; only
+    // start the device-level trial when there is no account anchor.
+    if (!trialAnchor) {
+      trialService.startTrialIfNeeded();
+    }
 
     // Initialize IAP service on native platforms
     if (isNativePlatform()) {
@@ -83,16 +92,21 @@ export const entitlementService = {
     }
 
     // Get current status
-    return this.getEntitlementStatus(undefined, userId);
+    return this.getEntitlementStatus(undefined, userId, trialAnchor);
   },
 
   /**
    * Get complete entitlement status.
    * @param appMode - Optional current app mode to determine access for standard purchasers with active trial
    * @param userId - Optional user ID for web platform entitlement lookup
+   * @param trialAnchor - Account creation date anchoring the trial per-user
    */
-  async getEntitlementStatus(appMode?: AppMode, userId?: string): Promise<EntitlementStatus> {
-    const trial = trialService.getTrialStatus();
+  async getEntitlementStatus(
+    appMode?: AppMode,
+    userId?: string,
+    trialAnchor?: Date | string | null
+  ): Promise<EntitlementStatus> {
+    const trial = trialService.getTrialStatus(trialAnchor);
     const purchase = await getPurchaseInfo(userId);
     const native = isNativePlatform();
 
@@ -156,9 +170,10 @@ export const entitlementService = {
   async checkAccess(
     requiredTier: PurchaseTier,
     appMode?: AppMode,
-    userId?: string
+    userId?: string,
+    trialAnchor?: Date | string | null
   ): Promise<LockedFeatureInfo> {
-    const status = await this.getEntitlementStatus(appMode, userId);
+    const status = await this.getEntitlementStatus(appMode, userId, trialAnchor);
 
     // 'none' tier is always accessible (shouldn't really be used)
     if (requiredTier === 'none') {
